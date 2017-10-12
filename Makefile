@@ -1,5 +1,5 @@
 run:
-	@go run main.go $(CURDIR)/bin/providers.json
+	@go run main.go $(CURDIR)/conf.d/providers.json
 
 build:
 	@go build -o $(CURDIR)/bin/scraper main.go

@@ -93,7 +93,7 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 				r[field] = strings.Trim(v, " ")
 			}
 		} else { //else if e.Debug {
-			r[field] = ""
+			// r[field] = ""
 			logf("missing field: %s", field)
 		}
 	}
@@ -104,14 +104,16 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 	r := Result{}
 	for field, ext := range fields {
 		xpathRule := GetExtractorValue(ext)
-		logf("xpathRule: %s", xpathRule)
+		// logf("xpathRule: %s", xpathRule)
 		if v := htmlquery.FindOne(node, xpathRule); v != nil {
 			t := htmlquery.InnerText(v)
-			logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
-			// pp.Print(v)
+			// logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
 			switch field {
 			case "url":
 				url := htmlquery.SelectAttr(v, "href")
+				if url == "" {
+					return nil
+				}
 				if field == "url" && !strings.HasPrefix(url, "http") {
 					r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, url), " ")
 				} else {
@@ -121,7 +123,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 				r[field] = strings.Trim(t, " ")
 			}
 		} else { //else if e.Debug {
-			r[field] = ""
+			// r[field] = ""
 			logf("missing field: %s", field)
 		}
 	}
@@ -190,7 +192,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 							results = append(results, r)
 						}
 					*/
-					results = append(results, r)
+					if r != nil {
+						results = append(results, r)
+					}
 				})
 				if results != nil {
 					aggregate[b] = results

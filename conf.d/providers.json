@@ -1,0 +1,362 @@
+{
+  "port": 3000,
+  "routes": {
+    "/google/search": {
+      "debug": true,
+      "disabled": true,
+      "name": "google-search",
+      "base_url": "https://www.google.com",
+      "url": "/search?q={{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "items": "#res div[class=g]",
+          "count": "#resultStats",
+          "details": {
+            "title": "h3 a",
+            "url": [
+              "h3 a",
+              "@href",
+              "query-param(q)"
+            ]
+          }
+        },
+        "extra": {
+          "items": "#brs .g-section-with-header div div, p",
+          "details": {
+            "title": "a",
+            "url": [
+              "a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/ccc-tv": {
+      "debug": true,
+      "disabled": true,
+      "name": "ccc-tv",
+      "base_url": "https://media.ccc.de",
+      "url": "/search/?q={{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "items": "div[class='container-fluid'] div[class='event-previews'] div[class='caption']",
+          "count": "span[class='sb_count']",
+          "details": {
+            "title": "h4",
+            "desc": "h3 a",
+            "url": [
+              "h3 a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/bitbucket": {
+      "debug": true,
+      "disabled": true,
+      "name": "bitbucket",
+      "base_url": "https://bitbucket.org",
+      "url": "/repo/all/1?name={{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "items": "#repositories li",
+          "count": "span[class='sb_count']",
+          "details": {
+            "title": "article[class='repo-summary'] h1 a[class='repo-link']",
+            "desc": "article, p",
+            "url": [
+              "article[class='repo-summary'] a[class='repo-link']",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/archive.is": {
+      "debug": true,
+      "disabled": true,
+      "name": "arch linux wiki",
+      "base_url": "https://archive.is",
+      "url": "{{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "items": "div[class='TEXT-BLOCK'] ul li",
+          "count": "span[class='sb_count']",
+          "details": {
+            "title": "div[class='TEXT-BLOCK'] a",
+            "desc": "div span",
+            "url": [
+              "div[class='TEXT-BLOCK'] a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/archlinux/all": {
+      "debug": true,
+      "disabled": true,
+      "name": "arch linux wiki",
+      "base_url": "https://wiki.archlinux.org",
+      "url": "/index.php?title=Special:Search&offset=1&{{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "count": "span[class='sb_count']",
+          "items": "#mw-content-text div > ul[2] li",
+          "details": {
+            "title": ".mw-search-result-heading a",
+            "desc": "div span",
+            "url": [
+              "div a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/voat": {
+      "debug": true,
+      "disabled": true,
+      "base_url": "https://searchvoat.co",
+      "url": "/?t={{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "count": "span[class='sb_count']",
+          "items": "#timeline table tr td",
+          "details": {
+            "title": "div[class='entry'] p a[class='title']",
+            "desc": "div[class='entry'] p span[class='domain']",
+            "url": [
+              "div[@class='entry'] p a[class='title']",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/bing/news": {
+      "debug": true,
+      "base_url": "https://www.bing.com",
+      "url": "/news/search?{{query}}&first=1",
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "count": "span[class='sb_count']",
+          "items": "#algocore .newsitem",
+          "details": {
+            "title": "div[class=t_t] a",
+            "image": [
+              "div[class=image] a img",
+              "@src"
+            ],
+            "desc": "div[class=snippet]",
+            "url": [
+              "div[class=t_t] a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/bing": {
+      "debug": true,
+      "strict_mode": true,
+      "base_url": "https://www.bing.com",
+      "url": "/search?q={{query}}",
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "count": "span[class='sb_count']",
+          "items": "#b_results li.b_algo, #b_results li.b_ans",
+          "details": {
+            "title": "li[class=b_algo] h2",
+            "desc": "div[class='b_caption'] p",
+            "url": [
+              "li[class=b_algo] h2 a",
+              "@href"
+            ]
+          }
+        },
+        "extra": {
+          "items": "#b_context li div ul li",
+          "details": {
+            "title": "li a",
+            "url": [
+              "li a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/google/play/apps": {
+      "debug": true,
+      "selector": "css",
+      "name": "google play apps",
+      "base_url": "https://play.google.com",
+      "url": "/store/search?q={{query}}&c=apps",
+      "blocks": {
+        "result": {
+          "items": "div[class='id-card-list card-list two-cards'] div[class='details']",
+          "count": "//span[@class='sb_count']",
+          "details": {
+            "title": "a[class='title']",
+            "desc": "div[class='subtitle-container'] a[class='subtitle']",
+            "url": [
+              "a[class='title']",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    "/habrahabr": {
+      "debug": true,
+      "name": "habrahabr",
+      "base_url": "https://habrahabr.ru",
+      "url": "/search/page1/?q={{query}}&target_type=posts&flow=&order_by=relevance",
+      "selector": "xpath",
+      "blocks": {
+        "results": {
+          "items": "//ul[contains(@class, 'content-list_posts')]/li",
+          "details": {
+            "title": "//a[contains(@class, 'post__title_link')]",
+            "cat": "//ul[contains(@class, 'post__hubs')]",
+            "desc": "//div[contains(@class, 'post__text')]",
+            "url": [
+              "//a[@class='post__title_link']/@href"
+            ]
+          }
+        }
+      }
+    },
+    "/google/play/movies": {
+      "debug": true,
+      "name": "google play movies",
+      "base_url": "https://play.google.com",
+      "url": "/store/search?q={{query}}&c=movies",
+      "selector": "xpath",
+      "blocks": {
+        "movies": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[1]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        },
+        "tv-shows": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[2]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        },
+        "tv-episodes": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[3]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        }
+      }
+    },
+    "/google/play/music": {
+      "debug": true,
+      "name": "google play music",
+      "base_url": "https://play.google.com",
+      "url": "/store/search?q={{query}}&c=music",
+      "selector": "xpath",
+      "blocks": {
+        "artists": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[1]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        },
+        "albums": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[2]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        },
+        "songs": {
+          "items": "//*[@id='body-content']/div/div/div[1]/div/div[3]/div/div[2]/div",
+          "details": {
+            "title": "//a[@class='title']",
+            "cat": "//a[@class='subtitle subtitle-movie-category']",
+            "desc": "//a[@class='subtitle']",
+            "url": [
+              "//a[@class='title']/@href"
+            ]
+          }
+        }
+      }
+    },
+    "/google/scholar": {
+      "debug": true,
+      "selector": "css",
+      "base_url": "https://scholar.google.com",
+      "url": "/scholar?hl=en&as_sdt=0%2C5&as_vis=1&q={{query}}&btnG=",
+      "blocks": {
+        "result": {
+          "items": "#gs_res_ccl_mid div",
+          "count": "//span[@class='sb_count']",
+          "details": {
+            "title": "#gs_res_ccl_mid div[class=gs_ri] h3",
+            "desc": "#gs_res_ccl_mid div[class=gs_ri] div[class=gs_rs]",
+            "url": [
+              "#gs_res_ccl_mid div[class=gs_ri] h3 a",
+              "@href"
+            ]
+          }
+        },
+        "extra": {
+          "items": "#gs_qsuggest ul li",
+          "details": {
+            "title": "li a",
+            "url": [
+              "li a",
+              "@href"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

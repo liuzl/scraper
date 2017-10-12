@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/k0kubun/pp"
 	// "gopkg.in/yaml.v2"
 	// "github.com/roscopecoltran/configor"
 )
@@ -23,7 +25,10 @@ type Entry struct {
 }
 
 //the configuration file
-type Config map[string]*Endpoint
+type Config struct {
+	Port   int                  `default:"3000" json:"port,omitempty"`
+	Routes map[string]*Endpoint `json:"routes,omitempty"`
+}
 
 type Handler struct {
 	Config  Config            `opts:"-"`
@@ -41,6 +46,11 @@ func (h *Handler) LoadConfigFile(path string) error {
 	return h.LoadConfig(b)
 }
 
+var Endpoints struct {
+	Disabled bool
+	Routes   []string
+}
+
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
 
@@ -56,14 +66,17 @@ func (h *Handler) LoadConfig(b []byte) error {
 		return err
 	}
 
+	// pp.Print(c)
+
 	if h.Log {
-		for k, e := range c {
+		for k, e := range c.Routes {
 			if strings.HasPrefix(k, "/") {
-				delete(c, k)
+				delete(c.Routes, k)
 				k = strings.TrimPrefix(k, "/")
-				c[k] = e
+				c.Routes[k] = e
 			}
 			logf("Loaded endpoint: /%s", k)
+			Endpoints.Routes = append(Endpoints.Routes, k)
 			// Copy the Debug attribute
 			e.Debug = h.Debug
 			// Copy the Header attributes (only if they are not yet set)
@@ -81,6 +94,9 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if h.Debug {
 		logf("Enabled debug mode")
 	}
+
+	pp.Print(Endpoints)
+
 	//replace config
 	h.Config = c
 	return nil
@@ -158,7 +174,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Endpoint will return the Handler's Endpoint from its Config
 func (h *Handler) Endpoint(path string) *Endpoint {
-	if e, ok := h.Config[path]; ok {
+	if e, ok := h.Config.Routes[path]; ok {
 		return e
 	}
 	return nil
