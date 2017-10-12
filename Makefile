@@ -2,7 +2,7 @@ run:
 	@go run main.go $(CURDIR)/conf.d/providers.json
 
 build:
-	@go build -o $(CURDIR)/bin/scraper main.go
+	@go build -o $(CURDIR)/dist/scraper-local main.go
 
 dist: deps
 	@gox -verbose -os="darwin linux" -arch="amd64" -output="$(CURDIR)/dist/scraper-{{.OS}}" .
