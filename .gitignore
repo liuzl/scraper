@@ -33,3 +33,12 @@ dist/grawler-*
 dist/scraper-*
 bin/scraper
 bin/server
+
+shared/cache/
+shared/cache/**
+
+shared/data/deepdetect/
+shared/data/deepdetect/**
+
+shared/data/elasticsearch/
+shared/data/elasticsearch/**

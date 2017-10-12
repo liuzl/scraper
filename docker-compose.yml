@@ -1,0 +1,76 @@
+---
+version: '2.1'
+services:
+
+  data:
+    image: tianon/true
+    container_name: scraper-data
+    volumes:
+    - "$PWD:/app/src"
+    - "./shared/data:/data"
+    - "./shared/conf.d:/app/conf.d"
+    - "./shared/data/deepdetect:/data"
+    - "./shared/models:/opt/models"
+
+  scraper:
+    container_name: scraper
+    build:
+      context: .
+      dockerfile: "scraper-alpine.dockerfile"
+    ports:
+    - 3000:3000
+    volumes:
+    # - "${PWD}:/app/code" # change it for "$PWD:/app", if you want to share the source code with the container
+    - "./shared/cache:/data/cache"
+    - "./shared/conf.d:/app/conf.d"
+
+  aile:
+    container_name: scraphub-aile
+    build:
+      context: shared/docker/templates/automatic-list
+      dockerfile: "aile-alpine.dockerfile"
+    ports:
+    - 8000:8000
+    - 8888:8888
+    volumes:
+    # - "${PWD}:/app/code" # change it for "$PWD:/app", if you want to share the source code with the container
+    - "./shared/data:/data"
+    - "./shared/conf.d:/app/conf.d"
+    - "./shared/data/annotated:/data/annotated"
+    - "./shared/data/projects:/data/projects"
+    - "./cmd:/app/cmd"
+    #- "/tmp/.X11-unix:/tmp/.X11-unix:ro"
+    #- "$XAUTHORITY:/root/.Xauthority"
+    command: ["/bin/bash"]
+
+  deepdetect:
+    container_name: deepdetect-cpu
+    image: beniz/deepdetect_cpu
+    ports:
+    - 8890:8890
+    volumes:
+    - "./shared/data/deepdetect:/data"
+    - "./shared/models:/opt/models"
+    command: ["./dede", "-host", "0.0.0.0", "-port", "8890"]
+
+  deepdetect-tf:
+    container_name: deepdetect-tf-cpu
+    build:
+      context: shared/docker/templates/deepdetect/docker/cpu-caffe-tf
+      dockerfile: Dockerfile
+    ports:
+    - 8895:8895
+    volumes:
+    - "./shared/data/deepdetect:/data"
+    - "./shared/models:/opt/models"
+    command: ["./dede", "-host", "0.0.0.0", "-port", "8895"] 
+
+  elk5:
+    container_name: elk-v5.x
+    image: cdrocker/elk5:latest
+    ports:
+    - 5601:5601
+    - 9200:9200
+    - 5044:5044
+    volumes:
+    - "./shared/data/elasticsearch:/var/lib/elasticsearch"
