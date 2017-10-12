@@ -7,7 +7,7 @@ MAINTAINER Rosco Pecoltran <https://github.com/roscopecoltran>
 ARG GOPATH=${GOPATH:-"/go"}
 ARG APK_INTERACTIVE=${APK_INTERACTIVE:-"bash nano tree"}
 ARG APK_RUNTIME=${APK_RUNTIME:-"go git openssl ca-certificates"}
-ARG APK_BUILD=${APK_BUILD:-"gcc g++ musl-dev gfortran lapack-dev openssl-dev"}
+ARG APK_BUILD=${APK_BUILD:-"gcc g++ musl-dev gfortran lapack-dev openssl-dev oniguruma-dev"}
 
 ENV APP_BASENAME=${APP_BASENAME:-"scraper"} \
     PATH="${GOPATH}/bin:/app:$PATH" \
