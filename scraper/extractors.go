@@ -9,11 +9,16 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/html"
 )
 
 type Extractor struct {
 	val string
 	fn  extractorFn
+}
+
+func GetExtractorValue(ext Extractors) string {
+	return ext[0].val
 }
 
 func NewExtractor(value string) (*Extractor, error) {
@@ -237,4 +242,12 @@ var generators = []struct {
 			}, nil
 		},
 	},
+}
+
+func loadHTML(str string) *html.Node {
+	node, err := html.Parse(strings.NewReader(str))
+	if err != nil {
+		panic(err)
+	}
+	return node
 }

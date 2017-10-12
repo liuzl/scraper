@@ -7,10 +7,20 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	// "gopkg.in/yaml.v2"
+	// "github.com/roscopecoltran/configor"
 )
 
 // Result represents a result
 type Result map[string]string
+type MultiResult map[string][]Result
+
+type Entry struct {
+	id    int
+	title string
+	url   string
+	desc  string
+}
 
 //the configuration file
 type Config map[string]*Endpoint
@@ -33,10 +43,19 @@ func (h *Handler) LoadConfigFile(path string) error {
 
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
+
 	//json unmarshal performs selector validation
+
+	/*
+		if err := yaml.Unmarshal(b, &c); err != nil {
+			return err
+		}
+	*/
+
 	if err := json.Unmarshal(b, &c); err != nil {
 		return err
 	}
+
 	if h.Log {
 		for k, e := range c {
 			if strings.HasPrefix(k, "/") {
@@ -78,7 +97,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// always JSON!
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// admin actions
 	if r.URL.Path == "" || r.URL.Path == "/" {
 		get := false

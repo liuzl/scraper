@@ -10,7 +10,18 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-)
+	"github.com/moovweb/css2xpath"
+	/*
+		"github.com/rakanalh/goscrape"
+		"github.com/rakanalh/goscrape/extract"
+		"github.com/rakanalh/goscrape/processors"
+	*//*
+		"github.com/gorilla/css/scanner"
+		"github.com/moovweb/gokogiri"
+		"github.com/moovweb/gokogiri/html"
+		"github.com/moovweb/gokogiri/xml"
+		"github.com/moovweb/gokogiri/xpath"
+	*/)
 
 var templateRe = regexp.MustCompile(`\{\{\s*(\w+)\s*(:(\w+))?\s*\}\}`)
 
@@ -19,16 +30,14 @@ func template(isurl bool, str string, vars map[string]string) (out string, err e
 		m := templateRe.FindStringSubmatch(key)
 		k := m[1]
 		value, ok := vars[k]
-		//missing - apply defaults or error
-		if !ok {
+		if !ok { //missing - apply defaults or error
 			if m[3] != "" {
 				value = m[3]
 			} else {
 				err = errors.New("Missing param: " + k)
 			}
 		}
-		//determine if we need to escape
-		if isurl {
+		if isurl { //determine if we need to escape
 			queryi := strings.Index(str, "?")
 			keyi := strings.Index(str, key)
 			if queryi != -1 && keyi > queryi {
@@ -61,4 +70,18 @@ func jsonerr(err error) []byte {
 
 func logf(format string, args ...interface{}) {
 	log.Printf("[scraper] "+format, args...)
+}
+
+func xPathToCss(xpath []string, xtype string) []string {
+	fmt.Printf("xpath type: %s \n", xtype)
+	var result []string
+	for _, css := range xpath {
+		switch xtype {
+		case "local":
+			result = append(result, css2xpath.Convert(css, css2xpath.LOCAL))
+		default:
+			result = append(result, css2xpath.Convert(css, css2xpath.GLOBAL))
+		}
+	}
+	return result
 }
