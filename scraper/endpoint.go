@@ -132,7 +132,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
-	url, err := template(true, fmt.Sprintf("%s/%s", e.BaseURL, e.URL), params) //render url using params
+	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.URL), params) //render url using params
 	if err != nil {
 		return nil, err
 	}

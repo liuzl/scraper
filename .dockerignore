@@ -3,11 +3,20 @@
 *.a
 *.so
 
+dist/grawler
+dist/scraper-*
+
 proto/
 
 # Folders
 _obj
 _test
+
+LICENSE
+*.md
+*-example
+docker-compose.yml
+*.dockerfile
 
 # Architecture specific extensions/prefixes
 *.[568vq]

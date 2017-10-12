@@ -1,5 +1,5 @@
 ---
-version: '2.1'
+version: '3'
 services:
 
   data:
@@ -17,14 +17,15 @@ services:
     build:
       context: .
       dockerfile: "scraper-alpine.dockerfile"
+    # network_mode: "host"
     ports:
     - 3000:3000
     volumes:
     - "${PWD}:/go/src/github.com/roscopecoltran/scraper" # change it for "$PWD:/app", if you want to share the source code with the container
     - "./shared/cache:/data/cache"
     - "./shared/conf.d:/app/conf.d"
-    command: ["/bin/bash"]
-    # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
+    # command: ["/bin/bash"]
+    command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
 
   aile:
     container_name: scraphub-aile
@@ -34,6 +35,7 @@ services:
     ports:
     - 8000:8000
     - 8888:8888
+    # network_mode: "host"
     volumes:
     # - "${PWD}:/app/code" # change it for "$PWD:/app", if you want to share the source code with the container
     - "./shared/data:/data"
@@ -48,6 +50,7 @@ services:
   deepdetect:
     container_name: deepdetect-cpu
     image: beniz/deepdetect_cpu
+    # network_mode: "host"
     ports:
     - 8890:8890
     volumes:
@@ -60,6 +63,7 @@ services:
     build:
       context: shared/docker/templates/deepdetect/docker/cpu-caffe-tf
       dockerfile: Dockerfile
+    # network_mode: "host"
     ports:
     - 8895:8895
     volumes:
@@ -70,6 +74,7 @@ services:
   elk5:
     container_name: elk-v5.x
     image: cdrocker/elk5:latest
+    # network_mode: "host"
     ports:
     - 5601:5601
     - 9200:9200

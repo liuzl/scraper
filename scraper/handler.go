@@ -7,8 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
-	"github.com/k0kubun/pp"
+	// "github.com/k0kubun/pp"
 	// "gopkg.in/yaml.v2"
 	// "github.com/roscopecoltran/configor"
 )
@@ -53,7 +52,6 @@ var Endpoints struct {
 
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
-
 	/*
 		if err := yaml.Unmarshal(b, &c); err != nil {
 			return err
@@ -65,7 +63,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 	if h.Log {
 		for k, e := range c.Routes {
-			pp.Print(c.Routes)
+			// pp.Print(c.Routes)
 			if strings.HasPrefix(e.Route, "/") {
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
@@ -90,7 +88,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 		logf("Enabled debug mode")
 	}
 
-	pp.Print(Endpoints)
+	// pp.Print(Endpoints)
 
 	//replace config
 	h.Config = c
