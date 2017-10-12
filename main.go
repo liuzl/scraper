@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/jpillora/opts"
-	"github.com/jpillora/scraper/scraper"
+	"github.com/roscopecoltran/scraper/scraper"
 )
 
 var VERSION = "0.0.0"

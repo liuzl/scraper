@@ -24,3 +24,11 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+vendor
+vendor/
+vendor/**
+
+dist/scraper-*
+bin/scraper
+bin/server

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/rakanalh/goscrape"
-	"github.com/rakanalh/goscrape/extract"
+	"github.com/rakanalh/goscrape/extractor"
 	"github.com/rakanalh/goscrape/processors"
 )
 

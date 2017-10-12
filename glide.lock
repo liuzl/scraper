@@ -1,0 +1,69 @@
+hash: b312c55269d0cd467d4ddb0abe1aa3466399dccae455d4dcc07b3f29054295c5
+updated: 2017-10-12T17:28:28.616278097+02:00
+imports:
+- name: github.com/andybalholm/cascadia
+  version: 349dd0209470eabd9514242c688c403c0926d266
+- name: github.com/antchfx/xpath
+  version: 58d12fe685d684ed55aab3b988394652025e36dc
+- name: github.com/antchfx/xquery
+  version: 442bfabf14dcc3267c6268c526720e659b5c0e65
+  subpackages:
+  - html
+- name: github.com/jpillora/opts
+  version: 3f7962811f238e35bdbd9a74cbfcd45b209dd298
+- name: github.com/k0kubun/pp
+  version: e057ee7a28277be4d2af303443b6da377768181f
+- name: github.com/kardianos/osext
+  version: ae77be60afb1dcacde03767a8c37337fad28ac14
+- name: github.com/mattn/go-colorable
+  version: 6c0fd4aa6ec5818d5e3ea9e03ae436972a6c5a9a
+- name: github.com/mattn/go-isatty
+  version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
+- name: github.com/moovweb/gokogiri
+  version: eafc181356de1da75468a7bdf54b430393f9c0e3
+  subpackages:
+  - help
+  - html
+  - util
+  - xml
+  - xpath
+- name: github.com/moovweb/rubex
+  version: cb849acea6148000db8a55743f71476b0897ea41
+- name: github.com/PuerkitoBio/goquery
+  version: e1271ee34c6a305e38566ecd27ae374944907ee9
+- name: github.com/rakanalh/goscrape
+  version: f1a8d02041707967d5e86eaf2418a6b0a76f7ef0
+  subpackages:
+  - extractor
+  - processors
+- name: github.com/roscopecoltran/css2xpath
+  version: c88fdc0475d215213077bf93f9f3f2d7a2426408
+- name: golang.org/x/net
+  version: 57efc9c3d9f91fb3277f8da1cff370539c4d3dc5
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+- name: golang.org/x/sys
+  version: e312636bdaa2fac4f0acde9d17ab9fbad2b4ad10
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: b19bf474d317b857955b12035d2c5acb57ce8b01
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - transform
+testImports: []

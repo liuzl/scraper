@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/moovweb/css2xpath"
+	"github.com/roscopecoltran/css2xpath"
 	/*
 		"github.com/rakanalh/goscrape"
 		"github.com/rakanalh/goscrape/extract"
