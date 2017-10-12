@@ -33,10 +33,8 @@ RUN \
     go get -v -u github.com/mitchellh/gox && \
     \
     glide install --strip-vendor
-
-#    \
-#    gox -verbose -os="linux" -arch="amd64" -output="/app/{{.Dir}}" ./cmd/scraper-server
-# apk add --no-cache oniguruma-dev
+    \
+    gox -verbose -os="linux" -arch="amd64" -output="/app/{{.Dir}}" ./cmd/scraper-server
 
 VOLUME ["/data"]
 

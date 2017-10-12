@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/roscopecoltran/css2xpath"
+	// "github.com/roscopecoltran/css2xpath"
 	/*
 		"github.com/rakanalh/goscrape"
 		"github.com/rakanalh/goscrape/extract"
@@ -72,6 +72,7 @@ func logf(format string, args ...interface{}) {
 	log.Printf("[scraper] "+format, args...)
 }
 
+/*
 func xPathToCss(xpath []string, xtype string) []string {
 	fmt.Printf("xpath type: %s \n", xtype)
 	var result []string
@@ -85,3 +86,4 @@ func xPathToCss(xpath []string, xtype string) []string {
 	}
 	return result
 }
+*/
