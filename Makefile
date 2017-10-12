@@ -4,8 +4,8 @@ run:
 build:
 	@go build -o $(CURDIR)/dist/scraper-local main.go
 
-dist: deps
-	@gox -verbose -os="darwin linux" -arch="amd64" -output="$(CURDIR)/dist/scraper-{{.OS}}" .
+dist:
+	gox -verbose -os="darwin linux" -arch="amd64" -output="./dist/scraper-{{.OS}}" $(glide novendor)
 
 deps:
 	@go get -v -u github.com/Masterminds/glide
