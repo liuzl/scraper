@@ -26,8 +26,8 @@ type Entry struct {
 
 //the configuration file
 type Config struct {
-	Port   int                  `default:"3000" json:"port,omitempty"`
-	Routes map[string]*Endpoint `json:"routes,omitempty"`
+	Port   int         `default:"3000" json:"port,omitempty"`
+	Routes []*Endpoint `json:"routes,omitempty"`
 }
 
 type Handler struct {
@@ -54,29 +54,31 @@ var Endpoints struct {
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
 
-	//json unmarshal performs selector validation
-
 	/*
 		if err := yaml.Unmarshal(b, &c); err != nil {
 			return err
 		}
 	*/
-
-	if err := json.Unmarshal(b, &c); err != nil {
+	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
 	}
 
-	// pp.Print(c)
-
 	if h.Log {
 		for k, e := range c.Routes {
-			if strings.HasPrefix(k, "/") {
-				delete(c.Routes, k)
-				k = strings.TrimPrefix(k, "/")
+			//fmt.Printf("Endpoint key: %d \n\n", k)
+			//fmt.Println("Endpoint params:")
+			//pp.Print(e)
+			//fmt.Println("Routes config:")
+			pp.Print(c.Routes)
+			if strings.HasPrefix(e.Route, "/") {
+				// delete(c.Routes[k], e)
+				// c.Routes[k] = nil
+				// pp.Print(e)
+				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
-			logf("Loaded endpoint: /%s", k)
-			Endpoints.Routes = append(Endpoints.Routes, k)
+			logf("Loaded endpoint: /%s", e.Route)
+			Endpoints.Routes = append(Endpoints.Routes, e.Route)
 			// Copy the Debug attribute
 			e.Debug = h.Debug
 			// Copy the Header attributes (only if they are not yet set)
@@ -174,8 +176,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Endpoint will return the Handler's Endpoint from its Config
 func (h *Handler) Endpoint(path string) *Endpoint {
-	if e, ok := h.Config.Routes[path]; ok {
-		return e
+	var keyCfg int
+	for k, v := range h.Config.Routes {
+		//fmt.Println("k: \n")
+		//pp.Println(k)
+		//fmt.Println("v.Route: \n")
+		//pp.Println(v.Route)
+		//fmt.Println("v: \n")
+		//pp.Println(v)
+		if v.Route == path {
+			keyCfg = k
+			break
+		}
 	}
+	if h.Config.Routes[keyCfg] != nil {
+		return h.Config.Routes[keyCfg]
+	}
+	//if e, ok := h.Config.Routes[keyCfg]; ok {
+	//	return e
+	//}
 	return nil
 }

@@ -49,6 +49,7 @@ type Endpoint struct {
 	Debug      bool `default:"true" json:"debug,omitempty"`
 	StrictMode bool `default:"false" json:"strict_mode,omitempty"`
 
+	Route   string `json:"route,omitempty"`
 	Name    string `json:"name,omitempty"`
 	Method  string `json:"method,omitempty"`
 	BaseURL string `json:"base_url,omitempty"`
