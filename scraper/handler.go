@@ -65,15 +65,8 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 	if h.Log {
 		for k, e := range c.Routes {
-			//fmt.Printf("Endpoint key: %d \n\n", k)
-			//fmt.Println("Endpoint params:")
-			//pp.Print(e)
-			//fmt.Println("Routes config:")
 			pp.Print(c.Routes)
 			if strings.HasPrefix(e.Route, "/") {
-				// delete(c.Routes[k], e)
-				// c.Routes[k] = nil
-				// pp.Print(e)
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
@@ -178,12 +171,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Endpoint(path string) *Endpoint {
 	var keyCfg int
 	for k, v := range h.Config.Routes {
-		//fmt.Println("k: \n")
-		//pp.Println(k)
-		//fmt.Println("v.Route: \n")
-		//pp.Println(v.Route)
-		//fmt.Println("v: \n")
-		//pp.Println(v)
 		if v.Route == path {
 			keyCfg = k
 			break
@@ -192,8 +179,5 @@ func (h *Handler) Endpoint(path string) *Endpoint {
 	if h.Config.Routes[keyCfg] != nil {
 		return h.Config.Routes[keyCfg]
 	}
-	//if e, ok := h.Config.Routes[keyCfg]; ok {
-	//	return e
-	//}
 	return nil
 }
