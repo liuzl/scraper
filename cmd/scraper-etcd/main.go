@@ -9,9 +9,10 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
-	// etcd "github.com/coreos/etcd/clientv3"
-	// "github.com/soyking/e3ch"
+	etcd "github.com/coreos/etcd/clientv3"
+	"github.com/soyking/e3ch"
 
 	"github.com/jpillora/opts"
 	"github.com/roscopecoltran/scraper/scraper"
@@ -31,7 +32,6 @@ type config struct {
 	EtcdPort   int    `default:"2379" help:"Listening port" json:"etcd_port"`
 }
 
-/*
 func initEtcd() {
 	// initial etcd v3 client
 	// strings.Split(*etcdServer, ",")
@@ -63,7 +63,6 @@ func initEtcd() {
 	clt.List("/dir1")
 	clt.Delete("/dir")
 }
-*/
 
 func main() {
 
@@ -99,7 +98,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// initEtcd()
+	initEtcd()
 
 	log.Printf("[scraper] Listening on %d...", c.Port)
 	log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), h))

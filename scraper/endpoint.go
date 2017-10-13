@@ -46,7 +46,7 @@ import (
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
 type Endpoint struct {
 	Disabled   bool `default:"false" json:"disabled,omitempty"`
-	Debug      bool `default:"true" json:"debug,omitempty"`
+	Debug      bool `default:"false" json:"debug,omitempty"`
 	StrictMode bool `default:"false" json:"strict_mode,omitempty"`
 
 	Route   string `json:"route,omitempty"`
@@ -72,12 +72,13 @@ type ExtractConfig struct {
 }
 
 type SelectorConfig struct {
-	Slug     string                `json:"slug,omitempty"`
-	Debug    bool                  `default:"true" json:"debug,omitempty"`
-	Required bool                  `default:"true" json:"required,omitempty"`
-	Selector string                `default:"css" json:"selector,omitempty"`
-	Items    string                `json:"items,omitempty"`
-	Details  map[string]Extractors `json:"details,omitempty"`
+	Slug       string                `json:"slug,omitempty"`
+	Debug      bool                  `default:"true" json:"debug,omitempty"`
+	Required   bool                  `default:"true" json:"required,omitempty"`
+	Selector   string                `default:"css" json:"selector,omitempty"`
+	Items      string                `json:"items,omitempty"`
+	Details    map[string]Extractors `json:"details,omitempty"`
+	StrictMode bool                  `default:"false" json:"strict_mode,omitempty"`
 	// Type     string                `json:"type,omitempty"`
 }
 
@@ -102,6 +103,7 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 }
 
 func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
+	pp.Print(e)
 	r := Result{}
 	for field, ext := range fields {
 		xpathRule := GetExtractorValue(ext)
@@ -132,6 +134,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
+	pp.Print(e)
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.URL), params) //render url using params
 	if err != nil {
 		return nil, err
@@ -181,18 +184,17 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		for b, s := range e.Blocks {
 			if s.Items != "" {
+				pp.Print(s)
 				var results []Result
 				htmlquery.FindEach(doc, s.Items, func(i int, node *html.Node) {
 					// pp.Print(node)
 					r := e.extractXpath(node, s.Details)
 					// r["id"] = strconv.Itoa(i)
-					/*
-						if len(r) == len(s.Details) && e.StrictMode {
-							results = append(results, r)
-						} else if len(r) > 0 && !e.StrictMode {
-							results = append(results, r)
-						}
-					*/
+					if len(r) == len(s.Details) && s.StrictMode {
+						results = append(results, r)
+					} else if len(r) > 0 && !s.StrictMode {
+						results = append(results, r)
+					}
 					if r != nil {
 						results = append(results, r)
 					}

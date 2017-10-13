@@ -42,3 +42,20 @@ shared/data/deepdetect/**
 
 shared/data/elasticsearch/
 shared/data/elasticsearch/**
+
+shared/data/etcd/
+shared/data/etcd/**
+
+server.rsa.crt
+server.rsa.key
+
+panicparse
+
+shared/data/influxdb/data
+shared/data/influxdb/meta
+shared/data/influxdb/wal
+
+shared/data/grafana/lib
+shared/data/grafana/log
+
+shared/data/etcd/member

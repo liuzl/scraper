@@ -1,5 +1,5 @@
 {
-  "port": 3000,
+  "port": 3008,
   "routes": [
     {
       "route": "/google/search",
@@ -53,6 +53,30 @@
             "desc": "h3 a",
             "url": [
               "h3 a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "route": "/golanglibs",
+      "debug": true,
+      "strict_mode": true,
+      "name": "golanglibs",
+      "base_url": "https://golanglibs.com",
+      "url": "/search?q={{query}}",
+      "timeout": 10,
+      "selector": "xpath",
+      "blocks": {
+        "result": {
+          "strict_mode": true,
+          "items": "/html/body/div[1]/div[3]/div[1]/div",
+          "details": {
+            "title": "div[2]/div/a",
+            "desc": "div[2]/div",
+            "url": [
+              "div[2]/div/a",
               "@href"
             ]
           }

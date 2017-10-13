@@ -14,13 +14,17 @@ ENV APP_BASENAME=${APP_BASENAME:-"scraper"} \
     GOPATH=${GOPATH:-"/go"}
 
 RUN \
-      apk add --no-cache ${APK_RUNTIME} && \
+        echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
     \
-      apk add --no-cache --virtual=.interactive-dependencies ${APK_INTERACTIVE} && \
+        apk upgrade && \
     \
-      apk add --no-cache --virtual=.build-dependencies ${APK_BUILD} && \
+        apk add --no-cache ${APK_RUNTIME} && \
     \
-    mkdir -p /data/cache
+        apk add --no-cache --virtual=.interactive-dependencies ${APK_INTERACTIVE} && \
+    \
+        apk add --no-cache --virtual=.build-dependencies ${APK_BUILD} && \
+    \
+        mkdir -p /data/cache
 #    \
 #      apk del --no-cache --virtual=.build-dependencies && \
 

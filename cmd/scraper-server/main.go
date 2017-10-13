@@ -1,5 +1,7 @@
 package main
 
+// luc
+
 import (
 	"log"
 	"net/http"
@@ -7,6 +9,9 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	// etcd "github.com/coreos/etcd/clientv3"
+	// "github.com/soyking/e3ch"
 
 	"github.com/jpillora/opts"
 	"github.com/roscopecoltran/scraper/scraper"
@@ -16,11 +21,49 @@ var VERSION = "0.0.0"
 
 type config struct {
 	*scraper.Handler `type:"embedded"`
-	ConfigFile       string `type:"arg" help:"Path to JSON configuration file"`
-	Host             string `help:"Listening interface"`
-	Port             int    `help:"Listening port"`
-	NoLog            bool   `help:"Disable access logs"`
+	// etcdClient       *etcd.Client `json:"-"`
+
+	ConfigFile string `type:"arg" help:"Path to JSON configuration file" json:"config_file"`
+	Host       string `default:"0.0.0.0" help:"Listening interface" json:"host"`
+	Port       int    `default:"8092" help:"Listening port" json:"port"`
+	NoLog      bool   `default:"false" help:"Disable access logs" json:"logs"`
+	EtcdHost   string `default:"etcd-1,etcd-2" help:"Listening interface" json:"etcd_host"`
+	EtcdPort   int    `default:"2379" help:"Listening port" json:"etcd_port"`
 }
+
+/*
+func initEtcd() {
+	// initial etcd v3 client
+	// strings.Split(*etcdServer, ",")
+	e3Clt, err := etcd.New(etcd.Config{
+		Endpoints:   []string{"etcd-1:2379"},
+		DialTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// new e3ch client with namespace(rootKey)
+	clt, err := client.New(e3Clt, "scraper")
+	if err != nil {
+		panic(err)
+	}
+
+	// set the rootKey as directory
+	err = clt.FormatRootKey()
+	if err != nil {
+		panic(err)
+	}
+
+	clt.CreateDir("/dir1")
+	clt.Create("/dir1/key1", "")
+	clt.Create("/dir", "")
+	clt.Put("/dir1/key1", "value1")
+	clt.Get("/dir1/key1")
+	clt.List("/dir1")
+	clt.Delete("/dir")
+}
+*/
 
 func main() {
 
@@ -55,6 +98,8 @@ func main() {
 	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
 		log.Fatal(err)
 	}
+
+	// initEtcd()
 
 	log.Printf("[scraper] Listening on %d...", c.Port)
 	log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), h))

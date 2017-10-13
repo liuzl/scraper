@@ -181,3 +181,17 @@ docker-compose.yml
 crane.yml
 *.dockerfile
 
+server.rsa.crt
+server.rsa.key
+
+panicparse
+
+shared/data/influxdb/data
+shared/data/influxdb/meta
+shared/data/influxdb/wal
+
+shared/data/grafana/lib
+shared/data/grafana/log
+
+shared/data/etcd/member
+
