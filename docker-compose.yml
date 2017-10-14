@@ -30,7 +30,9 @@ services:
     - "./shared/cache:/data/cache"
     - "./shared/conf.d:/app/conf.d"
     # command: ["/bin/bash"]
-    command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
+    # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
+    command: ["go", "run", "cmd/scraper-etcd/main.go", "--debug", "/app/conf.d/providers.list.json"]
+    # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
 
   aile:
     container_name: scraphub-aile

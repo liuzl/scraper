@@ -125,6 +125,39 @@ services:
     - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-1
     - ETCD_INITIAL_CLUSTER_STATE=new
 
+  influxdb:
+    container_name: influxdb
+    image: influxdb:1.3-alpine
+    volumes:
+    - ./shared/data/influxdb:/var/lib/influxdb
+    # volumes_from:
+    # - applications
+    ports:
+    - 8083:8083
+    - 8086:8086
+    privileged: true
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:4.5.2
+    # volumes_from:
+    # - applications
+    volumes:
+    - "./shared/conf.d/grafana/grafana.ini:/etc/grafana/grafana.ini"
+    - ./shared/data/grafana/lib:/var/lib/grafana
+    - ./shared/data/grafana/lib/plugins:/var/lib/grafana/plugins
+    - ./shared/data/grafana/log:/var/log/grafana
+    links:
+    - influxdb:influxdb
+    environment:
+    - GF_INSTALL_PLUGINS=grafana-clock-panel
+    ports:
+    - 3000:3000
+    depends_on:
+    - influxdb
+    privileged: true
+
+
   prometheus:
     image: prom/prometheus
     volumes:

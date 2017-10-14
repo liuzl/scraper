@@ -9,10 +9,13 @@ import:
   - webdav
   - http2
   - http2/hpack
+- package: github.com/kennygrant/sanitize  
+- package: github.com/leebenson/conform
 - package: github.com/PuerkitoBio/goquery
 - package: github.com/antchfx/xquery
   subpackages:
   - html
+- package: github.com/microcosm-cc/bluemonday
 - package: github.com/grpc-ecosystem/grpc-gateway
   version: master
   subpackages:

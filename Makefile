@@ -11,3 +11,6 @@ deps:
 	@go get -v -u github.com/Masterminds/glide
 	@go get -v -u github.com/mitchellh/gox
 	@go get -v -u github.com/moovweb/rubex
+
+compose:
+	@docker-compose up --remove-orphans scraper

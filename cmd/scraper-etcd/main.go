@@ -3,6 +3,7 @@ package main
 // luc
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,10 +13,10 @@ import (
 	"time"
 
 	etcd "github.com/coreos/etcd/clientv3"
-	"github.com/soyking/e3ch"
-
 	"github.com/jpillora/opts"
+	// "github.com/k0kubun/pp"
 	"github.com/roscopecoltran/scraper/scraper"
+	"github.com/soyking/e3ch"
 )
 
 var VERSION = "0.0.0"
@@ -33,21 +34,28 @@ type config struct {
 }
 
 func initEtcd() {
+
+	fmt.Printf("Connecting to ETCD v3.x cluster...\n")
+
 	// initial etcd v3 client
 	// strings.Split(*etcdServer, ",")
 	e3Clt, err := etcd.New(etcd.Config{
-		Endpoints:   []string{"etcd-1:2379"},
+		Endpoints:   []string{"etcd1:2379"},
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
 		panic(err)
 	}
 
+	// pp.Print(e3Clt)
+
 	// new e3ch client with namespace(rootKey)
 	clt, err := client.New(e3Clt, "scraper")
 	if err != nil {
 		panic(err)
 	}
+
+	// pp.Print(clt)
 
 	// set the rootKey as directory
 	err = clt.FormatRootKey()
@@ -62,6 +70,9 @@ func initEtcd() {
 	clt.Get("/dir1/key1")
 	clt.List("/dir1")
 	clt.Delete("/dir")
+
+	clt.List("/")
+
 }
 
 func main() {

@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
-	// "strconv"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
 	"github.com/k0kubun/pp"
+	"github.com/leebenson/conform"
 	"golang.org/x/net/html"
+	// "github.com/microcosm-cc/bluemonday"
+	// "github.com/kennygrant/sanitize"
+	// "github.com/slotix/slugifyurl"
 	// "github.com/antchfx/xpath"
 	// "github.com/advancedlogic/GoOse"
 	/*
@@ -103,7 +107,7 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 }
 
 func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
-	pp.Print(e)
+	// pp.Print(e)
 	r := Result{}
 	for field, ext := range fields {
 		xpathRule := GetExtractorValue(ext)
@@ -134,7 +138,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
-	pp.Print(e)
+	// pp.Print(e)
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.URL), params) //render url using params
 	if err != nil {
 		return nil, err
@@ -187,24 +191,28 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 				pp.Print(s)
 				var results []Result
 				htmlquery.FindEach(doc, s.Items, func(i int, node *html.Node) {
-					// pp.Print(node)
 					r := e.extractXpath(node, s.Details)
-					// r["id"] = strconv.Itoa(i)
-					if len(r) == len(s.Details) && s.StrictMode {
+					if len(r) == len(s.Details) {
 						results = append(results, r)
-					} else if len(r) > 0 && !s.StrictMode {
-						results = append(results, r)
+					} else if len(r) > 0 {
+						if s.StrictMode == false {
+							results = append(results, r)
+						}
 					}
+					conform.Strings(r)
 					if r != nil {
+						r["id"] = strconv.Itoa(i)
 						results = append(results, r)
 					}
+					fmt.Print(" ---[ result: \n")
+					pp.Print(r)
+					fmt.Print(" ]---- \n")
 				})
 				if results != nil {
 					aggregate[b] = results
 				}
 			}
 		}
-
 	case "css":
 		doc, err := goquery.NewDocumentFromReader(resp.Body) //parse HTML
 		if err != nil {
