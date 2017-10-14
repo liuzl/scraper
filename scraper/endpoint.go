@@ -47,45 +47,6 @@ import (
 	- https://github.com/peterhellberg/link
 */
 
-// Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
-type Endpoint struct {
-	Disabled   bool `default:"false" json:"disabled,omitempty"`
-	Debug      bool `default:"false" json:"debug,omitempty"`
-	StrictMode bool `default:"false" json:"strict_mode,omitempty"`
-
-	Route   string `json:"route,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Method  string `json:"method,omitempty"`
-	BaseURL string `json:"base_url,omitempty"`
-	URL     string `json:"url"`
-	Body    string `json:"body,omitempty"`
-
-	Selector  string                    `default:"css" json:"selector,omitempty"`
-	Headers   map[string]string         `json:"headers,omitempty"`
-	Blocks    map[string]SelectorConfig `json:"blocks,omitempty"`
-	Extract   ExtractConfig             `default:"false" json:"extract,omitempty"`
-	MinFields int                       `json:"-"`
-	Count     string                    `json:"-"`
-}
-
-type ExtractConfig struct {
-	Debug     bool `default:"true" json:"debug,omitempty"`
-	Links     bool `default:"true" json:"links,omitempty"`
-	Meta      bool `default:"true" json:"meta,omitempty"`
-	OpenGraph bool `default:"true" json:"opengraph,omitempty"`
-}
-
-type SelectorConfig struct {
-	Slug       string                `json:"slug,omitempty"`
-	Debug      bool                  `default:"true" json:"debug,omitempty"`
-	Required   bool                  `default:"true" json:"required,omitempty"`
-	Selector   string                `default:"css" json:"selector,omitempty"`
-	Items      string                `json:"items,omitempty"`
-	Details    map[string]Extractors `json:"details,omitempty"`
-	StrictMode bool                  `default:"false" json:"strict_mode,omitempty"`
-	// Type     string                `json:"type,omitempty"`
-}
-
 func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
 	r := Result{}
 	if e.Debug {

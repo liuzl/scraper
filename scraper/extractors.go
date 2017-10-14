@@ -12,11 +12,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-type Extractor struct {
-	val string
-	fn  extractorFn
-}
-
 func GetExtractorValue(ext Extractors) string {
 	return ext[0].val
 }

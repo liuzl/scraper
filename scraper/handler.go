@@ -7,34 +7,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	// "github.com/k0kubun/pp"
-	// "gopkg.in/yaml.v2"
 	// "github.com/roscopecoltran/configor"
+	// "github.com/k0kubun/pp"
 )
 
-// Result represents a result
-type Result map[string]string
-type MultiResult map[string][]Result
-
-type Entry struct {
-	id    int
-	title string
-	url   string
-	desc  string
-}
-
-//the configuration file
-type Config struct {
-	Port   int         `default:"3000" json:"port,omitempty"`
-	Routes []*Endpoint `json:"routes,omitempty"`
-}
-
 type Handler struct {
-	Config  Config            `opts:"-"`
-	Headers map[string]string `opts:"-"`
-	Auth    string            `help:"Basic auth credentials <user>:<pass>"`
-	Log     bool              `opts:"-"`
-	Debug   bool              `help:"Enable debug output"`
+	Config  Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
+	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
+	Log     bool              `opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
+	Debug   bool              `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
@@ -52,11 +34,7 @@ var Endpoints struct {
 
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
-	/*
-		if err := yaml.Unmarshal(b, &c); err != nil {
-			return err
-		}
-	*/
+
 	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
 	}

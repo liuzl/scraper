@@ -1,17 +1,12 @@
 package main
 
 import (
-	/*"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
-	"flag"
-	"io/ioutil"
-	*/
 	"errors"
+	"fmt"
 	"sync"
 
 	etcd "github.com/coreos/etcd/clientv3"
-	// clientbuilder "github.com/tonnerre/go-etcd-clientbuilder"
+	"github.com/soyking/e3ch"
 )
 
 var etcdClient *etcd.Client
@@ -24,8 +19,47 @@ var etcdOnceError error
 	-
 */
 
-/*
+func initEtcd() {
 
+	fmt.Printf("Connecting to ETCD v3.x cluster...\n")
+
+	// initial etcd v3 client
+	// strings.Split(*etcdServer, ",")
+	e3Clt, err := etcd.New(etcd.Config{
+		Endpoints:   []string{"etcd1:2379"},
+		DialTimeout: 5 * time.Second,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// new e3ch client with namespace(rootKey)
+	clt, err := client.New(e3Clt, "scraper")
+	if err != nil {
+		panic(err)
+	}
+
+	// pp.Print(clt)
+
+	// set the rootKey as directory
+	err = clt.FormatRootKey()
+	if err != nil {
+		panic(err)
+	}
+
+	clt.CreateDir("/dir1")
+	clt.Create("/dir1/key1", "")
+	clt.Create("/dir", "")
+	clt.Put("/dir1/key1", "value1")
+	clt.Get("/dir1/key1")
+	clt.List("/dir1")
+	clt.Delete("/dir")
+
+	clt.List("/")
+
+}
+
+/*
 ctx, cancel := context.WithTimeout(context.Background(), timeout)
 resp, err := cli.Put(ctx, "sample_key", "sample_value")
 cancel()
