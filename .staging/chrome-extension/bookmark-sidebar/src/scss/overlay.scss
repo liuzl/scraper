@@ -1,0 +1,713 @@
+@import "include/vars";
+@import "include/mixins";
+@import "include/loading";
+@import "include/scrollBox";
+@import "include/checkbox";
+//
+$textColor: $__textColor;
+@import "include/generals";
+
+body {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::before {
+    content: "";
+    position: relative;
+    display: block;
+    height: 1px;
+  }
+
+  &.noAnimations {
+
+    *, *::before, *::after {
+      transition: none !important;
+    }
+  }
+}
+
+div.modal {
+  position: relative;
+  width: 500px;
+  height: 400px;
+  background: $contentBackground;
+  box-shadow: 0 12px 50px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  user-select: none;
+  transform: scale(0.7);
+  z-index: 2;
+  transition: transform 0.3s;
+
+  &.visible {
+    transform: scale(1);
+  }
+
+  > h1 {
+    @include mask(null, $__foregroundColor, 24px);
+    position: relative;
+    color: $__foregroundColor;
+    font-size: 150%;
+    font-weight: $__fontWeightNormal;
+    height: $overlayHeaderHeight;
+    padding: 12px 75px 0 55px;
+    background-color: $__colorScheme;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+
+    &::before {
+      -webkit-mask-position: 20px center;
+    }
+  }
+
+  > a.close {
+    @include mask('icon-close', $__foregroundColor, 24px);
+    position: absolute;
+    top: 4px;
+    right: 15px;
+    display: block;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+    z-index: 2;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  > a.preview, > span.preview {
+    display: block;
+    font-size: 140%;
+    font-weight: $__fontWeightNormal;
+    margin: 30px 30px 20px 30px;
+    background-color: rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    padding: 17px 15px;
+
+    > img, > span.icon {
+      position: relative;
+      vertical-align: top;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin: 0 20px 0 0;
+    }
+
+    > span.icon {
+      @include mask(#{'icon-' + $__bookmarksDirIcon}, $__bookmarksDirColor, 24px);
+    }
+  }
+
+  > a.preview {
+    transition: background-color 0.3s;
+    cursor: pointer;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    > span.icon {
+      @include mask(#{'icon-demo'}, transparent, 24px);
+
+      @each $color in $demoColors {
+        $i: index($demoColors, $color);
+        &[data-color='#{$i}']::before {
+          background-color: $color;
+        }
+      }
+    }
+
+    + a.previewUrl {
+      display: block;
+      margin: -15px 30px 20px 30px;
+      font-size: 80%;
+      font-weight: $__fontWeightMedium;
+      opacity: 0.7;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      cursor: pointer;
+    }
+  }
+
+  &[data-type='updateUrls'] {
+
+    > h1::before {
+      @include maskImage('icon-update');
+    }
+
+    > p {
+      position: relative;
+      text-align: center;
+      margin-top: 40px;
+      font-size: 140%;
+      line-height: 170%;
+
+      &.success {
+        @include mask('icon-check', $colorSuccess, 48px);
+        padding: 30px 0 80px;
+
+        &::before {
+          -webkit-mask-position-y: bottom;
+        }
+      }
+    }
+
+    > div.error {
+      @include mask('icon-info', $colorNotice, 48px);
+      position: relative;
+      text-align: center;
+      margin-top: 50px;
+      line-height: 150%;
+      padding: 70px 30px 0;
+
+      &::before {
+        -webkit-mask-position-y: top;
+      }
+
+      > h3 {
+        font-size: 160%;
+        font-weight: $__fontWeightNormal;
+        margin-bottom: 25px;
+      }
+    }
+
+    > div.progressBar {
+      position: relative;
+      background: rgba(0, 0, 0, 0.1);
+      height: 3px;
+      margin: 40px 30px 0;
+
+      > div {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        background: $__colorScheme;
+        transition: width 0.1s linear;
+      }
+    }
+
+    > span.progressLabel {
+      display: block;
+      text-align: center;
+      font-size: 120%;
+      margin-top: 20px;
+      opacity: 0.6;
+
+      > span {
+        margin: 0 3px;
+      }
+    }
+
+    > svg.loading {
+      margin: $overlayHeaderHeight auto 0;
+      transition: margin-top 0.5s;
+    }
+
+    > div#urlList {
+      height: calc(100% - #{$overlayHeaderHeight} - 57px);
+
+      > ul {
+        margin: 12px 0;
+
+        > li {
+          transition: background 0.3s;
+          padding: 0 16px 7px 16px;
+
+          &:hover {
+            background: $hoverBackground;
+          }
+
+          > div.checkbox {
+            display: inline-block;
+            vertical-align: top;
+            margin: 10px 16px 0 0;
+          }
+
+          > img {
+            vertical-align: top;
+            display: inline-block;
+            width: 16px;
+            margin: 11px 18px 0 0;
+          }
+
+          > strong {
+            display: inline-block;
+            width: calc(100% - 70px);
+            line-height: 40px;
+            margin-bottom: -10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          > a, > span {
+            position: relative;
+            display: block;
+            margin-left: 70px;
+            line-height: 20px;
+            width: calc(100% - 36px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 22px;
+          }
+
+          > span, > a > span {
+            transition: opacity 0.5s;
+            opacity: 0.6;
+          }
+
+          > a {
+            transition: color 0.5s;
+
+            &:hover {
+              color: $__colorScheme;
+            }
+
+            &:last-of-type {
+              @include mask('icon-check', $colorSuccess, 16px);
+            }
+
+            &:first-of-type {
+              @include mask('icon-close', $colorError, 16px);
+              text-decoration: line-through;
+            }
+
+            &::before {
+              -webkit-mask-position: 0 center !important;
+            }
+          }
+
+          > span {
+            font-style: italic;
+          }
+        }
+      }
+    }
+
+    &.urlCheckLoading {
+      transition: width 0.5s, height 0.5s, margin-top 0.5s;
+    }
+
+    &.urlCheckList {
+      width: 600px;
+      height: 600px;
+      max-height: 100%;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 57px;
+        z-index: 2;
+        background: $hoverBackground;
+      }
+
+      > svg.loading {
+        margin-top: 150px;
+      }
+    }
+  }
+
+  &[data-type='delete'], &[data-type='hide'], &[data-type='openChildren'] {
+
+    > p {
+      padding: 30px 30px 5px 30px;
+      font-size: 140%;
+      line-height: 170%;
+    }
+  }
+
+  &[data-type='delete'] > h1::before {
+    @include maskImage('icon-delete');
+  }
+
+  &[data-type='hide'] > h1::before {
+    @include maskImage('icon-hide');
+  }
+
+  &[data-type='openChildren'] > h1::before {
+    @include maskImage('icon-newTab');
+  }
+
+  &[data-type='infos'] {
+
+    > h1::before {
+      @include maskImage('icon-info');
+    }
+
+    > ul {
+      display: flex;
+      flex-flow: row;
+      font-size: 120%;
+      margin-top: 70px;
+      padding: 0 30px;
+      justify-content: space-between;
+
+      > li {
+        position: relative;
+
+        &.tooltip {
+          @include mask('icon-info', $__textColor, 16px);
+          position: relative;
+          cursor: help;
+          background-size: 16px;
+          padding-right: 18px;
+
+          &::before {
+            opacity: 0.5;
+            -webkit-mask-position: right center;
+          }
+        }
+
+        > ul {
+          position: absolute;
+          top: 27px;
+          right: -10px;
+          background: $tooltipBackground;
+          color: $tooltipTextColor;
+          font-size: 65%;
+          padding: 2px 5px;
+          border-radius: 2px;
+          transform: translate3d(0, -5px, 0);
+          transition: opacity 0.3s, transform 0.3s;
+          @extend %hidden;
+
+          &::before {
+            content: "";
+            position: absolute;
+            top: -14px;
+            right: 10px;
+            border: 7px solid transparent;
+            border-bottom-color: $tooltipBackground;
+          }
+
+          > li {
+            white-space: nowrap;
+            margin: 5px 0;
+          }
+        }
+
+        &:hover > ul {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+      }
+    }
+  }
+
+  &[data-type='edit'], &[data-type='add'] {
+
+    > ul {
+      padding: 2px 30px;
+
+      > li {
+        margin: 20px 0 30px 0;
+
+        > label {
+          font-size: 140%;
+          display: inline-block;
+          width: 80px;
+        }
+
+        > input {
+          display: inline-block;
+          background: transparent;
+          font-size: 120%;
+          width: calc(100% - 80px);
+          padding: 5px 8px;
+          outline: none;
+          box-shadow: none;
+          transition: border-color 0.5s;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+
+          &.error {
+            border-color: $colorError;
+          }
+
+          &:focus {
+            border-color: rgba(0, 0, 0, 0.25);
+          }
+        }
+      }
+    }
+  }
+
+  &[data-type='edit'] > h1::before {
+    @include maskImage('icon-edit');
+  }
+
+  &[data-type='add'] {
+
+    > h1::before {
+      @include maskImage('icon-add');
+    }
+
+    h2 {
+      margin: 0 0 40px 0;
+      font-weight: $__fontWeightThin;
+      font-size: 200%;
+    }
+
+    > ul {
+      transition: opacity 0.5s, transform 0.5s;
+      margin: 10px 0 0 0;
+      transform: translate3d(0, 15px, 0);
+      @extend %hidden;
+
+      &.visible {
+        @extend %visible;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
+    > menu[data-name='select'] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 30px);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 30px;
+      transition: opacity 0.2s, transform 0.2s;
+
+      &.hidden {
+        @extend %hidden;
+        transform: translate3d(0, -40px, 0);
+      }
+
+      > a {
+        @include mask(none, $__textColor, 36px);
+        position: relative;
+        display: block;
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+        background-color: $hoverBackground;
+        transition: box-shadow 0.5s;
+        cursor: pointer;
+
+        &::before {
+          transition: opacity 0.5s, background-color 0.5s;
+          opacity: 0.7;
+        }
+
+        &::after {
+          content: attr(title);
+          position: absolute;
+          display: block;
+          bottom: -30px;
+          left: -50%;
+          width: 200%;
+          padding: 40px 0 0 0;
+          font-size: 120%;
+          text-align: center;
+          color: $__textColor;
+          transition: color 0.5s;
+        }
+
+        &.hover {
+          box-shadow: 1px 4px 7px rgba(0, 0, 0, 0.15);
+
+          &::before {
+            opacity: 1;
+            background-color: $__colorScheme;
+          }
+
+          &::after {
+            color: $__colorScheme;
+          }
+        }
+
+        &[data-type='bookmark']::before {
+          @include maskImage('icon-bookmark');
+        }
+
+        &[data-type='dir']::before {
+          @include maskImage('icon-dir-1');
+        }
+
+        &[data-type='separator']::before {
+          @include maskImage('icon-separator');
+        }
+      }
+    }
+
+    > menu.buttons > a.action {
+      display: none;
+
+      &.visible {
+        display: inline-block;
+      }
+    }
+  }
+
+  > menu.buttons {
+    position: absolute;
+    bottom: 16px;
+    right: 20px;
+    z-index: 3;
+
+    > a {
+      position: relative;
+      display: inline-block;
+      padding: 5px 10px 4px;
+      margin: 0 5px;
+      color: $__colorScheme;
+      font-weight: $__fontWeightBold;
+      text-transform: uppercase;
+      border-radius: 3px;
+      cursor: pointer;
+
+      &::before {
+        content: "";
+        position: absolute;
+        display: block;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 3px;
+        background: $__colorScheme;
+        transition: opacity 0.5s;
+        @extend %hidden;
+      }
+
+      &:hover::before {
+        opacity: 0.15;
+      }
+    }
+  }
+}
+
+body.dark div.modal {
+  background: $darkContentBackground;
+
+  > a.preview, > span.preview {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &[data-type='edit'], &[data-type='add'] {
+
+    > ul > li > input {
+      border-color: rgba(255, 255, 255, 0.1);
+
+      &.error {
+        border-color: rgba($colorError, 0.5);
+      }
+
+      &:focus {
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+
+  &[data-type='add'] {
+
+    > menu:not(.buttons) {
+
+      > a {
+        background-color: $darkHoverBackground;
+
+        &::before, &::after {
+          opacity: 0.5;
+          transition: opacity 0.5s;
+        }
+
+        &:hover {
+
+          &::before {
+            opacity: 1;
+            background-color: $__textColor;
+          }
+
+          &::after {
+            opacity: 1;
+            color: $__textColor;
+          }
+        }
+      }
+    }
+
+    > menu.buttons > a.action {
+      display: none;
+
+      &.visible {
+        display: inline-block;
+      }
+    }
+  }
+
+  &[data-type='infos'] {
+
+    > h1::before {
+      @include maskImage('icon-info');
+    }
+
+    > ul > li > ul {
+      background: $darkTooltipBackground;
+      color: $darkTooltipTextColor;
+
+      &::before {
+        border-bottom-color: $darkTooltipBackground;
+      }
+    }
+  }
+
+  &[data-type='updateUrls'] {
+
+    > div#urlList > ul > li {
+
+      &:hover {
+        background: $darkHoverBackground;
+      }
+
+      > a {
+
+        &:hover {
+          color: $__textColor;
+
+          > span {
+            opacity: 0.9;
+          }
+        }
+      }
+    }
+
+    > div.progressBar {
+      background: rgba(255, 255, 255, 0.1);
+
+      > div {
+        background: $__textColor;
+      }
+    }
+
+    &.urlCheckList {
+
+      &::after {
+        background: $darkHoverBackground;
+      }
+    }
+  }
+
+  > menu.buttons > a {
+    color: $__textColor;
+
+    &::before {
+      background: $__textColor;
+    }
+  }
+}

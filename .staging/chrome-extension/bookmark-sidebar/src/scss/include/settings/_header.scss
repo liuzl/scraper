@@ -1,0 +1,177 @@
+
+body > header {
+  position: relative;
+  width: 100%;
+  height: $settingsHeaderHeight;
+  background: $gradient;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: $settingsHeaderHeight;
+    height: $settingsHeaderHeight;
+    background: img('icon/icon.webp') no-repeat center / 40px;
+  }
+
+  > svg {
+    position: absolute;
+    top: calc(50% - 14px);
+    left: 45px;
+    width: 26px;
+    height: 26px;
+    stroke: rgba(255, 255, 255, 0.5);
+    fill: none;
+  }
+
+  > h1 {
+    display: inline-block;
+    font-size: 150%;
+    margin: 0 0 0 100px;
+    padding: 10px 0 0 0;
+    color: $textColorInverted;
+    font-weight: $__fontWeightLight;
+
+    > span {
+      cursor: pointer;
+
+      + span {
+        position: relative;
+        margin-left: 24px;
+
+        &::before {
+          content: "";
+          position: absolute;
+          top: 9px;
+          left: -14px;
+          border: 5px solid transparent;
+          border-left-color: $textColorInverted;
+          opacity: 0.5;
+        }
+      }
+
+      &:last-child {
+        pointer-events: none;
+      }
+    }
+  }
+
+  > menu {
+    display: inline-block;
+    margin: 10px 30px 0 0;
+    float: right;
+
+    > button {
+      position: relative;
+      display: inline-block;
+      vertical-align: top;
+      border: 0;
+      outline: 0;
+      cursor: pointer;
+
+      &.save {
+        background: $contentBackground;
+        color: $mainColor;
+        padding: 4px 8px;
+        font-weight: $__fontWeightMedium;
+        font-size: 100%;
+        border-radius: 5px;
+        box-shadow: 0px 2px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      &.restore {
+        @include mask('icon-update', $textColorInverted, 24px);
+        background: transparent;
+        margin: 1px 0 0 10px;
+        width: 24px;
+        height: 24px;
+      }
+
+      &.hidden {
+        display: none;
+      }
+    }
+  }
+
+  > div.dialog {
+    position: absolute;
+    top: $settingsHeaderHeight;
+    right: 0;
+    width: 300px;
+    padding: 12px 10px;
+    text-align: center;
+    background: $contentBackground;
+    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.1));
+    transition: opacity 0.3s, transform 0.3s;
+    transform: translate3d(-12px, -10px, 0);
+    @extend %hidden;
+
+    &.visible {
+      @extend %visible;
+      transform: translate3d(-12px, 0, 0);
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      border: 10px solid transparent;
+      border-bottom-color: $contentBackground;
+      top: -20px;
+      right: 20px;
+    }
+
+    > p {
+      line-height: 140%;
+    }
+
+    > a {
+      position: relative;
+      display: inline-block;
+      color: $mainColorAlt;
+      padding: 3px 5px 3px 15px;
+      margin-bottom: 5px;
+      font-weight: $__fontWeightMedium;
+      cursor: pointer;
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 7px;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        border-top: 2px solid $mainColorAlt;
+        border-left: 2px solid $mainColorAlt;
+        transform: rotateZ(135deg);
+      }
+    }
+
+    > span {
+      position: relative;
+      display: inline-block;
+      padding: 6px 10px 5px 30px;
+      margin: 10px 0 15px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 20px;
+
+      &::before {
+        -webkit-mask-position: 8px center !important;
+      }
+    }
+
+    &[data-type='sidebar'] > span {
+      @include mask('icon-settings', $textColor, 16px);
+    }
+
+    &[data-type='appearance'] > span {
+      @include mask('settings/icon-appearance', $textColor, 16px);
+    }
+
+    &[data-type='newtab'] > span {
+      @include mask('settings/icon-newtab', $textColor, 14px);
+    }
+  }
+}

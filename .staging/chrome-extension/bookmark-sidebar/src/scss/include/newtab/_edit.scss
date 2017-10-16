@@ -1,0 +1,350 @@
+
+body > a.edit {
+  @include mask('icon-edit', $textColorLight, 24px);
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 36px;
+  height: 36px;
+  display: block;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+menu.infoBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: $__textColor;
+  padding: 15px 20px;
+  transition: transform 0.5s;
+  transform: translate3d(0, 60px, 0);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  align-items: center;
+
+  > a {
+    display: block;
+    cursor: pointer;
+
+    &.save {
+      background: $contentBackground;
+      padding: 4px 8px;
+      font-weight: $__fontWeightMedium;
+      font-size: 100%;
+      border-radius: 5px;
+      box-shadow: 0px 2px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    &.cancel {
+      color: $textColorInverted;
+      margin: 0 20px;
+      padding: 5px 3px;
+    }
+  }
+}
+
+body[data-pos='right'] {
+
+  > a.edit {
+    right: auto;
+    left: 20px;
+  }
+
+  menu.infoBar {
+    justify-content: flex-start;
+
+    > a {
+
+      &.save {
+        order: 1;
+      }
+
+      &.cancel {
+        order: 2;
+      }
+    }
+  }
+}
+
+body.edit {
+
+  > a.edit {
+    display: none;
+  }
+
+  menu.infoBar {
+    transform: translate3d(0, 0, 0);
+  }
+
+  section#content {
+    height: calc(100vh - 50px);
+
+    > nav {
+
+      a.add, a.remove, a.edit {
+        transition: background 0.3s;
+        border-radius: 50%;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.05);
+        }
+      }
+
+      > a.add {
+        @include mask('icon-add', $textColorLight, 20px);
+        position: absolute;
+        display: block;
+        width: 30px;
+        height: 30px;
+        top: 0;
+        left: -35px;
+      }
+
+      > ul > li {
+        background: rgba(0, 0, 0, 0.05);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        min-width: 60px;
+        border-radius: 3px;
+        margin: 0 2px;
+        padding: 0 0 14px 0;
+        box-shadow: inset 0 -20px 0 -4px rgba(0, 0, 0, 0.05);
+
+        > a.link {
+          pointer-events: none;
+
+          &:hover {
+            background: transparent;
+          }
+        }
+
+        > a.edit, > a.remove {
+          position: relative;
+          display: inline-block;
+          width: 24px;
+          height: 24px;
+        }
+
+        > a.edit {
+          @include mask('icon-edit', $textColorLight, 14px);
+        }
+
+        > a.remove {
+          @include mask('icon-delete', $textColorLight, 14px);
+        }
+
+        > a[data-pos] {
+          position: absolute;
+          display: block;
+          width: 16px;
+          height: 16px;
+          right: 0;
+          bottom: 0;
+          cursor: pointer;
+
+          &::before {
+            content: "";
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 6px;
+            height: 6px;
+            border-top: 2px solid $textColorLight;
+            border-left: 2px solid $textColorLight;
+            transform: rotateZ(135deg);
+          }
+        }
+
+        > a[data-pos='left'] {
+          right: auto;
+          left: 0;
+
+          &::before {
+            transform: rotateZ(-45deg);
+          }
+        }
+
+        &:last-child > a[data-pos='right'],
+        &:first-child > a[data-pos='left'] {
+          display: none;
+        }
+
+        > div {
+          position: absolute;
+          text-align: left;
+          background: $contentBackground;
+          filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.1));
+          padding: 10px;
+          bottom: -170px;
+          right: -10px;
+          height: 160px;
+          width: 250px;
+          border-radius: 3px;
+          z-index: 9;
+
+          &::before {
+            content: "";
+            position: absolute;
+            top: -20px;
+            right: 20px;
+            border: 10px solid transparent;
+            border-bottom-color: $contentBackground;
+          }
+
+          > label {
+            font-weight: $__fontWeightMedium;
+            display: block;
+          }
+
+          > input[type='text'] {
+            outline: none;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: transparent;
+            display: block;
+            width: 100%;
+            margin: 3px 0 10px;
+            padding: 5px;
+
+            &:focus {
+              border-color: rgba(0, 0, 0, 0.25);
+            }
+          }
+
+          > button[type='submit'] {
+            border: none;
+            outline: none;
+            background: none;
+            color: $__colorScheme;
+            font-weight: $__fontWeightMedium;
+            cursor: pointer;
+            float: right;
+            margin-top: 3px;
+          }
+        }
+      }
+    }
+  }
+
+  div#search {
+
+    > input[type='text'] {
+      padding-right: 125px;
+    }
+
+    > button[type="submit"] {
+      display: none;
+    }
+
+    > select {
+      position: absolute;
+      top: 10px;
+      right: 23px;
+      background: $bodyBackground;
+      width: 100px;
+      height: $newTabSearchHeight - 20;
+      border-radius: ($newTabSearchHeight - 20) / 2;
+      padding: 0 7px;
+      border: none;
+      outline: none;
+      cursor: pointer;
+    }
+  }
+
+  div#topPages {
+
+    > select {
+      display: block;
+      background: $contentBackground;
+      height: 25px;
+      margin: -25px auto 0;
+      border-radius: 10px;
+      padding: 0 7px;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+body.dark {
+
+  menu.infoBar {
+    background: $darkHoverBackground;
+
+    > a.save {
+      color: $darkHoverBackground;
+    }
+  }
+
+  > a.edit:hover {
+    background: $darkHoverBackground;
+  }
+
+  &.edit {
+
+    section#content > nav {
+
+      a.add:hover {
+        background: $darkHoverBackground;
+      }
+
+      > ul > li {
+        background: $darkHoverBackground;
+        border-color: rgba(255, 255, 255, 0.075);
+
+        > a.edit, > a.remove {
+
+          &:hover {
+            background: lighten($darkHoverBackground, 10%);
+          }
+        }
+
+        > div {
+          background: $darkHoverBackground;
+          filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.2));
+          transform: translate3d(0, 3px, 0);
+
+          &::before {
+            border-bottom-color: $darkHoverBackground;
+          }
+
+          > input[type='text'] {
+            border-color: rgba(255, 255, 255, 0.2);
+
+            &:focus {
+              border-color: rgba(255, 255, 255, 0.4);
+            }
+          }
+
+          > button[type='submit'] {
+            color: $__textColor;
+          }
+        }
+      }
+    }
+
+    div#search {
+
+      > select {
+        background: lighten($darkHoverBackground, 10%);
+      }
+    }
+
+    div#topPages {
+
+      > select {
+        background: lighten($darkHoverBackground, 10%);
+      }
+    }
+  }
+}

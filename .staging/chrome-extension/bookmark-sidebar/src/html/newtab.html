@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title data-i18n="newtab_title"></title>
+    <style>
+        body.building > * {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body class="building">
+<section id="content">
+    <nav></nav>
+
+    <section class="mid">
+        <div id="search">
+            <input type="text" autofocus />
+            <button type="submit"></button>
+        </div>
+        <div id="topPages"></div>
+    </section>
+</section>
+
+<script src="/js/lib/jsu.js"></script>
+<script src='/js/helper/i18n.js'></script>
+<script src='/js/helper/font.js'></script>
+<script src='/js/helper/stylesheet.js'></script>
+<script src='/js/helper/template.js'></script>
+<script src='/js/helper/model.js'></script>
+<!-- [START REMOVE] -->
+<script src='/js/helper/entry.js'></script>
+<script src='/js/newtab/edit.js'></script>
+<script src='/js/newtab/search.js'></script>
+<script src='/js/newtab/shortcuts.js'></script>
+<script src='/js/newtab/topPages.js'></script>
+<!-- [END REMOVE] -->
+<script src='/js/newtab.js'></script>
+</body>
+</html>

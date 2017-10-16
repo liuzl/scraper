@@ -1,0 +1,113 @@
+@import "include/vars";
+@import "include/mixins";
+
+// Scroll prevention
+body.blockbyte-bs-noscroll {
+  overflow: hidden !important;
+}
+
+// Indicator
+body > div#blockbyte-bs-indicator {
+
+  > div {
+    position: absolute;
+    transform: translate3d(-$__indicatorWidth, 0, 0);
+    top: 0;
+    left: 0;
+    width: $__indicatorWidth !important;
+    height: 100%;
+    background: $__indicatorColor;
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 2;
+    @extend %hidden;
+
+    > span {
+      -webkit-mask: no-repeat center / $__indicatorIconSize;
+      @include maskImage('icon-bookmark');
+      background-color: $__indicatorIconColor;
+      position: absolute;
+      display: block;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &[data-pos='right'] {
+    left: auto;
+    right: 0;
+
+    > div {
+      transform: translate3d($__indicatorWidth, 0, 0);
+      left: auto;
+      right: 0;
+    }
+  }
+
+  &.blockbyte-bs-hover {
+
+    > div {
+      transform: translate3d(0, 0, 0);
+      opacity: 1;
+    }
+  }
+
+  &[data-pos='left'].blockbyte-bs-has-lsb {
+
+    > div {
+      background: transparent;
+
+      > span {
+        -webkit-mask-position-y: 20px;
+      }
+    }
+  }
+}
+
+// Sidebar
+body > iframe#blockbyte-bs-sidebar {
+  width: $__sidebarWidth;
+  max-width: none;
+  height: 0;
+  z-index: #{2147483647 - 1};
+  background-color: $__sidebarMaskColor;
+  border: none;
+  display: block !important;
+  transform: translate3d(-$__sidebarWidth, 0, 0);
+  transition: width 0s 0.3s, height 0s 0.3s, opacity 0.3s, transform 0.3s;
+
+  &[data-pos='right'] {
+    left: auto;
+    right: 0;
+    transform: translate3d($__sidebarWidth, 0, 0);
+  }
+
+  &.blockbyte-bs-visible {
+    @extend %visible;
+    width: calc(100% + #{$__sidebarWidth});
+    height: 100%;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+  &.blockbyte-bs-hideMask {
+    width: calc(#{$__sidebarWidth} + 300px);
+    background: none;
+  }
+}
+
+// Overlay
+body > iframe#blockbyte-bs-overlay {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  z-index: 2147483647;
+  border: none;
+  background: $__overlayMaskColor;
+  transition: opacity 0.3s;
+
+  &.blockbyte-bs-visible {
+    @extend %visible;
+  }
+}

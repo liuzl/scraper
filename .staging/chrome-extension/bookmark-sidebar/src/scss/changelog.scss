@@ -1,0 +1,177 @@
+@import "include/vars";
+@import "include/mixins";
+//
+@import "include/generals";
+
+body {
+  background: $bodyBackground;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+section.infobox {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate3d(0, -40px, 0);
+  transition: opacity 0.5s, transform 0.5s;
+  perspective: 800px;
+  @extend %hidden;
+
+  &.visible {
+    @extend %visible;
+    transform: translate3d(0, 0, 0);
+  }
+
+  > div {
+    position: relative;
+    width: 100%;
+    max-width: 650px;
+    height: 400px;
+    padding: 30px;
+    background: $gradient;
+    color: $textColorInverted;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
+    transform-style: preserve-3d;
+    transition: transform 1s;
+
+    span.icon {
+      display: block;
+      background: img('icon/icon.webp') no-repeat center / 96px;
+      height: 96px;
+      margin: 40px 0;
+    }
+
+    h1 {
+      font-size: 200%;
+      line-height: 130%;
+      font-weight: 200;
+      margin: 15px 0 0 0;
+
+      @media (max-width: 650px) {
+        font-size: 200%;
+      }
+
+      @media (max-width: 400px) {
+        font-size: 170%;
+      }
+
+    }
+
+    a.cta {
+      display: block;
+      margin: 0 auto 30px;
+      width: 250px;
+      background: $contentBackground;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+      color: $mainColor;
+      font-size: 140%;
+      font-weight: 300;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 3px;
+
+      @media (max-width: 650px) {
+        font-size: 120%;
+        width: 220px;
+      }
+    }
+
+    a.close {
+      text-decoration: none;
+      color: $textColorInverted;
+      opacity: 0.5;
+    }
+
+    > div {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      padding: inherit;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+
+      &.back {
+        text-align: left;
+        transform: rotateX(180deg);
+
+        h1 {
+          margin: 0;
+        }
+
+        a.close {
+          @include mask('icon-close', $textColorInverted, 26px);
+          position: absolute;
+          top: 30px;
+          right: 35px;
+          display: block;
+          width: 42px;
+          height: 42px;
+          cursor: pointer;
+          border-radius: 50%;
+          transition: background-color 0.3s;
+          opacity: 0.7;
+          z-index: 2;
+
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+
+  &.flipped {
+
+    > div {
+      transform: rotateX(180deg);
+    }
+  }
+
+  ul.changelog {
+    margin-top: 40px;
+
+    li {
+      padding: 10px 0;
+
+      &:not(.noIndicator)::before {
+        content: "-";
+        margin: 0 10px 0 0;
+      }
+
+      > span.sub { // @deprecated only for changelog v1.10
+        display: block;
+        margin: 5px 0 0 17px;
+        font-size: 90%;
+        opacity: 0.6;
+      }
+
+      ul {
+        margin: 10px 0 0 25px;
+      }
+    }
+
+    a { // @deprecated only for changelog v1.10
+      display: inline-block;
+      background: $contentBackground;
+      padding: 2px 7px;
+      margin: 0px 0 0 10px;
+      color: $mainColor;
+      border-radius: 3px;
+      box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+    }
+  }
+}
