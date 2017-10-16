@@ -1,0 +1,51 @@
+@import "include/vars";
+@import "include/mixins";
+
+body > div#blockbyte-lsb-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  z-index: #{2147483647 - 3};
+
+  &.blockbyte-lsb-visible {
+
+    &::before, &::after {
+      content: "";
+      position: absolute;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translate3d(-$__indicatorWidth, 0, 0);
+      top: 0;
+      left: 0;
+      width: $__indicatorWidth;
+      height: 100%;
+      @extend %hidden;
+    }
+
+    &::before {
+      background: $__indicatorColor;
+      z-index: 1;
+    }
+
+    &::after {
+      position: absolute;
+      background: img('arrow.webp') no-repeat center / $__indicatorIconSize;
+      z-index: 2;
+    }
+
+    &.blockbyte-lsb-hover { // hover
+
+      &::before, &::after {
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
+      }
+    }
+  }
+
+  @media print {
+    display: none;
+  }
+}
