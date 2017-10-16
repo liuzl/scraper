@@ -24,6 +24,8 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/wantedly/gorm-zap"
+	"go.uber.org/zap"
 
 	// "github.com/k0kubun/pp"
 	"github.com/qor/action_bar"
@@ -60,6 +62,7 @@ var (
 	ActionBar *action_bar.ActionBar
 
 	Tables = []interface{}{
+		&scraper.Screenshot{},
 		&scraper.Matcher{},
 		&scraper.Queries{},
 		&scraper.ProviderWebRankConfig{},
@@ -79,9 +82,14 @@ var (
 		&scraper.OpenAPIConfig{},
 		&scraper.OpenAPISpecsConfig{},
 	}
+
+	logger  *zap.Logger
+	errInit error
 )
 
 func main() {
+
+	logger, errInit = zap.NewProduction()
 
 	h := &scraper.Handler{Log: true}
 	c := config{
@@ -126,10 +134,17 @@ func main() {
 	// scraper.ConvertToJsonSchema()
 
 	if h.Config.Dashboard {
-		DB, _ = gorm.Open("sqlite3", "admin.db")
+		DB, errInit = gorm.Open("sqlite3", "admin.db")
+		if errInit != nil {
+			panic("failed to connect database")
+		}
+		defer DB.Close()
 
 		if h.Config.Debug {
 			DB.LogMode(true)
+			if errInit == nil {
+				DB.SetLogger(gormzap.New(logger))
+			}
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...)
@@ -189,6 +204,7 @@ func initDashboard() {
 
 	// Groups of Scrapers
 	group := AdminUI.AddResource(&scraper.Group{}, &admin.Config{Menu: []string{"Classify Data"}})
+	// group.Meta(&admin.Meta{Name: "Groups", Type: "select_many"})
 
 	// Add Asset Manager, for rich editor
 	assetManager := AdminUI.AddResource(&media_library.AssetManager{}, &admin.Config{Invisible: true})
@@ -213,6 +229,8 @@ func initDashboard() {
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Groups", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
+	endpoint.IndexAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
+	endpoint.SearchAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
 
 	endpoint.Meta(&admin.Meta{Name: "Description", Config: &admin.RichEditorConfig{AssetManager: assetManager, Plugins: []admin.RedactorPlugin{
 		{Name: "medialibrary", Source: "/admin/assets/javascripts/qor_redactor_medialibrary.js"},
@@ -223,8 +241,17 @@ func initDashboard() {
 		},
 	}})
 
-	endpoint.IndexAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
-	endpoint.SearchAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
+	endpoint.Filter(&admin.Filter{
+		Name:   "Groups",
+		Config: &admin.SelectOneConfig{RemoteDataResource: group},
+	})
+
+	endpoint.Filter(&admin.Filter{
+		Name:   "Providers",
+		Config: &admin.SelectOneConfig{RemoteDataResource: provider},
+	})
+
+	// product.SearchAttrs("Name", "Code", "Category.Name", "Brand.Name")
 
 	headersEndpoint := endpoint.Meta(&admin.Meta{Name: "Headers"}).Resource
 	headersEndpoint.NewAttrs(&admin.Section{
@@ -248,10 +275,18 @@ func initDashboard() {
 
 	detailsEndpoint := blocksEndpoint.Meta(&admin.Meta{Name: "Matchers"}).Resource
 	detailsEndpoint.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
-	// Paths
+
+	// Add ProductImage as Media Libraray
+	ScreenshotsResource := AdminUI.AddResource(&scraper.Screenshot{}, &admin.Config{Menu: []string{"Activity"}, Priority: -1})
+	ScreenshotsResource.Filter(&admin.Filter{
+		Name:       "SelectedType",
+		Label:      "Media Type",
+		Operations: []string{"contains"},
+		Config:     &admin.SelectOneConfig{Collection: [][]string{{"video", "Video"}, {"image", "Image"}, {"file", "File"}, {"video_link", "Video Link"}}},
+	})
+	ScreenshotsResource.IndexAttrs("File", "Title")
 
 	// endpoint.ShowAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
-
 	/*
 		endpoint.NewAttrs(
 			&admin.Section{

@@ -11,7 +11,7 @@ import (
 
 	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/jinzhu/gorm"
-	"github.com/k0kubun/pp"
+	// "github.com/k0kubun/pp"
 	// slugify "github.com/slotix/slugifyurl"
 	"github.com/Machiel/slugify"
 )
@@ -33,9 +33,10 @@ var (
 
 func MigrateTables(db *gorm.DB, isTruncate bool, tables ...interface{}) {
 	for _, table := range tables {
+		// fmt.Println("table name: ", table)
 		if isTruncate {
 			if err := db.DropTableIfExists(table).Error; err != nil {
-				panic(err)
+				fmt.Println("table creation error, error msg: ", err)
 			}
 		}
 		db.AutoMigrate(table)
@@ -90,9 +91,10 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 		if err != nil {
 			return err
 		}
-		if c.Debug {
-			pp.Print(selectionBlocks)
-		}
+
+		//if c.Debug {
+		//	pp.Print(selectionBlocks)
+		//}
 
 		endpointTemplateURL := fmt.Sprintf("%s/%s", e.BaseURL, e.PatternURL)
 		slugURL := slugifier.Slugify(endpointTemplateURL)
@@ -113,10 +115,10 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			StrictMode: e.StrictMode,
 		}
 
-		if c.Debug {
-			fmt.Printf("\n\nMigrating endpoint: %s/%s \n", e.BaseURL, e.PatternURL)
-			pp.Print(endpoint)
-		}
+		//if c.Debug {
+		//	fmt.Printf("\n\nMigrating endpoint: %s/%s \n", e.BaseURL, e.PatternURL)
+		// pp.Print(endpoint)
+		//}
 
 		var groups []*Group
 		group, _, err := FindOrCreateGroupByName(db, "Web")
@@ -135,19 +137,19 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 		}
 		providerHost, providerPort, err := net.SplitHostPort(providerDataURL.Host)
 		if err != nil {
-			fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
-			//return err
+			// fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
+			// return err
 		}
 
-		if c.Debug {
-			pp.Println(providerDataURL)
-			//pp.Println(providerHost)
-			//pp.Println(providerPort)
-		}
+		// if c.Debug {
+		// pp.Println(providerDataURL)
+		//pp.Println(providerHost)
+		//pp.Println(providerPort)
+		// }
 		providerDomain := domainutil.Domain(providerDataURL.Host)
-		if c.Debug {
-			pp.Println(providerDomain)
-		}
+		//if c.Debug {
+		//	pp.Println(providerDomain)
+		//}
 
 		if providerHost != "" {
 			endpoint.Host = providerHost
@@ -187,7 +189,7 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			// return err
 		}
 
-		endpoint.ProviderID = provider.ID
+		//endpoint.ProviderID = provider.ID
 		endpoint.Provider = provider
 
 		for _, b := range selectionBlocks {
@@ -238,13 +240,13 @@ func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]
 			Matchers:   targets,
 			StrictMode: v.StrictMode,
 		}
-		if debug {
-			fmt.Printf("\nConverting selector config: %s \n", k)
-			fmt.Println("Input:")
-			pp.Print(v)
-			fmt.Println("Output:")
-			pp.Print(selection)
-		}
+		//if debug {
+		//	fmt.Printf("\nConverting selector config: %s \n", k)
+		//fmt.Println("Input:")
+		//pp.Print(v)
+		//fmt.Println("Output:")
+		//pp.Print(selection)
+		//}
 		blocks = append(blocks, selection)
 	}
 	return blocks, nil

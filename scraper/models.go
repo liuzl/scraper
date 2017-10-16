@@ -4,9 +4,15 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/jinzhu/gorm"
-	// "github.com/qor/slug"
+	"github.com/qor/media/media_library"
+	"github.com/qor/sorting"
+	"github.com/qor/validations"
+	// "github.com/qor/publish2"
+	// "github.com/qor/media"
+	// "github.com/qor/media/oss"
 )
 
 // WEB SCRAPER ///////////////////////////////////////////////////////////////
@@ -19,12 +25,14 @@ type Provider struct {
 	gorm.Model
 	// ProviderID uint
 	Name  string                   `json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"` // gorm:"type:varchar(128);unique_index"
+	Logo  media_library.MediaBox   `json:"-" yaml:"-" toml:"-"`
 	Ranks []*ProviderWebRankConfig `json:"ranks,omitempty" yaml:"ranks,omitempty" toml:"ranks,omitempty"`
 	// Endpoints []*Endpoint              `json:"endpoints,omitempty" yaml:"endpoints,omitempty" toml:"endpoints,omitempty"`
 }
 
 type ProviderWebRankConfig struct {
 	gorm.Model
+	sorting.SortingDESC
 	ProviderID uint
 	Engine     string `json:"google,omitempty" yaml:"google,omitempty" toml:"google,omitempty"`
 	Score      string `json:"bing,omitempty" yaml:"bing,omitempty" toml:"bing,omitempty"`
@@ -47,13 +55,15 @@ type Config struct {
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
 type Endpoint struct {
 	gorm.Model
+	sorting.SortingDESC
 	Disabled bool `default:"false" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
-	ProviderStr string    `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
-	ProviderID  uint      `json:"-" yaml:"-" toml:"-"`
+	ProviderStr string `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	// ProviderID  uint      `json:"-" yaml:"-" toml:"-"`
 	Provider    *Provider `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
 	Description string    `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
 	Groups      []*Group  `json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"` // media_library.MediaBox `json:"-" yaml:"-" toml:"-"`
 
 	Route  string `json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
 	Method string `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
@@ -86,8 +96,71 @@ type Endpoint struct {
 	StrictMode bool `default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 }
 
+type Screenshot struct {
+	gorm.Model
+	Title      string
+	EndpointID uint `json:"-" yaml:"-" toml:"-"`
+	// Category     Category
+	// CategoryID   uint
+	SelectedType string
+	File         media_library.MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
+}
+
+func (screenshot Screenshot) Validate(db *gorm.DB) {
+	if strings.TrimSpace(screenshot.Title) == "" {
+		db.AddError(validations.NewError(screenshot, "Title", "Title can not be empty"))
+	}
+}
+
+func (screenshot *Screenshot) SetSelectedType(typ string) {
+	screenshot.SelectedType = typ
+}
+
+func (screenshot *Screenshot) GetSelectedType() string {
+	return screenshot.SelectedType
+}
+
+func (screenshot *Screenshot) ScanMediaOptions(mediaOption media_library.MediaOption) error {
+	if bytes, err := json.Marshal(mediaOption); err == nil {
+		return screenshot.File.Scan(bytes)
+	} else {
+		return err
+	}
+}
+
+func (screenshot *Screenshot) GetMediaOption() (mediaOption media_library.MediaOption) {
+	mediaOption.Video = screenshot.File.Video
+	mediaOption.FileName = screenshot.File.FileName
+	mediaOption.URL = screenshot.File.URL()
+	mediaOption.OriginalURL = screenshot.File.URL("original")
+	mediaOption.CropOptions = screenshot.File.CropOptions
+	mediaOption.Sizes = screenshot.File.GetSizes()
+	mediaOption.Description = screenshot.File.Description
+	return
+}
+
+/*
+type ScreenShotVariationImageStorage struct{ oss.OSS }
+
+func (colorVariation ScreenShot) MainImageURL() string {
+	if len(colorVariation.Images.Files) > 0 {
+		return colorVariation.Images.URL()
+	}
+	return "/images/default_product.png"
+}
+
+func (ScreenShotVariationImageStorage) GetSizes() map[string]*media.Size {
+	return map[string]*media.Size{
+		"small":  {Width: 320, Height: 320},
+		"middle": {Width: 640, Height: 640},
+		"big":    {Width: 1280, Height: 1280},
+	}
+}
+*/
+
 type Queries struct {
 	gorm.Model
+	sorting.SortingDESC
 	Keywords []Query
 }
 
@@ -132,6 +205,7 @@ func (endpointProperties EndpointProperties) Value() (driver.Value, error) {
 // SelectorConfig represents a content selection rule for a single URL Pattern.
 type SelectorConfig struct {
 	gorm.Model
+	sorting.Sorting
 	EndpointID  uint                  `json:"-" yaml:"-" toml:"-"`
 	Collection  string                `json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
 	Description string                `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
@@ -152,6 +226,7 @@ type Extractor struct {
 // Extractor represents a pair of css selector and extracted node.
 type MatcherConfig struct {
 	gorm.Model
+	sorting.Sorting
 	SelectorConfigID uint
 	Target           string // TargetConfig
 	Selects          []Matcher
