@@ -23,8 +23,9 @@ type Result map[string]string
 // Create a GORM-backend model
 type Provider struct {
 	gorm.Model
+	sorting.Sorting
 	// ProviderID uint
-	Name  string                   `json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"` // gorm:"type:varchar(128);unique_index"
+	Name  string                   `required:"true" json:"name" yaml:"name" toml:"name"` // gorm:"type:varchar(128);unique_index"
 	Logo  media_library.MediaBox   `json:"-" yaml:"-" toml:"-"`
 	Ranks []*ProviderWebRankConfig `json:"ranks,omitempty" yaml:"ranks,omitempty" toml:"ranks,omitempty"`
 	// Endpoints []*Endpoint              `json:"endpoints,omitempty" yaml:"endpoints,omitempty" toml:"endpoints,omitempty"`
@@ -32,7 +33,7 @@ type Provider struct {
 
 type ProviderWebRankConfig struct {
 	gorm.Model
-	sorting.SortingDESC
+	sorting.Sorting
 	ProviderID uint
 	Engine     string `json:"google,omitempty" yaml:"google,omitempty" toml:"google,omitempty"`
 	Score      string `json:"bing,omitempty" yaml:"bing,omitempty" toml:"bing,omitempty"`
@@ -41,6 +42,7 @@ type ProviderWebRankConfig struct {
 // Config represents...
 type Config struct {
 	gorm.Model
+	sorting.Sorting
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
 	Port      int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
@@ -55,14 +57,14 @@ type Config struct {
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
 type Endpoint struct {
 	gorm.Model
-	sorting.SortingDESC
+	sorting.Sorting
 	Disabled bool `default:"false" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
-	ProviderStr string `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
-	// ProviderID  uint      `json:"-" yaml:"-" toml:"-"`
-	Provider    *Provider `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
-	Description string    `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
-	Groups      []*Group  `json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	Source      string   `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	ProviderID  uint     `json:"-" yaml:"-" toml:"-"`
+	Provider    Provider `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
+	Groups      []*Group `json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"` // media_library.MediaBox `json:"-" yaml:"-" toml:"-"`
 
 	Route  string `json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`

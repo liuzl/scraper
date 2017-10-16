@@ -77,7 +77,6 @@ var (
 		&scraper.BlocksConfig{},
 		&scraper.HeaderConfig{},
 		&scraper.SelectorConfig{},
-		&scraper.Extractor{},
 		&scraper.ExtractConfig{},
 		&scraper.OpenAPIConfig{},
 		&scraper.OpenAPISpecsConfig{},
@@ -213,11 +212,6 @@ func initDashboard() {
 	Help := AdminUI.NewResource(&help.QorHelpEntry{}, &admin.Config{Menu: []string{"Help"}})
 	Help.GetMeta("Body").Config = &admin.RichEditorConfig{AssetManager: assetManager}
 
-	// Providers
-	provider := AdminUI.AddResource(&scraper.Provider{}, &admin.Config{Menu: []string{"Classify Data"}})
-	providerWebRank := provider.Meta(&admin.Meta{Name: "Ranks"}).Resource
-	providerWebRank.ShowAttrs("Engine", "Score")
-
 	details := AdminUI.AddResource(&scraper.MatcherConfig{}, &admin.Config{Invisible: true})
 	details.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
 
@@ -229,8 +223,9 @@ func initDashboard() {
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Groups", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
-	endpoint.IndexAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
-	endpoint.SearchAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
+
+	endpoint.IndexAttrs("Name", "Disabled", "Provider", "Route", "Method")
+	endpoint.SearchAttrs("Name", "Disabled", "Provider", "Route", "Method")
 
 	endpoint.Meta(&admin.Meta{Name: "Description", Config: &admin.RichEditorConfig{AssetManager: assetManager, Plugins: []admin.RedactorPlugin{
 		{Name: "medialibrary", Source: "/admin/assets/javascripts/qor_redactor_medialibrary.js"},
@@ -245,6 +240,11 @@ func initDashboard() {
 		Name:   "Groups",
 		Config: &admin.SelectOneConfig{RemoteDataResource: group},
 	})
+
+	// Providers
+	provider := AdminUI.AddResource(&scraper.Provider{}, &admin.Config{Menu: []string{"Classify Data"}})
+	providerWebRank := provider.Meta(&admin.Meta{Name: "Ranks"}).Resource
+	providerWebRank.ShowAttrs("Engine", "Score")
 
 	endpoint.Filter(&admin.Filter{
 		Name:   "Providers",

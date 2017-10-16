@@ -9,23 +9,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Machiel/slugify"
 	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/jinzhu/gorm"
 	// "github.com/k0kubun/pp"
-	// slugify "github.com/slotix/slugifyurl"
-	"github.com/Machiel/slugify"
 )
 
 var (
-	/*
-		slugOpts = slugify.Options{
-			SlashChar:    "_",   //Used to replace slashes
-			MaxLength:    100,   //Output string length limit
-			SkipScheme:   true,  //Omit scheme http(s)://
-			SkipUserinfo: true,  //Omit username and password information
-			UnixOnly:     false, //Vlidate file names for Windows OS.
-		}
-	*/
 	slugifier = slugify.New(slugify.Configuration{
 		ReplaceCharacter: '_',
 	})
@@ -39,22 +29,25 @@ func MigrateTables(db *gorm.DB, isTruncate bool, tables ...interface{}) {
 				fmt.Println("table creation error, error msg: ", err)
 			}
 		}
+		//fmt.Println(" ------- START ------- ")
+		//pp.Print(table)
 		db.AutoMigrate(table)
+		//fmt.Println(" ------- END ------- ")
 	}
 }
 
 // FindOrCreateTagByName finds a tag by name, creating if it doesn't exist
-func FindOrCreateProviderByName(db *gorm.DB, name string) (*Provider, bool, error) {
+func FindOrCreateProviderByName(db *gorm.DB, name string) (Provider, bool, error) {
 	if name == "" {
-		return nil, false, errors.New("WARNING !!! No provider name provided")
+		return Provider{}, false, errors.New("WARNING !!! No provider name provided")
 	}
 	var provider Provider
 	if db.Where("lower(name) = ?", strings.ToLower(name)).First(&provider).RecordNotFound() {
 		provider.Name = name
 		err := db.Create(&provider).Error
-		return &provider, true, err
+		return provider, true, err
 	}
-	return &provider, false, nil
+	return provider, false, nil
 }
 
 func FindOrCreateGroupByName(db *gorm.DB, name string) (*Group, bool, error) {
@@ -189,7 +182,8 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			// return err
 		}
 
-		//endpoint.ProviderID = provider.ID
+		// endpoint.ProviderID = provider.ID
+		// pp.Print(provider)
 		endpoint.Provider = provider
 
 		for _, b := range selectionBlocks {
