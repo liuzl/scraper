@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/qor/media/media_library"
@@ -59,6 +60,9 @@ type Endpoint struct {
 	gorm.Model
 	sorting.Sorting
 	Disabled bool `default:"false" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+
+	Connections []Connection `json:"-" yaml:"-" toml:"-"`
+	Update      time.Time
 
 	Source      string   `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
 	ProviderID  uint     `json:"-" yaml:"-" toml:"-"`
@@ -299,4 +303,32 @@ type OpenAPISpecsConfig struct {
 	gorm.Model
 	Slug    string
 	Version string
+}
+
+type Connection struct {
+	// gorm.Model
+	ID         uint     `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	EndpointID uint     `json:"-" yaml:"-" toml:"-"`
+	Request    Request  `json:"request" yaml:"request" toml:"request"`
+	Response   Response `json:"response" yaml:"response" toml:"response"`
+	RecordedAt string   `json:"recorded_at" yaml:"recorded_at" toml:"recorded_at"`
+}
+
+type Request struct {
+	// gorm.Model
+	ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	ConnectionID uint   `json:"-" yaml:"-" toml:"-"`
+	Header       string `json:"header" yaml:"header" toml:"header"`
+	Body         string `json:"body" yaml:"body" toml:"body"`
+	Method       string `json:"method" yaml:"method" toml:"method"`
+	URL          string `json:"url" yaml:"url" toml:"url"`
+}
+
+type Response struct {
+	// gorm.Model
+	ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	ConnectionID uint   `json:"-" yaml:"-" toml:"-"`
+	Status       string `json:"status" yaml:"status" toml:"status"`
+	Header       string `json:"header" yaml:"header" toml:"header"`
+	Body         string `json:"body" yaml:"body" toml:"body"`
 }

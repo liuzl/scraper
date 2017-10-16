@@ -1,3 +1,5 @@
+SWAGGER_UI_VERSION=3.3.2
+
 run:
 	@go run main.go $(CURDIR)/shared/conf.d/providers.list.json
 
@@ -18,3 +20,9 @@ deps:
 
 compose:
 	@docker-compose up --remove-orphans scraper
+
+swagger-ui:	
+	curl -L -o $(CURDIR)/swagger-ui-${SWAGGER_UI_VERSION}.tar.gz https://github.com/swagger-api/swagger-ui/archive/v$(SWAGGER_UI_VERSION).tar.gz
+	tar zxf $(CURDIR)/swagger-ui-$(SWAGGER_UI_VERSION).tar.gz
+	mv $(CURDIR)/swagger-ui-$(SWAGGER_UI_VERSION) $(CURDIR)/swaggerui
+	rm -f $(CURDIR)/swagger-ui-$(SWAGGER_UI_VERSION).tar.gz

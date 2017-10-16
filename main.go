@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 
 	// "github.com/k0kubun/pp"
+	// "github.com/jungju/qor_admin_auth"
 	"github.com/qor/action_bar"
 	"github.com/qor/help"
 	"github.com/qor/media_library"
@@ -57,11 +58,33 @@ type config struct {
 }
 
 var (
+	// Serialize all modifications through these
+	// commands chan interface{}
+	// errors   chan error
+
+	// Clients
+	// clients     []sockjs.Session
+	// clientsLock sync.RWMutex
+
 	DB        *gorm.DB
 	AdminUI   *admin.Admin
 	ActionBar *action_bar.ActionBar
+	// Index     bleve.Index
+	// handler http.Handler
+	// indexLock sync.RWMutex
+	// Signalled to exit everything
+	// finish chan struct{}
+
+	// Used to control when things are done
+	// wg sync.WaitGroup
 
 	Tables = []interface{}{
+
+		//&scraper.Endpoint{},
+		&scraper.Connection{},
+		&scraper.Request{},
+		&scraper.Response{},
+
 		&scraper.Screenshot{},
 		&scraper.Matcher{},
 		&scraper.Queries{},
@@ -191,6 +214,9 @@ func initDashboard() {
 	// category := Admin.AddResource(&models.Category{}, &admin.Config{Menu: []string{"Product Management"}, Priority: -3})
 	// category.Meta(&admin.Meta{Name: "Categories", Type: "select_many"})
 
+	// m := qor_admin_auth.DefaultNew(DB, &models.User{})
+	// m.AddResourceForPage("user", &models.User{}, "User Manage")
+
 	// Activity
 	queries := AdminUI.AddResource(&scraper.Query{}, &admin.Config{Menu: []string{"Activity"}})
 	//query := queries.Meta(&admin.Meta{Name: "Keywords"}).Resource
@@ -217,6 +243,16 @@ func initDashboard() {
 
 	AdminUI.AddResource(&scraper.SelectorConfig{}, &admin.Config{Invisible: true})
 	AdminUI.AddResource(&scraper.HeaderConfig{}, &admin.Config{Invisible: true})
+
+	// connection :=
+	AdminUI.AddResource(&scraper.Connection{}, &admin.Config{Menu: []string{"Activity"}})
+	//connection.Meta(&admin.Meta{Name: "Body", Type: "text"})
+
+	request := AdminUI.AddResource(&scraper.Request{}, &admin.Config{Menu: []string{"Activity"}})
+	request.Meta(&admin.Meta{Name: "Body", Type: "text"})
+
+	response := AdminUI.AddResource(&scraper.Response{}, &admin.Config{Menu: []string{"Activity"}})
+	response.Meta(&admin.Meta{Name: "Body", Type: "text"})
 
 	// Endpoints
 	endpoint := AdminUI.AddResource(&scraper.Endpoint{}, &admin.Config{Menu: []string{"Web Scrapers"}})
@@ -410,5 +446,8 @@ func initDashboard() {
 
 	- https://github.com/ROOT005/com_web/blob/master/models/project.go
 	- https://github.com/ROOT005/com_web/blob/master/models/website.go
+
+	- https://github.com/drrzmr/pontalverde/blob/master/model/user/user.go
+	- https://github.com/liujianping/scaffold/blob/master/templates/portal/app/models/base.db.go
 
 */
