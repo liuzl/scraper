@@ -100,7 +100,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 	// pp.Print(e)
-	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.URL), params) //render url using params
+	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +120,12 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if err != nil {
 		return nil, err
 	}
+
+	/*
+		Key   string
+		Value string
+	*/
+
 	if e.Headers != nil {
 		for k, v := range e.Headers {
 			if e.Debug {
@@ -151,7 +157,14 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			if s.Items != "" {
 				pp.Print(s)
 				var results []Result
+				/*
+					rules, err := ConvertDetails(s.Details)
+					if err != nil {
+						return nil, err
+					}
+				*/
 				htmlquery.FindEach(doc, s.Items, func(i int, node *html.Node) {
+
 					r := e.extractXpath(node, s.Details)
 					if len(r) == len(s.Details) {
 						results = append(results, r)

@@ -3,9 +3,13 @@ run:
 
 build:
 	@go build -o $(CURDIR)/dist/scraper-local main.go
+	@echo "$ ./dist/scraper-local ./shared/conf.d/providers.list.json"
+	@echo ""
+	@./dist/scraper-local ./shared/conf.d/providers.list.json
 
 dist:
 	gox -verbose -os="darwin linux" -arch="amd64" -output="./dist/scraper-{{.OS}}" $(glide novendor)
+	# gox -verbose -os="darwin linux" -arch="amd64" -output="./dist/scraper-{{.OS}}" $(glide novendor)
 
 deps:
 	@go get -v -u github.com/Masterminds/glide

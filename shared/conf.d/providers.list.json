@@ -1,11 +1,16 @@
 {
   "port": 3008,
+  "debug": true,
+  "migrate": true,
+  "truncate": true,
+  "dashboard": true,
   "routes": [
     {
       "route": "/google/search",
       "debug": true,
       "disabled": true,
       "name": "google-search",
+      "provider": "google.com",
       "base_url": "https://www.google.com",
       "url": "/search?q={{query}}",
       "timeout": 10,
@@ -40,6 +45,7 @@
       "debug": true,
       "disabled": true,
       "name": "ccc-tv",
+      "provider": "media.ccc.de",
       "base_url": "https://media.ccc.de",
       "url": "/search/?q={{query}}",
       "timeout": 10,
@@ -64,6 +70,7 @@
       "debug": true,
       "strict_mode": true,
       "name": "golanglibs",
+      "provider": "golanglibs.com",
       "base_url": "https://golanglibs.com",
       "url": "/search?q={{query}}",
       "timeout": 10,
@@ -88,10 +95,14 @@
       "debug": true,
       "disabled": true,
       "name": "bitbucket",
+      "provider": "bitbucket.org",
       "base_url": "https://bitbucket.org",
       "url": "/repo/all/1?name={{query}}",
       "timeout": 10,
       "selector": "css",
+      "headers": {
+        "Accept": "application/vnd.github.mercy-preview+json"
+      },
       "blocks": {
         "result": {
           "items": "#repositories li",
@@ -112,6 +123,7 @@
       "debug": true,
       "disabled": true,
       "name": "arch linux wiki",
+      "provider": "archive.is",
       "base_url": "https://archive.is",
       "url": "{{query}}",
       "timeout": 10,
@@ -136,6 +148,7 @@
       "debug": true,
       "disabled": true,
       "name": "arch linux wiki",
+      "provider": "archlinux.org",
       "base_url": "https://wiki.archlinux.org",
       "url": "/index.php?title=Special:Search&offset=1&{{query}}",
       "timeout": 10,
@@ -159,6 +172,7 @@
       "route": "/voat",
       "debug": true,
       "disabled": true,
+      "provider": "searchvoat.co",
       "base_url": "https://searchvoat.co",
       "url": "/?t={{query}}",
       "timeout": 10,
@@ -182,6 +196,7 @@
       "route": "/bing/news",
       "debug": true,
       "base_url": "https://www.bing.com",
+      "provider": "bing.com",
       "url": "/news/search?{{query}}&first=1",
       "selector": "css",
       "blocks": {
@@ -208,6 +223,7 @@
       "debug": true,
       "strict_mode": true,
       "base_url": "https://www.bing.com",
+      "provider": "bing.com",
       "url": "/search?q={{query}}",
       "selector": "css",
       "blocks": {
@@ -240,6 +256,7 @@
       "debug": true,
       "selector": "css",
       "name": "google play apps",
+      "provider": "google.com",
       "base_url": "https://play.google.com",
       "url": "/store/search?q={{query}}&c=apps",
       "blocks": {
@@ -262,6 +279,7 @@
       "debug": true,
       "name": "habrahabr",
       "base_url": "https://habrahabr.ru",
+      "provider": "habrahabr.ru",
       "url": "/search/page1/?q={{query}}&target_type=posts&flow=&order_by=relevance",
       "selector": "xpath",
       "blocks": {
@@ -282,6 +300,7 @@
       "route": "/google/play/movies",
       "debug": true,
       "name": "google play movies",
+      "provider": "google.com",
       "base_url": "https://play.google.com",
       "url": "/store/search?q={{query}}&c=movies",
       "selector": "xpath",
@@ -326,6 +345,7 @@
       "debug": true,
       "name": "google play music",
       "base_url": "https://play.google.com",
+      "provider": "google.com",
       "url": "/store/search?q={{query}}&c=music",
       "selector": "xpath",
       "blocks": {
@@ -368,6 +388,8 @@
       "route": "/google/scholar",
       "debug": true,
       "selector": "css",
+      "provider": "google.com",
+      "name": "Google Scholar",
       "base_url": "https://scholar.google.com",
       "url": "/scholar?hl=en&as_sdt=0%2C5&as_vis=1&q={{query}}&btnG=",
       "blocks": {

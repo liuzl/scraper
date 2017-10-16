@@ -50,6 +50,7 @@ type extractorFn func(string, *goquery.Selection) (string, *goquery.Selection)
 
 type extractorGenerator func(string) (extractorFn, error)
 
+// type Extractors []Extractor
 type Extractors []*Extractor
 
 //execute all Extractors on the query

@@ -8,15 +8,18 @@ import (
 	"net/http"
 	"strings"
 	// "github.com/roscopecoltran/configor"
-	// "github.com/k0kubun/pp"
 )
 
 type Handler struct {
+	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+
 	Config  Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
-	Log     bool              `opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
-	Debug   bool              `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+
+	Auth string `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
+	Log  bool   `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
+
+	Debug bool `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
@@ -65,11 +68,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if h.Debug {
 		logf("Enabled debug mode")
 	}
-
-	// pp.Print(Endpoints)
-
-	//replace config
-	h.Config = c
+	h.Config = c //replace config
 	return nil
 }
 
