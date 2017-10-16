@@ -54,12 +54,12 @@ func (h *Handler) LoadConfig(b []byte) error {
 			// Copy the Debug attribute
 			e.Debug = h.Debug
 			// Copy the Header attributes (only if they are not yet set)
-			if e.Headers == nil {
-				e.Headers = h.Headers
+			if e.HeadersJSON == nil {
+				e.HeadersJSON = h.Headers
 			} else {
 				for k, v := range h.Headers {
-					if _, ok := e.Headers[k]; !ok {
-						e.Headers[k] = v
+					if _, ok := e.HeadersJSON[k]; !ok {
+						e.HeadersJSON[k] = v
 					}
 				}
 			}

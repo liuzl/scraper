@@ -25,7 +25,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 
-	"github.com/k0kubun/pp"
+	// "github.com/k0kubun/pp"
 	"github.com/qor/action_bar"
 	"github.com/qor/help"
 	"github.com/qor/media_library"
@@ -60,8 +60,8 @@ var (
 	ActionBar *action_bar.ActionBar
 
 	Tables = []interface{}{
-		&scraper.ExtractorORM{},
-		//&scraper.Extractors{},
+		&scraper.MatcherConfig{},
+		&scraper.TargetConfig{},
 		&scraper.Provider{},
 		&scraper.Group{},
 		&scraper.Topic{},
@@ -205,20 +205,34 @@ func initDashboard() {
 	// Collection of Scrapers
 	group := AdminUI.AddResource(&scraper.Group{}) //, &admin.Config{Menu: []string{"Source Management"}})
 
-	details := AdminUI.AddResource(&scraper.ExtractorORM{}, &admin.Config{Invisible: true})
-	pp.Print(details)
+	details := AdminUI.AddResource(&scraper.MatcherConfig{}, &admin.Config{Invisible: true})
+	details.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
+	// pp.Print(details)
 
-	selectors := AdminUI.AddResource(&scraper.SelectorConfig{}, &admin.Config{Invisible: true})
-	pp.Print(selectors)
+	//selectors :=
+	AdminUI.AddResource(&scraper.SelectorConfig{}, &admin.Config{Invisible: true})
+	// pp.Print(selectors)
 
-	headers := AdminUI.AddResource(&scraper.HeaderConfig{}, &admin.Config{Invisible: true})
-	pp.Print(headers)
+	// headers :=
+	AdminUI.AddResource(&scraper.HeaderConfig{}, &admin.Config{Invisible: true})
+	//pp.Print(headers)
 
 	// ref. https://doc.getqor.com/metas/collection-edit.html
 	// Endpoints
 	endpoint := AdminUI.AddResource(&scraper.Endpoint{}) //, &admin.Config{Menu: []string{"Source Management"}})
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
+
+	// headersEndpoint := endpoint.Meta(&admin.Meta{Name: "HeadersORM"}).Resource
+
+	blocksEndpoint := endpoint.Meta(&admin.Meta{Name: "Blocks"}).Resource
+	detailsEndpoint := blocksEndpoint.Meta(&admin.Meta{Name: "Matchers"}).Resource
+	detailsEndpoint.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
+
+	// details
+	// DetailsORM
+
+	// endpoint.Meta(&admin.Meta{Name: "BlocksORM.[]Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 
 	// endpoint.EditAttrs("HeadersORM", "BlocksORM", "Extract", "BlocksORM.DetailsORM")
 	// endpoint.Meta(&admin.Meta{Name: "HeadersORM", Config: &admin.SelectOneConfig{Collection: &scraper.HeaderConfig{}, AllowBlank: false}})

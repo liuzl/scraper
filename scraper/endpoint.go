@@ -126,8 +126,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		Value string
 	*/
 
-	if e.Headers != nil {
-		for k, v := range e.Headers {
+	if e.HeadersJSON != nil {
+		for k, v := range e.HeadersJSON {
 			if e.Debug {
 				logf("use header %s=%s", k, v)
 			}
@@ -153,12 +153,12 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		for b, s := range e.Blocks {
+		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
 				pp.Print(s)
 				var results []Result
 				/*
-					rules, err := ConvertDetails(s.Details)
+					rules, err := ConvertDetails(s.DetailsJSON)
 					if err != nil {
 						return nil, err
 					}
@@ -194,7 +194,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		sel := doc.Selection
 
-		for b, s := range e.Blocks {
+		for b, s := range e.BlocksJSON {
 			if e.Debug {
 				pp.Print(b)
 				pp.Print(s)

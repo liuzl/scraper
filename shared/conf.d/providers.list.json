@@ -1,6 +1,6 @@
 {
   "port": 3008,
-  "debug": true,
+  "debug": false,
   "migrate": true,
   "truncate": true,
   "dashboard": true,
