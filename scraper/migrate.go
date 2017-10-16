@@ -34,18 +34,23 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 		if c.Debug {
 			pp.Print(selectionBlocks)
 		}
+
+		exampleURL := fmt.Sprintf("%s/%s", e.BaseURL, e.PatternURL)
+		exampleURL = strings.Replace(exampleURL, "{{query}}", "test", -1)
+
 		endpoint := Endpoint{
 			Disabled: false,
 			// Provider:   provider,
 			Route:      e.Route,
 			Name:       e.Name,
-			Method:     e.Method,
+			Method:     strings.ToUpper(e.Method),
 			BaseURL:    e.BaseURL,
 			PatternURL: e.PatternURL,
-			Body:       e.Body,
+			// Body:       e.Body,
 			Selector:   e.Selector,
 			Headers:    headers,
 			Blocks:     selectionBlocks,
+			ExampleURL: exampleURL,
 			// Extract:    ExtractConfig{},
 			Debug:      e.Debug,
 			StrictMode: e.StrictMode,
@@ -102,7 +107,8 @@ func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]
 			return nil, err
 		}
 		selection := &SelectorConfig{
-			Slug:       v.Slug,
+			Name: k,
+			// Slug:       v.Slug,
 			Debug:      v.Debug,
 			Required:   v.Required,
 			Items:      v.Items,

@@ -1,7 +1,12 @@
 package scraper
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+
 	"github.com/jinzhu/gorm"
+	"github.com/qor/slug"
 )
 
 // WEB SCRAPER ///////////////////////////////////////////////////////////////
@@ -12,7 +17,15 @@ type Result map[string]string
 // Create a GORM-backend model
 type Provider struct {
 	gorm.Model
-	Name string
+	Name  string                   `gorm:"type:varchar(128);unique_index" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
+	Ranks []*ProviderWebRankConfig `json:"ranks,omitempty" yaml:"ranks,omitempty" toml:"ranks,omitempty"`
+}
+
+type ProviderWebRankConfig struct {
+	gorm.Model
+	ProviderID uint
+	Engine     string `json:"google,omitempty" yaml:"google,omitempty" toml:"google,omitempty"`
+	Score      string `json:"bing,omitempty" yaml:"bing,omitempty" toml:"bing,omitempty"`
 }
 
 // Config represents...
@@ -37,6 +50,7 @@ type Endpoint struct {
 	ProviderStr string `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
 	// Provider    *Provider `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
 
+	Slug   string `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
 	Route  string `json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
 	Name   string `gorm:"index" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
 	Method string `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
@@ -45,7 +59,7 @@ type Endpoint struct {
 	PatternURL string `json:"url" yaml:"url" toml:"url"`
 	ExampleURL string `json:"example_url" yaml:"example_url" toml:"example_url"`
 
-	Body     string `json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
+	Body     string `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
 	Selector string `gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
 
 	HeadersJSON map[string]string         `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
@@ -53,6 +67,8 @@ type Endpoint struct {
 
 	Headers []*HeaderConfig   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
 	Blocks  []*SelectorConfig `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
+
+	EndpointProperties EndpointProperties `sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
 
 	Extract   ExtractConfig `default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
 	MinFields int           `json:"-" yaml:"-" toml:"-"`
@@ -62,20 +78,63 @@ type Endpoint struct {
 	StrictMode bool `default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 }
 
-//type HeadersProperties []HeaderConfig
-//type BlocksProperties []SelectorConfig
-//type DetailsProperties []ExtractorORM
+type Queries struct {
+	gorm.Model
+	Keywords []Query
+}
+
+type Query struct {
+	gorm.Model
+	InputQuery string
+	Slug       string
+	MD5        string
+	SHA1       string
+	UUID       string
+	Blocked    bool
+}
+
+type EndpointProperties []EndpointProperty
+
+type EndpointProperty struct {
+	Name  string
+	Value string
+}
+
+func (endpointProperties *EndpointProperties) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, endpointProperties)
+	case string:
+		if v != "" {
+			return endpointProperties.Scan([]byte(v))
+		}
+	default:
+		return errors.New("not supported")
+	}
+	return nil
+}
+
+func (endpointProperties EndpointProperties) Value() (driver.Value, error) {
+	if len(endpointProperties) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(endpointProperties)
+}
 
 // SelectorConfig represents a content selection rule for a single URL Pattern.
 type SelectorConfig struct {
 	gorm.Model
 	EndpointID uint
+
+	Name         string    `json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
+	NameWithSlug slug.Slug `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	//Slug         string `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	Required bool `default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
+
 	Items      string                `json:"items,omitempty" yaml:"items,omitempty" toml:"items,omitempty"`
 	Details    map[string]Extractors `gorm:"-" json:"details,omitempty" yaml:"details,omitempty" toml:"details,omitempty"`
 	Matchers   []*MatcherConfig      `json:"matchers,omitempty" yaml:"matchers,omitempty" toml:"matchers,omitempty"`
 	StrictMode bool                  `default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
-	Required   bool                  `default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
-	Slug       string                `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
 	Debug      bool                  `default:"true" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 

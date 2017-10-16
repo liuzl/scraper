@@ -60,6 +60,8 @@ var (
 	ActionBar *action_bar.ActionBar
 
 	Tables = []interface{}{
+		&scraper.Queries{},
+		&scraper.ProviderWebRankConfig{},
 		&scraper.MatcherConfig{},
 		&scraper.TargetConfig{},
 		&scraper.Provider{},
@@ -88,7 +90,7 @@ func main() {
 	}
 
 	opts.New(&c).
-		Repo("github.com/jpillora/scraper").
+		Repo("github.com/roscopecoltran/scraper").
 		Version(VERSION).
 		Parse()
 
@@ -174,6 +176,16 @@ func initDashboard() {
 	// category := Admin.AddResource(&models.Category{}, &admin.Config{Menu: []string{"Product Management"}, Priority: -3})
 	// category.Meta(&admin.Meta{Name: "Categories", Type: "select_many"})
 
+	// Activity
+	queries := AdminUI.AddResource(&scraper.Query{}, &admin.Config{Menu: []string{"Activity"}})
+	//query := queries.Meta(&admin.Meta{Name: "Keywords"}).Resource
+	queries.NewAttrs(&admin.Section{
+		Rows: [][]string{{"InputQuery", "Blocked"}},
+	})
+	queries.EditAttrs(&admin.Section{
+		Rows: [][]string{{"InputQuery", "Blocked"}},
+	})
+
 	// Groups of Scrapers
 	group := AdminUI.AddResource(&scraper.Group{}, &admin.Config{Menu: []string{"Classify Data"}})
 
@@ -186,6 +198,8 @@ func initDashboard() {
 
 	// Providers
 	provider := AdminUI.AddResource(&scraper.Provider{}, &admin.Config{Menu: []string{"Classify Data"}})
+	providerWebRank := provider.Meta(&admin.Meta{Name: "Ranks"}).Resource
+	providerWebRank.ShowAttrs("Engine", "Score")
 
 	details := AdminUI.AddResource(&scraper.MatcherConfig{}, &admin.Config{Invisible: true})
 	details.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
@@ -198,9 +212,109 @@ func initDashboard() {
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
 
+	// endpoint.Meta(&admin.Meta{Name: "Disabled", Label: "Disable this endpoint"})
+	// endpoint.Meta(&admin.Meta{Name: "Debug", Label: "Debug this endpoint"})
+	// endpoint.Meta(&admin.Meta{Name: "StrictMode", Label: "Requires to match the expected number of attributes"})
+
+	// endpoint.EditAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
+	// endpoint.ShowAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
+	// endpoint.ShowAttrs("Debug", "Name", "Route", "Method", "Selector", "BaseURL")
+	// endpoint.ShowAttrs("Debug", "Name", "Route", "Method", "Selector", "BaseURL")
+
 	blocksEndpoint := endpoint.Meta(&admin.Meta{Name: "Blocks"}).Resource
+	blocksEndpoint.EditAttrs("Disabled", "Required", "Debug", "Name", "Items", "Matchers", "StrictMode", "Debug")
+
 	detailsEndpoint := blocksEndpoint.Meta(&admin.Meta{Name: "Matchers"}).Resource
 	detailsEndpoint.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
+
+	// endpoint.ShowAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
+
+	/*
+		endpoint.NewAttrs(
+			&admin.Section{
+				Title: "Status",
+				Rows: [][]string{
+					{"Disabled", "Debug"},
+				},
+			},
+			&admin.Section{
+				Title: "Info",
+				Rows: [][]string{
+					{"Name", "Slug", "Route", "Method", "ExampleURL"},
+				},
+			},
+			&admin.Section{
+				Title: "Params",
+				Rows: [][]string{
+					{"Selector", "BaseURL", "PatternURL"},
+				},
+			},
+			&admin.Section{
+				Title: "Headers",
+				Rows: [][]string{
+					{"Headers"},
+				},
+			},
+			&admin.Section{
+				Title: "Blocks",
+				Rows: [][]string{
+					{"Blocks"},
+				},
+			},
+			&admin.Section{
+				Title: "Bots",
+				Rows: [][]string{
+					{"Extract"},
+				},
+			},
+		)
+
+		endpoint.EditAttrs(
+			&admin.Section{
+				Title: "Status",
+				Rows: [][]string{
+					{"Disabled", "Debug"},
+				},
+			},
+			&admin.Section{
+				Title: "Info",
+				Rows: [][]string{
+					{"Name", "Route", "Method", "ExampleURL"},
+				},
+			},
+			&admin.Section{
+				Title: "Params",
+				Rows: [][]string{
+					{"Selector", "BaseURL", "PatternURL"},
+				},
+			},
+			&admin.Section{
+				Title: "Headers",
+				Rows: [][]string{
+					{"Headers"},
+				},
+			},
+			&admin.Section{
+				Title: "Blocks",
+				Rows: [][]string{
+					{"Blocks"},
+				},
+			},
+			&admin.Section{
+				Title: "Bots",
+				Rows: [][]string{
+					{"Extract"},
+				},
+			},
+		)
+	*/
+	endpointPropertiesRes := endpoint.Meta(&admin.Meta{Name: "EndpointProperties"}).Resource
+	endpointPropertiesRes.NewAttrs(&admin.Section{
+		Rows: [][]string{{"Name", "Value"}},
+	})
+	endpointPropertiesRes.EditAttrs(&admin.Section{
+		Rows: [][]string{{"Name", "Value"}},
+	})
 
 	openapi := AdminUI.AddResource(&scraper.OpenAPIConfig{}, &admin.Config{Menu: []string{"API Scrapers"}})
 
