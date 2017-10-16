@@ -61,3 +61,8 @@ shared/data/grafana/log
 
 shared/data/etcd/member
 .env
+*.db
+*.crt
+*.key
+*.csr
+*.pem
