@@ -73,6 +73,8 @@ var (
 		&scraper.SelectorConfig{},
 		&scraper.Extractor{},
 		&scraper.ExtractConfig{},
+		&scraper.OpenAPIConfig{},
+		&scraper.OpenAPISpecsConfig{},
 	}
 )
 
@@ -165,36 +167,6 @@ func initDashboard() {
 	// Menu(s)
 	AdminUI.AddMenu(&admin.Menu{Name: "Dashboard", Link: "/admin"}) // // Add Dashboard
 
-	// Add Asset Manager, for rich editor
-	assetManager := AdminUI.AddResource(&media_library.AssetManager{}, &admin.Config{Invisible: true})
-
-	// Add Help
-	Help := AdminUI.NewResource(&help.QorHelpEntry{})
-	Help.GetMeta("Body").Config = &admin.RichEditorConfig{AssetManager: assetManager}
-
-	// Providers
-	provider := AdminUI.AddResource(&scraper.Provider{}) //, &admin.Config{Menu: []string{"Source Management"}})
-	// provider.Meta(&admin.Meta{Name: "Country", Config: &admin.SelectOneConfig{Collection: Countries}})
-	/*
-		provider.Meta(&admin.Meta{Name: "Description", Config: &admin.RichEditorConfig{AssetManager: assetManager, Plugins: []admin.RedactorPlugin{
-			{Name: "medialibrary", Source: "/admin/assets/javascripts/qor_redactor_medialibrary.js"},
-			{Name: "table", Source: "/javascripts/redactor_table.js"},
-		},
-			Settings: map[string]interface{}{
-				"medialibraryUrl": "/admin/product_images",
-			},
-		}})
-	*/
-	// provider.Meta(&admin.Meta{Name: "Category", Config: &admin.SelectOneConfig{AllowBlank: true}})
-	// provider.Meta(&admin.Meta{Name: "Topics", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
-	// provider.Meta(&admin.Meta{Name: "Groups", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
-	/*
-		provider.Filter(&admin.Filter{
-			Name:   "Topics",
-			Config: &admin.SelectOneConfig{RemoteDataResource: collection},
-		})
-	*/
-
 	// Categories (Scrapers, Providers)
 	// topic := AdminUI.AddResource(&scraper.Topic{}) //, &admin.Config{Menu: []string{"Source Management"}})
 	// topic.Meta(&admin.Meta{Name: "Topics", Type: "select_many"})
@@ -202,76 +174,42 @@ func initDashboard() {
 	// category := Admin.AddResource(&models.Category{}, &admin.Config{Menu: []string{"Product Management"}, Priority: -3})
 	// category.Meta(&admin.Meta{Name: "Categories", Type: "select_many"})
 
-	// Collection of Scrapers
-	group := AdminUI.AddResource(&scraper.Group{}) //, &admin.Config{Menu: []string{"Source Management"}})
+	// Groups of Scrapers
+	group := AdminUI.AddResource(&scraper.Group{}, &admin.Config{Menu: []string{"Classify Data"}})
+
+	// Add Asset Manager, for rich editor
+	assetManager := AdminUI.AddResource(&media_library.AssetManager{}, &admin.Config{Invisible: true})
+
+	// Add Help
+	Help := AdminUI.NewResource(&help.QorHelpEntry{}, &admin.Config{Menu: []string{"Help"}})
+	Help.GetMeta("Body").Config = &admin.RichEditorConfig{AssetManager: assetManager}
+
+	// Providers
+	provider := AdminUI.AddResource(&scraper.Provider{}, &admin.Config{Menu: []string{"Classify Data"}})
 
 	details := AdminUI.AddResource(&scraper.MatcherConfig{}, &admin.Config{Invisible: true})
 	details.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
-	// pp.Print(details)
 
-	//selectors :=
 	AdminUI.AddResource(&scraper.SelectorConfig{}, &admin.Config{Invisible: true})
-	// pp.Print(selectors)
-
-	// headers :=
 	AdminUI.AddResource(&scraper.HeaderConfig{}, &admin.Config{Invisible: true})
-	//pp.Print(headers)
 
-	// ref. https://doc.getqor.com/metas/collection-edit.html
 	// Endpoints
-	endpoint := AdminUI.AddResource(&scraper.Endpoint{}) //, &admin.Config{Menu: []string{"Source Management"}})
+	endpoint := AdminUI.AddResource(&scraper.Endpoint{}, &admin.Config{Menu: []string{"Web Scrapers"}})
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
-
-	// headersEndpoint := endpoint.Meta(&admin.Meta{Name: "HeadersORM"}).Resource
 
 	blocksEndpoint := endpoint.Meta(&admin.Meta{Name: "Blocks"}).Resource
 	detailsEndpoint := blocksEndpoint.Meta(&admin.Meta{Name: "Matchers"}).Resource
 	detailsEndpoint.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
 
-	// details
-	// DetailsORM
-
-	// endpoint.Meta(&admin.Meta{Name: "BlocksORM.[]Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
-
-	// endpoint.EditAttrs("HeadersORM", "BlocksORM", "Extract", "BlocksORM.DetailsORM")
-	// endpoint.Meta(&admin.Meta{Name: "HeadersORM", Config: &admin.SelectOneConfig{Collection: &scraper.HeaderConfig{}, AllowBlank: false}})
-	// product.Meta(&admin.Meta{Name: "HeadersORM", Config: &admin.SelectOneConfig{AllowBlank: true}})
-	// endpoint.Meta(&admin.Meta{Name: "HeadersORM", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
-
-	// endpoint.Meta(&admin.Meta{Name: "Locale", Config: &admin.SelectOneConfig{Collection: Locales}})
-	/*
-		SelectorConfigRes := endpoint.Meta(&admin.Meta{Name: "SelectorConfig"}).Resource
-		productPropertiesRes.NewAttrs(&admin.Section{
-			Rows: [][]string{{"Name", "Value"}},
-		})
-	*/
-
-	// endpoint.Meta(&admin.Meta{Name: "HeaderConfig", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
-	// endpoint.Meta(&admin.Meta{Name: "SelectorConfig", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
-	// endpoint.Meta(&admin.Meta{Name: "DetailsORM", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
-
-	// endpoint.Meta(&admin.Meta{Name: "Locale", Config: &admin.SelectOneConfig{Collection: Locales}})
-
-	// endpoint.Meta(&admin.Meta{Name: "BlocksORM", Config: &admin.SelectOneConfig{Collection: scraper.SelectorConfig, AllowBlank: false}})
-	// details := endpoint.Meta(&admin.Meta{Name: "Parameter"}).Resource
-	// details.Meta(&admin.Meta{Name: "Height", Type: "Float"})
-	// endpoint.Meta(&admin.Meta{Name: "BlocksORM", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
-	// endpoint.Meta(&admin.Meta{Name: "Groups", Config: &admin.SelectOneConfig{Groups: scraper.MethodTypes, AllowBlank: false}})
-	// endpoint.SearchAttrs("BaseURL", "PatternURL", "Selector", "Disabled")
-	// endpoint.IndexAttrs("BaseURL", "PatternURL", "Selector", "Disabled")
-	/*
-		endpoint.Filter(&admin.Filter{
-			Name:   "Groups",
-			Config: &admin.SelectOneConfig{RemoteDataResource: group},
-		})
-	*/
+	openapi := AdminUI.AddResource(&scraper.OpenAPIConfig{}, &admin.Config{Menu: []string{"API Scrapers"}})
 
 	// Search resources
+	// AdminUI.AddSearchResource(topic)
 	AdminUI.AddSearchResource(endpoint)
 	AdminUI.AddSearchResource(group)
 	AdminUI.AddSearchResource(provider)
-	// AdminUI.AddSearchResource(topic)
+	AdminUI.AddSearchResource(openapi)
 
 }
 

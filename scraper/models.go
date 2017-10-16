@@ -4,6 +4,8 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// WEB SCRAPER ///////////////////////////////////////////////////////////////
+
 // Result represents a result
 type Result map[string]string
 
@@ -135,4 +137,18 @@ type ExtractConfig struct {
 	Links     bool `default:"true" json:"links,omitempty" yaml:"links,omitempty" toml:"links,omitempty"`
 	Meta      bool `default:"true" json:"meta,omitempty" yaml:"meta,omitempty" toml:"meta,omitempty"`
 	OpenGraph bool `default:"true" json:"opengraph,omitempty" yaml:"opengraph,omitempty" toml:"opengraph,omitempty"`
+}
+
+// OPENAPI SCRAPER ///////////////////////////////////////////////////////////////
+type OpenAPIConfig struct {
+	gorm.Model
+	Name     string
+	Provider Provider
+	Specs    []*OpenAPISpecsConfig
+}
+
+type OpenAPISpecsConfig struct {
+	gorm.Model
+	Slug    string
+	Version string
 }
