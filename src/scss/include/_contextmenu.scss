@@ -1,0 +1,233 @@
+
+div.contextmenu {
+  position: absolute;
+  top: 0;
+  min-width: 240px;
+  background: $contentBackground;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+  overflow: hidden;
+  transform: translate3d(0, -20px, 0);
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 4;
+  @extend %hidden;
+
+  &[data-type='list'], &[data-type='separator'] {
+    left: -9999px;
+    margin: 0 0 0 10px;
+    min-width: 260px;
+  }
+
+  &[data-type='menu'] {
+    right: -93px;
+    margin-top: -2px;
+  }
+
+  &[data-type='sort'] {
+    right: -57px;
+    margin-top: -2px;
+  }
+
+  &.visible {
+    transform: translate3d(0, 0, 0);
+    @extend %visible;
+
+    &.top {
+      transform: translate3d(0, -40px, 0);
+    }
+  }
+
+  > ul.icons {
+    background: darken($hoverBackground, 0.5%);
+    padding: 4px 2px 6px 2px;
+
+    > li {
+      display: inline-block;
+
+      &.right {
+        float: right;
+      }
+
+      > a {
+        @include mask(null, $contextMenuIconColor, 22px);
+        position: relative;
+        display: block;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        border-radius: 50%;
+        margin: 0 3px;
+        transition: background-color 0.3s;
+
+        &.hover {
+          background-color: darken($hoverBackground, 3%);
+        }
+
+        &[data-name='delete']::before {
+          @include maskImage('icon-delete');
+          -webkit-mask-size: 20px;
+        }
+
+        &[data-name='edit']::before {
+          @include maskImage('icon-edit');
+        }
+
+        &[data-name='infos']::before {
+          @include maskImage('icon-info');
+        }
+
+        &[data-name='add']::before {
+          @include maskImage('icon-add');
+        }
+
+        &[data-name='pin']::before {
+          @include maskImage('icon-pin');
+          -webkit-mask-size: 16px;
+        }
+
+        &[data-name='unpin']::before {
+          @include maskImage('icon-unpin');
+          -webkit-mask-size: 16px;
+        }
+
+        &[data-name='show']::before {
+          @include maskImage('icon-show');
+        }
+
+        &[data-name='hide']::before {
+          @include maskImage('icon-hide');
+        }
+
+        &[data-name='settings']::before {
+          @include maskImage('icon-settings');
+        }
+
+        &[data-name='bookmarkManager']::before {
+          @include maskImage('icon-star');
+        }
+      }
+    }
+  }
+
+  > ul.list {
+
+    > li {
+      position: relative;
+
+      > div.checkbox {
+        position: absolute;
+        z-index: 2;
+        top: 13px;
+        left: 14px;
+
+        + a {
+          padding-left: 50px;
+
+          &::before {
+            display: none;
+          }
+        }
+
+        &.hover + a {
+          color: $__colorScheme;
+        }
+      }
+
+      > a {
+        @include mask(null, $contextMenuIconColor, 20px);
+        position: relative;
+        display: block;
+        line-height: 45px;
+        padding: 0 12px 0 42px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        cursor: pointer;
+        transition: color 0.3s;
+
+        &::before {
+          -webkit-mask-position: 12px center;
+          transition: background-color 0.3s, opacity 0.3s;
+        }
+
+        &.hover {
+          color: $__colorScheme;
+
+          &::before {
+            background-color: $__colorScheme;
+            opacity: 0.8;
+          }
+        }
+
+        &[data-name='newTab']::before, &[data-name='openChildren']::before {
+          @include maskImage('icon-newTab');
+        }
+
+        &[data-name='newTabIncognito']::before {
+          @include maskImage('icon-incognito');
+        }
+
+        &[data-name='deleteSeparator']::before {
+          @include maskImage('icon-delete');
+        }
+
+        &[data-name='updateUrls']::before {
+          @include maskImage('icon-update');
+        }
+
+        &[data-name='showInDir']::before {
+          @include maskImage('icon-showInDir');
+        }
+      }
+    }
+  }
+}
+
+section#sidebar {
+
+  &[data-pos='right'] {
+
+    div.contextmenu[data-type='menu'], div.contextmenu[data-type='sort'] {
+      right: 0;
+    }
+  }
+}
+
+body.dark div.contextmenu {
+  background: $darkHoverBackground;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+
+  > ul.list > li > a {
+    transition: opacity 0.3s;
+    opacity: 0.7;
+
+    &::before {
+      background-color: $darkContextMenuIconColor;
+    }
+
+    &.hover {
+      color: $__textColor;
+      opacity: 1;
+
+      &::before {
+        background-color: $__textColor;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  > ul.icons {
+    background: lighten($darkHoverBackground, 3%);
+
+    > li > a {
+
+      &::before {
+        background-color: $darkContextMenuIconColor;
+      }
+
+      &.hover {
+        background-color: lighten($darkHoverBackground, 8%);
+      }
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "manifest_version": 2,
+  "name": "__MSG_extension_name__",
+  "short_name": "__MSG_extension_name__",
+  "description": "__MSG_extension_desc__",
+  "default_locale": "en",
+  "version": "0.0.1",
+  "version_name": "Dev",
+  "minimum_chrome_version": "61",
+  "homepage_url": "https://extensions.blockbyte.de/",
+  "background": {
+    "scripts": [
+      "js/lib/jsu.js",
+      "js/background/analytics.js",
+      "js/background/language.js",
+      "js/background/model.js",
+      "js/background/upgrade.js",
+      "js/background/bookmarkApi.js",
+      "js/background/viewAmount.js",
+      "js/background/newtab.js",
+      "js/background/image.js",
+      "js/background/cache.js",
+      "js/background/icon.js",
+      "js/background/port.js",
+      "js/background.js"
+    ],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "css": [
+        "css/contentBase.css"
+      ],
+      "js": [
+        "js/lib/jsu.js",
+        "js/helper/model.js",
+        "js/helper/toggle.js",
+        "js/helper/entry.js",
+        "js/helper/list.js",
+        "js/helper/scroll.js",
+        "js/helper/template.js",
+        "js/helper/i18n.js",
+        "js/helper/font.js",
+        "js/helper/sidebarEvents.js",
+        "js/helper/search.js",
+        "js/helper/stylesheet.js",
+        "js/helper/dragndrop.js",
+        "js/helper/keyboard.js",
+        "js/helper/checkbox.js",
+        "js/helper/overlay.js",
+        "js/helper/contextmenu.js",
+        "js/helper/tooltip.js",
+        "js/helper/specialEntry.js",
+        "js/helper/utility.js",
+        "js/extension.js",
+        "js/init.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "browser_action": {
+    "default_icon": "img/icon/dev/128x128.png"
+  },
+  "content_security_policy": "script-src 'self' https://www.google-analytics.com; object-src 'self'",
+  "web_accessible_resources": [
+    "css/sidebar.css",
+    "css/overlay.css",
+    "css/content.css",
+    "img/*"
+  ],
+  "incognito": "split",
+  "options_page": "html/settings.html",
+  "icons": {
+    "256": "img/icon/dev/256x256.png",
+    "128": "img/icon/dev/128x128.png",
+    "48": "img/icon/dev/48x48.png"
+  },
+  "permissions": [
+    "<all_urls>",
+    "bookmarks",
+    "storage",
+    "unlimitedStorage",
+    "fontSettings",
+    "chrome://favicon/"
+  ],
+  "optional_permissions": [
+    "tabs",
+    "topSites"
+  ]
+}

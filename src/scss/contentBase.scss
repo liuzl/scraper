@@ -1,0 +1,52 @@
+@import "include/vars";
+@import "include/mixins";
+
+// Indicator
+body > div#blockbyte-bs-indicator {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  z-index: #{2147483647 - 2};
+
+  &.blockbyte-bs-visible {
+    display: block;
+  }
+}
+
+// Sidebar
+body > iframe#blockbyte-bs-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  @extend %hidden;
+}
+
+// Overlay
+body > iframe#blockbyte-bs-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  @extend %hidden;
+}
+
+// No Animations
+body > div#blockbyte-bs-indicator.noAnimations,
+body > iframe#blockbyte-bs-sidebar.noAnimations,
+body > iframe#blockbyte-bs-overlay.noAnimations {
+
+  &, &::before, &::after, > * {
+    transition: none !important;
+  }
+}
+
+// Print
+@media print {
+  [id^='blockbyte-bs-'] {
+    display: none !important;
+  }
+}

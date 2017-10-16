@@ -1,0 +1,184 @@
+
+body[data-type^='appearance'] {
+
+  > div.colorMask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  > section#wrapper > main {
+
+    div.boxWrapper {
+      justify-content: flex-start;
+      margin: 0 20px;
+
+      > div.box {
+        max-width: 400px;
+        margin-right: 20px;
+
+        label, input[type='range'], select, input.color, input.color + span {
+          margin-bottom: 5px;
+        }
+
+        a.revert {
+          @include mask('icon-update', $textColorLight, 24px);
+          position: absolute;
+          display: block;
+          top: 12px;
+          right: 16px;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          transform: rotateY(180deg);
+        }
+
+        &.darkMode {
+
+          div.checkbox {
+            @include mask('settings/icon-light', $textColorInverted, 20px);
+            border-radius: 15px;
+            height: 30px;
+            width: 60px;
+            background: linear-gradient(to right, #fec171 0%, #ff6c69 100%);
+
+            &::before {
+              -webkit-mask-position-x: 32px;
+              transition: -webkit-mask 0.3s;
+            }
+
+            &::after {
+              content: "";
+              position: absolute;
+              top: 3px;
+              left: 3px;
+              width: 24px;
+              height: 24px;
+              border-radius: 50%;
+              background: $textColorInverted;
+              box-shadow: none;
+              opacity: 0.7;
+              -webkit-mask: none;
+              transition: transform 0.3s, opacity 0.3s;
+            }
+
+            &.active {
+              background: linear-gradient(to right, #3c5fe1 0%, #3a2b96 100%);
+
+              &::before {
+                @include maskImage('settings/icon-dark');
+                -webkit-mask-position-x: 6px;
+              }
+
+              &::after {
+                transform: translate3d(30px, 0, 0);
+                opacity: 0.9;
+              }
+            }
+          }
+        }
+
+        ul.radioWrapper {
+          margin-top: 10px;
+
+          span[class^='icon-'] {
+            @include mask(null, $mainColor, 24px);
+            position: relative;
+            display: inline-block;
+            margin-top: -2px;
+            width: 24px;
+            height: 24px;
+          }
+
+          span.icon-bookmark::before {
+            @include maskImage("icon/menu/icon-bookmark");
+          }
+
+          span.icon-bookmark-filled::before {
+            @include maskImage("icon/menu/icon-bookmark-filled");
+          }
+
+          span.icon-star::before {
+            @include maskImage("icon/menu/icon-star");
+          }
+
+          span.icon-dir-1::before {
+            @include maskImage("icon-dir-1");
+          }
+
+          span.icon-dir-2::before {
+            @include maskImage("icon-dir-2");
+            -webkit-mask-size: 18px;
+          }
+
+          span.icon-star-filled::before {
+            @include maskImage("icon/menu/icon-star-filled");
+          }
+        }
+      }
+    }
+
+    div[data-name='sidebar'] ul.radioWrapper > li {
+      display: inline-block;
+
+      + li {
+        margin-left: 30px;
+      }
+    }
+
+    &.small {
+
+      div.boxWrapper {
+        display: block;
+
+        > div.box {
+          width: 100%;
+          max-width: 520px;
+        }
+      }
+    }
+  }
+}
+
+iframe[data-appearance] {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+  z-index: 4;
+}
+
+iframe[data-appearance='overlay'] {
+  width: 600px;
+  height: 500px;
+  top: 35px;
+  transform: scale(0.9);
+  transform-origin: top right;
+
+  @media (max-width: 1400px) {
+    top: 40px;
+    transform: scale(0.8);
+  }
+
+  @media (max-width: 1200px) {
+    top: 45px;
+    transform: scale(0.7);
+  }
+}
+
+@media (min-width: 1024px) {
+  body[data-type='appearance_general'] > iframe[data-appearance='general'],
+  body[data-type='appearance_sidebar'] > iframe[data-appearance='sidebar'],
+  body[data-type='appearance_indicator'] > iframe[data-appearance='indicator'],
+  body[data-type='appearance_overlay'] > iframe[data-appearance='overlay'] {
+    display: block;
+  }
+}

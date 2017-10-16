@@ -1,0 +1,34 @@
+.scrollBox {
+  position: relative;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  outline: none;
+  background-color: $scrollBarBackground;
+  -webkit-background-clip: text;
+  transition: background-color 0.3s;
+
+  &::-webkit-scrollbar {
+    width: $__scrollBarWidth;
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 20px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    background-color: inherit;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 20px;
+  }
+
+  &.hideScrollbar {
+    background-color: transparent !important;
+  }
+}
+
+body.dark .scrollBox {
+  background-color: $darkScrollBarBackground;
+}
