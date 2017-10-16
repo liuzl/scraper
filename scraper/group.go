@@ -7,6 +7,7 @@ import (
 
 type Group struct {
 	gorm.Model
-	Name string
+	EndpointID uint
+	Name       string
 	// l10n.LocaleCreatable
 }

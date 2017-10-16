@@ -60,6 +60,7 @@ var (
 	ActionBar *action_bar.ActionBar
 
 	Tables = []interface{}{
+		&scraper.Matcher{},
 		&scraper.Queries{},
 		&scraper.ProviderWebRankConfig{},
 		&scraper.MatcherConfig{},
@@ -211,21 +212,43 @@ func initDashboard() {
 	endpoint := AdminUI.AddResource(&scraper.Endpoint{}, &admin.Config{Menu: []string{"Web Scrapers"}})
 	endpoint.Meta(&admin.Meta{Name: "Selector", Config: &admin.SelectOneConfig{Collection: scraper.SelectorEngines, AllowBlank: false}})
 	endpoint.Meta(&admin.Meta{Name: "Method", Config: &admin.SelectOneConfig{Collection: scraper.MethodTypes, AllowBlank: false}})
+	endpoint.Meta(&admin.Meta{Name: "Groups", Config: &admin.SelectManyConfig{SelectMode: "bottom_sheet"}})
 
-	// endpoint.Meta(&admin.Meta{Name: "Disabled", Label: "Disable this endpoint"})
-	// endpoint.Meta(&admin.Meta{Name: "Debug", Label: "Debug this endpoint"})
-	// endpoint.Meta(&admin.Meta{Name: "StrictMode", Label: "Requires to match the expected number of attributes"})
+	endpoint.Meta(&admin.Meta{Name: "Description", Config: &admin.RichEditorConfig{AssetManager: assetManager, Plugins: []admin.RedactorPlugin{
+		{Name: "medialibrary", Source: "/admin/assets/javascripts/qor_redactor_medialibrary.js"},
+		{Name: "table", Source: "/vendors/redactor_table.js"},
+	},
+		Settings: map[string]interface{}{
+			"medialibraryUrl": "/admin/product_images",
+		},
+	}})
 
-	// endpoint.EditAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
-	// endpoint.ShowAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
-	// endpoint.ShowAttrs("Debug", "Name", "Route", "Method", "Selector", "BaseURL")
-	// endpoint.ShowAttrs("Debug", "Name", "Route", "Method", "Selector", "BaseURL")
+	endpoint.IndexAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
+	endpoint.SearchAttrs("Name", "Disabled", "Provider.Name", "Route", "Method")
+
+	headersEndpoint := endpoint.Meta(&admin.Meta{Name: "Headers"}).Resource
+	headersEndpoint.NewAttrs(&admin.Section{
+		Rows: [][]string{{"Key", "Value"}},
+	})
+	headersEndpoint.EditAttrs(&admin.Section{
+		Rows: [][]string{{"Key", "Value"}},
+	})
 
 	blocksEndpoint := endpoint.Meta(&admin.Meta{Name: "Blocks"}).Resource
-	blocksEndpoint.EditAttrs("Disabled", "Required", "Debug", "Name", "Items", "Matchers", "StrictMode", "Debug")
+	blocksEndpoint.EditAttrs("Name", "Disabled", "Items", "Required", "Description", "Matchers", "StrictMode", "Debug")
+
+	blocksEndpoint.Meta(&admin.Meta{Name: "Description", Config: &admin.RichEditorConfig{AssetManager: assetManager, Plugins: []admin.RedactorPlugin{
+		{Name: "medialibrary", Source: "/admin/assets/javascripts/qor_redactor_medialibrary.js"},
+		{Name: "table", Source: "/vendors/redactor_table.js"},
+	},
+		Settings: map[string]interface{}{
+			"medialibraryUrl": "/admin/product_images",
+		},
+	}})
 
 	detailsEndpoint := blocksEndpoint.Meta(&admin.Meta{Name: "Matchers"}).Resource
 	detailsEndpoint.Meta(&admin.Meta{Name: "Target", Config: &admin.SelectOneConfig{Collection: scraper.TargetTypes, AllowBlank: false}})
+	// Paths
 
 	// endpoint.ShowAttrs("Disabled", "Debug", "Name", "Route", "Method", "ExampleURL", "Selector", "BaseURL", "PatternURL", "Headers", "Blocks", "Extract", "StrictMode")
 

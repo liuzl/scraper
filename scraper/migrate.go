@@ -1,12 +1,34 @@
 package scraper
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
+	"strconv"
 	"strings"
 
+	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/jinzhu/gorm"
 	"github.com/k0kubun/pp"
+	// slugify "github.com/slotix/slugifyurl"
+	"github.com/Machiel/slugify"
+)
+
+var (
+	/*
+		slugOpts = slugify.Options{
+			SlashChar:    "_",   //Used to replace slashes
+			MaxLength:    100,   //Output string length limit
+			SkipScheme:   true,  //Omit scheme http(s)://
+			SkipUserinfo: true,  //Omit username and password information
+			UnixOnly:     false, //Vlidate file names for Windows OS.
+		}
+	*/
+	slugifier = slugify.New(slugify.Configuration{
+		ReplaceCharacter: '_',
+	})
 )
 
 func MigrateTables(db *gorm.DB, isTruncate bool, tables ...interface{}) {
@@ -20,9 +42,46 @@ func MigrateTables(db *gorm.DB, isTruncate bool, tables ...interface{}) {
 	}
 }
 
+// FindOrCreateTagByName finds a tag by name, creating if it doesn't exist
+func FindOrCreateProviderByName(db *gorm.DB, name string) (*Provider, bool, error) {
+	if name == "" {
+		return nil, false, errors.New("WARNING !!! No provider name provided")
+	}
+	var provider Provider
+	if db.Where("lower(name) = ?", strings.ToLower(name)).First(&provider).RecordNotFound() {
+		provider.Name = name
+		err := db.Create(&provider).Error
+		return &provider, true, err
+	}
+	return &provider, false, nil
+}
+
+func FindOrCreateGroupByName(db *gorm.DB, name string) (*Group, bool, error) {
+	if name == "" {
+		return nil, false, errors.New("WARNING !!! No provider name provided")
+	}
+	var group Group
+	if db.Where("lower(name) = ?", strings.ToLower(name)).First(&group).RecordNotFound() {
+		group.Name = name
+		err := db.Create(&group).Error
+		return &group, true, err
+	}
+	return &group, false, nil
+}
+
 func MigrateEndpoints(db *gorm.DB, c Config) error {
 	for _, e := range c.Routes {
-		provider := convertProviderConfig(e.ProviderStr, c.Debug)
+		// provider := convertProviderConfig(e.ProviderStr, c.Debug)
+		//}
+		/*
+			if ok := db.NewRecord(provider); ok {
+				if err := db.Create(&provider).Error; err != nil {
+					fmt.Println("error: ", err)
+					return err
+				}
+			}
+		*/
+
 		selectionBlocks, err := convertSelectorsConfig(e.BlocksJSON, c.Debug)
 		if err != nil {
 			return err
@@ -35,36 +94,101 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			pp.Print(selectionBlocks)
 		}
 
-		exampleURL := fmt.Sprintf("%s/%s", e.BaseURL, e.PatternURL)
-		exampleURL = strings.Replace(exampleURL, "{{query}}", "test", -1)
+		endpointTemplateURL := fmt.Sprintf("%s/%s", e.BaseURL, e.PatternURL)
+		slugURL := slugifier.Slugify(endpointTemplateURL)
+		exampleURL := strings.Replace(endpointTemplateURL, "{{query}}", "test", -1)
 
 		endpoint := Endpoint{
-			Disabled: false,
-			// Provider:   provider,
+			Disabled:   false,
 			Route:      e.Route,
-			Name:       e.Name,
 			Method:     strings.ToUpper(e.Method),
 			BaseURL:    e.BaseURL,
 			PatternURL: e.PatternURL,
-			// Body:       e.Body,
 			Selector:   e.Selector,
+			Slug:       slugURL,
 			Headers:    headers,
 			Blocks:     selectionBlocks,
 			ExampleURL: exampleURL,
-			// Extract:    ExtractConfig{},
 			Debug:      e.Debug,
 			StrictMode: e.StrictMode,
 		}
+
 		if c.Debug {
-			fmt.Printf("\n\nMigrating endpoint: %s \n", e.Name)
+			fmt.Printf("\n\nMigrating endpoint: %s/%s \n", e.BaseURL, e.PatternURL)
 			pp.Print(endpoint)
 		}
-		if ok := db.NewRecord(provider); ok {
-			if err := db.Create(&provider).Error; err != nil {
-				fmt.Println("error: ", err)
-				return err
+
+		var groups []*Group
+		group, _, err := FindOrCreateGroupByName(db, "Web")
+		if err != nil {
+			fmt.Println("Could not upsert the group for the current endpoint. error: ", err)
+		}
+		groups = append(groups, group)
+		// pp.Println("Groups: ", group)
+		// pp.Println("Group: ", groups)
+		endpoint.Groups = groups
+
+		providerDataURL, err := url.Parse(e.BaseURL)
+		if err != nil {
+			fmt.Println("Could not parse/extract the endpoint url parts. error: ", err)
+			//return err
+		}
+		providerHost, providerPort, err := net.SplitHostPort(providerDataURL.Host)
+		if err != nil {
+			fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
+			//return err
+		}
+
+		if c.Debug {
+			pp.Println(providerDataURL)
+			//pp.Println(providerHost)
+			//pp.Println(providerPort)
+		}
+		providerDomain := domainutil.Domain(providerDataURL.Host)
+		if c.Debug {
+			pp.Println(providerDomain)
+		}
+
+		if providerHost != "" {
+			endpoint.Host = providerHost
+		} else {
+			endpoint.Host = providerDataURL.Host
+		}
+		endpoint.Domain = providerDomain
+
+		if providerPort != "" {
+			providerPortInt, err := strconv.Atoi(providerPort)
+			if err != nil {
+				fmt.Println("WARNING ! Missing the port number for this endpoint base url. error: ", err)
+			}
+			endpoint.Port = providerPortInt
+		} else {
+			// Move to a seperate method
+			switch providerDataURL.Scheme {
+			case "wss":
+			case "https":
+				endpoint.Port = 443
+			case "ws":
+			case "http":
+				endpoint.Port = 80
+			case "rpc":
+				endpoint.Port = 445
+			default:
+				fmt.Println("WARNING ! invalid base url scheme for the current endpoint.")
 			}
 		}
+
+		endpoint.Description = e.Description
+
+		//pp.Print(endpoint)
+		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
+		if err != nil {
+			fmt.Println("Could not upsert the current provider in the registry. error: ", err)
+			// return err
+		}
+
+		endpoint.ProviderID = provider.ID
+		endpoint.Provider = provider
 
 		for _, b := range selectionBlocks {
 			if ok := db.NewRecord(b); ok {
@@ -107,8 +231,7 @@ func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]
 			return nil, err
 		}
 		selection := &SelectorConfig{
-			Name: k,
-			// Slug:       v.Slug,
+			Collection: k,
 			Debug:      v.Debug,
 			Required:   v.Required,
 			Items:      v.Items,
@@ -130,18 +253,15 @@ func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]
 func convertDetailsConfig(tgts map[string]Extractors, debug bool) ([]*MatcherConfig, error) {
 	var targets []*MatcherConfig
 	for k, t := range tgts {
-		for c, e := range t {
-			target := &MatcherConfig{
-				Target:  k,
-				Matcher: e.val,
-			}
-			if debug {
-				fmt.Printf("\nConverting extractor target config: '%s' = '%s' \n", k, e.val)
-				pp.Print(c)
-				pp.Print(t)
-			}
-			targets = append(targets, target)
+		var matchers []Matcher
+		for _, e := range t {
+			matchers = append(matchers, Matcher{Expression: e.val})
 		}
+		target := &MatcherConfig{
+			Target:  k,
+			Selects: matchers,
+		}
+		targets = append(targets, target)
 	}
 	return targets, nil
 }
