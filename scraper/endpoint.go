@@ -257,9 +257,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	if e.HeadersJSON != nil {
 		for k, v := range e.HeadersJSON {
-			if e.Debug {
-				logf("use header %s=%s", k, v)
-			}
+			//if e.Debug {
+			logf("use header %s=%s", k, v)
+			//}
 			req.Header.Set(k, v)
 		}
 	}
@@ -269,7 +269,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 	defer resp.Body.Close()
 
-	if e.Debug { //show results
+	if e.Debug || resp.StatusCode != 200 { //show results
 		logf("%s %s => %s", method, url, resp.Status)
 	}
 

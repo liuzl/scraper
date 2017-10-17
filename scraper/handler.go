@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/joho/godotenv"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/joho/godotenv"
+	"github.com/k0kubun/pp"
 	// "github.com/roscopecoltran/configor"
 )
 
@@ -46,21 +48,51 @@ func (h *Handler) LoadConfig(b []byte) error {
 	}
 
 	if len(c.Env.Files) > 0 {
-		c.Env.Variables, _ = godotenv.Read(c.Env.Files...)
+		envVars, err := godotenv.Read(c.Env.Files...)
+		if err != nil {
+			return err
+		}
+		c.Env.VariablesList = envVars
+		envVarsTree := make(map[string]map[string]string)
+		for k, v := range envVars {
+			var varParentKey, varChildrenKey string
+			varParts := strings.Split(k, "_")
+			if len(varParts) > 1 {
+				varParentKey = varParts[0]
+				varChildrenKey = strings.Join(varParts[1:], "_")
+			}
+			if v != "" && varParentKey != "" && varChildrenKey != "" {
+				envVarsTree[varParentKey] = make(map[string]string)
+				envVarsTree[varParentKey][varChildrenKey] = v
+			}
+		}
+		c.Env.VariablesTree = envVarsTree
 	}
 
 	if h.Log {
 		for k, e := range c.Routes {
-			// pp.Print(c.Routes)
 			if strings.HasPrefix(e.Route, "/") {
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
 			logf("Loaded endpoint: /%s", e.Route)
 			Endpoints.Routes = append(Endpoints.Routes, e.Route)
-			// Copy the Debug attribute
-			e.Debug = h.Debug
-			// Copy the Header attributes (only if they are not yet set)
+			e.Debug = h.Debug                  // Copy the Debug attribute
+			if len(h.Headers) > 0 && h.Debug { // Copy the Header attributes (only if they are not yet set)
+				fmt.Printf("h.Headers, len=%d:\n", len(h.Headers))
+				pp.Println(h.Headers)
+			}
+			for k, v := range e.HeadersJSON {
+				if len(e.HeadersJSON) > 0 && h.Debug {
+					pp.Println("header key: ", k)
+					pp.Println("header val: ", v)
+				}
+				for kl, vl := range c.Env.VariablesList {
+					holderKey := fmt.Sprintf("{{%s}}", strings.Replace(kl, "\"", "", -1))
+					v = strings.Replace(v, holderKey, vl, -1)
+				}
+				e.HeadersJSON[k] = strings.Trim(v, " ")
+			}
 			if e.HeadersJSON == nil {
 				e.HeadersJSON = h.Headers
 			} else {
@@ -69,6 +101,10 @@ func (h *Handler) LoadConfig(b []byte) error {
 						e.HeadersJSON[k] = v
 					}
 				}
+			}
+			if len(e.HeadersJSON) > 0 && h.Debug {
+				fmt.Printf("e.HeadersJSON, len=%d:\n", len(e.HeadersJSON))
+				pp.Println(e.HeadersJSON)
 			}
 		}
 	}

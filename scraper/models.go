@@ -59,10 +59,11 @@ type Config struct {
 }
 
 type EnvConfig struct {
-	Disabled  bool              `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Files     []string          `json:"files,omitempty" yaml:"files,omitempty" toml:"files,omitempty"`
-	Variables map[string]string `json:"-" yaml:"-" toml:"-"`
-	Debug     bool              `default:"false" help:"Enable debug output for env vars processing" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Disabled      bool                         `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Files         []string                     `json:"files,omitempty" yaml:"files,omitempty" toml:"files,omitempty"`
+	VariablesList map[string]string            `json:"-" yaml:"-" toml:"-"`
+	VariablesTree map[string]map[string]string `json:"-" yaml:"-" toml:"-"`
+	Debug         bool                         `default:"false" help:"Enable debug output for env vars processing" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.

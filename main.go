@@ -8,34 +8,42 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
+	//"strconv"
 	"syscall"
-	// "golang.org/x/crypto/bcrypt"
-
-	// etcd "github.com/coreos/etcd/clientv3"
-	// "github.com/soyking/e3ch"
-	// "github.com/roscopecoltran/scraper/db/redis"
-	// "github.com/roscopecoltran/scraper/api"
-
-	"github.com/jpillora/opts"
-	"github.com/roscopecoltran/scraper/scraper"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/wantedly/gorm-zap"
-	"go.uber.org/zap"
-
+	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
-	// "github.com/jungju/qor_admin_auth"
 	"github.com/qor/action_bar"
 	"github.com/qor/help"
 	"github.com/qor/media_library"
 	"github.com/qor/qor"
 	"github.com/roscopecoltran/admin"
+	"github.com/roscopecoltran/scraper/scraper"
+	"github.com/wantedly/gorm-zap"
+
+	"github.com/gin-gonic/gin"
+	/*
+		"github.com/aviddiviner/gin-limit"
+		"github.com/gin-gonic/contrib/cache"
+		"github.com/gin-gonic/contrib/secure"
+		"github.com/gin-gonic/contrib/static"
+		"github.com/ashwanthkumar/slack-go-webhook"
+		"github.com/carlescere/scheduler"
+	*/
+
+	"go.uber.org/zap"
+	// "github.com/jungju/qor_admin_auth"
 	// "github.com/qor/publish2"
 	// "github.com/qor/validations"
+	// "golang.org/x/crypto/bcrypt"
+	// etcd "github.com/coreos/etcd/clientv3"
+	// "github.com/soyking/e3ch"
+	// "github.com/roscopecoltran/scraper/db/redis"
+	// "github.com/roscopecoltran/scraper/api"
 )
 
 var VERSION = "0.0.0"
@@ -144,14 +152,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf(" - IsLogger? %t \n", h.Log)
-	fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
-	fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
-	fmt.Println(" - Env params: ")
-	pp.Println(h.Config.Env)
+	if h.Config.Debug {
+		fmt.Printf(" - IsLogger? %t \n", h.Log)
+		fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
+		fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
+		fmt.Println(" - Env params: ")
+		pp.Println(h.Config.Env.VariablesTree)
+	}
 
-	// Register route
-	mux := http.NewServeMux()
+	mux := http.NewServeMux() // Register route
 
 	// initEtcd()
 	// redis.UseRedis(c.RedisHost)
@@ -188,7 +197,14 @@ func main() {
 	}
 
 	log.Printf("Listening on: %s:%d", c.Host, c.Port)
-	log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
+	// log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
+
+	// With GIN
+	r := gin.Default()
+	r.Any("/*w", gin.WrapH(mux))
+	if err := r.Run(fmt.Sprintf("%s:%d", c.Host, c.Port)); err != nil {
+		log.Fatalf("Can not run server, error: %s", err)
+	}
 
 }
 
