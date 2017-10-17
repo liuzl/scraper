@@ -55,7 +55,7 @@
       "provider": "github.com",
       "base_url": "https://github.com",
       "url": "/roscopecoltran.private.atom?token={{token}}",
-      "example": "https://github.com/roscopecoltran.private.atom?token=AXSSwttLWPQBNNv5IGCAgIMAR8IYXYMMks638g0JwA==",
+      "example": "https://github.com/roscopecoltran.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}",
       "timeout": 3,
       "selector": "rss",
       "method": "GET",
