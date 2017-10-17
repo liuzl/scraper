@@ -9,6 +9,9 @@ import (
 	"regexp"
 	"strings"
 
+	// "github.com/linkosmos/mapdecor"
+	// "github.com/toukii/jsnm"
+	// "github.com/byrnedo/mapcast"
 	"github.com/PuerkitoBio/goquery"
 	// "github.com/roscopecoltran/css2xpath"
 	/*
@@ -71,6 +74,75 @@ func jsonerr(err error) []byte {
 func logf(format string, args ...interface{}) {
 	log.Printf("[scraper] "+format, args...)
 }
+
+/*
+func mapdecor() {
+    input := map[string]interface{}{
+      "key1": nil,
+      "key2": "with",
+      "val1": "1",
+      "val2": "2",
+      "val3": "3",
+      "val4": "4",
+    }
+
+    decorFunc := func(input map[string]interface{}) (output map[string]interface{}) {
+      partitonFunc := func(s string, i interface{}) bool {
+        return strings.Contains(s, "val")
+      }
+
+      // For first (inputPartitioned[0]) partition we get key-values containing 'val' in key
+      // For second (inputPartitioned[1]) partition what is left
+      inputPartitioned := mapop.Partition(partitonFunc, input)
+
+      // Assigning values key to first partition
+      inputPartitioned[1]["values"] = inputPartitioned[0]
+
+      return inputPartitioned[1]
+    }
+
+
+    got := Decorate(input, decorFunc)
+
+  // Got
+  // map[string]interface{}{
+  //   "key1": nil,
+  //   "key2": "with",
+  //   "values": map[string]interface{}{
+  //     "val1": "1",
+  //     "val2": "2",
+  //     "val3": "3",
+  //     "val4": "4",
+  //   }
+  // }
+}
+*/
+
+/*
+// https://github.com/byrnedo/mapcast
+type myStruct struct {
+    Field int `json:"input_name" bson:"output_name"`
+    Hidden float32 `json:"-" bson:"hidden_field"`
+}
+
+func mapcast() {
+	myInput := map[string]string{"input_name": "345"}
+
+	Cast(myInput, myStruct{})
+	// returns map{"Field" : 345}
+
+	CastViaJson(myInput, myStruct{})
+	// returns map{"input_name" : 345}
+
+	CastViaJsonToBson(myInput, myStruct{})
+	// returns map{"output_name" : 345}
+
+	myMultiInput := map[string][]string{"input_name" : []string{"345}}
+
+	CastMultiViaJsonToBson(myMultiInput, myStruct{})
+	// returns map{"output_name" : []int[345]}
+}
+*/
 
 /*
 func xPathToCss(xpath []string, xtype string) []string {

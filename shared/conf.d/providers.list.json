@@ -4,6 +4,10 @@
   "migrate": true,
   "truncate": true,
   "dashboard": true,
+  "env": {
+    "debug": true,
+    "files": [".env"]
+  },
   "routes": [
     {
       "route": "/github/search",
@@ -12,14 +16,24 @@
       "name": "github-search",
       "provider": "github.com",
       "base_url": "https://api.github.com",
-      "url": "/search/repositories?q={{query}}",
+      "url": "/search/repositories?q={{query}}&per_page=3&page=1&order=desc&sort=stars",
       "example": "https://api.github.com/search/repositories?q=dlib&per_page=1&page=1&order=desc&sort=stars",
       "timeout": 3,
       "selector": "json",
       "method": "GET",
+      "headers": {
+        "Authorization": " token {{GITHUB_TOKEN}}",
+        "Accept": "application/vnd.github.mercy-preview+json"
+      },
       "blocks": {
         "result": {
-          "items": "results" 
+          "items": "items",
+          "details": {
+            "name": "name",
+            "desc": "description",
+            "owner": ["owner.avatar_url", "owner.id", "owner.login"],
+            "product": "full_name"
+          }
         }
       }
     },

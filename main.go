@@ -27,7 +27,7 @@ import (
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
 
-	// "github.com/k0kubun/pp"
+	"github.com/k0kubun/pp"
 	// "github.com/jungju/qor_admin_auth"
 	"github.com/qor/action_bar"
 	"github.com/qor/help"
@@ -147,6 +147,8 @@ func main() {
 	fmt.Printf(" - IsLogger? %t \n", h.Log)
 	fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
 	fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
+	fmt.Println(" - Env params: ")
+	pp.Println(h.Config.Env)
 
 	// Register route
 	mux := http.NewServeMux()
@@ -170,7 +172,7 @@ func main() {
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...)
-		scraper.SeedAlexaTop1M()
+		// scraper.SeedAlexaTop1M()
 		initDashboard()
 		// amount to /admin, so visit `/admin` to view the admin interface
 		AdminUI.MountTo("/admin", mux)

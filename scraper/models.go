@@ -19,7 +19,8 @@ import (
 // WEB SCRAPER ///////////////////////////////////////////////////////////////
 
 // Result represents a result
-type Result map[string]string
+// type ResultOld map[string]string
+type Result map[string]interface{}
 
 // Create a GORM-backend model
 type Provider struct {
@@ -46,6 +47,8 @@ type Config struct {
 	sorting.Sorting
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
+	Env EnvConfig `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+
 	Port      int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
 	Routes    []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
 	Dashboard bool        `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
@@ -53,6 +56,13 @@ type Config struct {
 	Migrate   bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
 
 	Debug bool `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EnvConfig struct {
+	Disabled  bool              `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Files     []string          `json:"files,omitempty" yaml:"files,omitempty" toml:"files,omitempty"`
+	Variables map[string]string `json:"-" yaml:"-" toml:"-"`
+	Debug     bool              `default:"false" help:"Enable debug output for env vars processing" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
@@ -88,6 +98,7 @@ type Endpoint struct {
 
 	HeadersJSON map[string]string         `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
 	BlocksJSON  map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	// PathsJSON   map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
 
 	Headers []*HeaderConfig   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
 	Blocks  []*SelectorConfig `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
@@ -218,6 +229,7 @@ type SelectorConfig struct {
 	Required    bool                  `default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
 	Items       string                `json:"items,omitempty" yaml:"items,omitempty" toml:"items,omitempty"`
 	Details     map[string]Extractors `gorm:"-" json:"details,omitempty" yaml:"details,omitempty" toml:"details,omitempty"`
+	Paths       map[string]string     `gorm:"-" json:"paths,omitempty" yaml:"paths,omitempty" toml:"paths,omitempty"`
 	Matchers    []*MatcherConfig      `json:"matchers,omitempty" yaml:"matchers,omitempty" toml:"matchers,omitempty"`
 	StrictMode  bool                  `default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 	Debug       bool                  `default:"true" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`

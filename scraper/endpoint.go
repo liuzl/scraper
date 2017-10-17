@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,9 +13,16 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
+	"github.com/gebv/typed"
 	"github.com/k0kubun/pp"
+	"github.com/karlseguin/cmap"
 	"github.com/leebenson/conform"
+	"github.com/mgbaozi/gomerge"
 	"golang.org/x/net/html"
+	// "github.com/whyrusleeping/json-filter"
+	// "github.com/wolfeidau/unflatten"
+	// "github.com/jzaikovs/t"
+	// "github.com/linkosmos/urlutils"
 	// "github.com/microcosm-cc/bluemonday"
 	// "github.com/kennygrant/sanitize"
 	// "github.com/slotix/slugifyurl"
@@ -50,6 +58,57 @@ import (
 	- https://github.com/peterhellberg/link
 */
 
+func typedTest(path string) {
+	// directly from a map[string]interace{}
+	// typed := typed.New(a_map)
+
+	// from a json []byte
+	// typed, err := typed.Json(data)
+
+	// from a file containing JSON
+	typ, _ := typed.JsonFile(path)
+	pp.Print(typ)
+
+}
+
+func cmapTest() {
+	m := cmap.New()
+	m.Set("power", 9000)
+	value, _ := m.Get("power")
+	pp.Print(value)
+	m.Delete("power")
+	m.Len()
+}
+
+type People struct {
+	Name  string `json:"name"`
+	Sex   string `json:"sex"`
+	Age   int    `json:"age"`
+	Times int    `json:"times"`
+}
+
+// body as string
+func gomergeTest(body []byte) {
+
+	var tom People
+	tom = People{
+		Name:  "tom",
+		Sex:   "male",
+		Age:   18,
+		Times: 1,
+	}
+
+	var request_data map[string]interface{}
+	if err := json.Unmarshal(body, &request_data); err != nil {
+		panic(err)
+	}
+	if err := gomerge.Merge(&tom, request_data); err != nil {
+		panic(err)
+	}
+	result, _ := json.Marshal(tom)
+	fmt.Println(result)
+}
+
 func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
 	r := Result{}
 	if e.Debug {
@@ -66,6 +125,73 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 			// r[field] = ""
 			logf("missing field: %s", field)
 		}
+	}
+	return r
+}
+
+// import "github.com/jzaikovs/t"
+func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extractors) []Result { //extract 1 result using this endpoints extractor map
+	var r []Result
+	if e.Debug {
+		pp.Println(fields)
+	}
+	list, err := mv.ValuesForPath("items")
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+	pp.Println(list)
+	for i := 0; i < len(list); i++ {
+		e := Result{}
+		for attr, field := range fields {
+			var keyPath string
+			var node []interface{}
+			if len(field) == 1 {
+				keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, field[0].val)
+				fmt.Println("field[0].val=", field[0].val, "keyPath: ", keyPath)
+				node, _ = mv.ValuesForPath(keyPath)
+			} else {
+				w := make(map[string]interface{}, len(field))
+				var merr error
+				for _, whl := range field {
+					var keyName string
+					if strings.Contains(whl.val, "|") {
+						keyParts := strings.Split(whl.val, "|")
+						pp.Println(keyParts)
+						keyName = keyParts[len(keyParts)-1]
+						whl.val = keyParts[0]
+						fmt.Println("keyName alias: ", keyName)
+					} else {
+						keyParts := strings.Split(whl.val, ".")
+						pp.Println(keyParts)
+						keyName = keyParts[len(keyParts)-1]
+						fmt.Println("keyName alias", keyName)
+					}
+					keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, whl.val)
+					fmt.Println("keyName: ", keyName, ", whl.vall=", whl.val, "keyPath: ", keyPath)
+					node, merr = mv.ValuesForPath(keyPath)
+					if merr != nil {
+						fmt.Println("Error: ", merr)
+					}
+					if node != nil {
+						if len(node) == 1 {
+							w[keyName] = node[0]
+						} else if len(node) > 1 {
+							w[keyName] = node
+						}
+					}
+				}
+				fmt.Println("subkeys whitelisted and mapped: ")
+				pp.Println(w)
+				e[attr] = w
+				continue
+			}
+			if len(node) == 1 {
+				e[attr] = node[0]
+			} else if len(node) > 1 {
+				e[attr] = node
+			}
+		}
+		r = append(r, e)
 	}
 	return r
 }
@@ -151,6 +277,13 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	// https://github.com/golang/go/wiki/Switch
 	switch e.Selector {
+	case "wiki":
+		fmt.Println("Using 'WIKI' extractor")
+	case "md":
+		fmt.Println("Using 'MARKDOWN' extractor")
+	case "csv":
+	case "tsv":
+		fmt.Printf("Using '%s-DELIMITED' extractor \n", e.Selector)
 	case "xml":
 		mv, err := mxj.NewMapXmlReader(resp.Body)
 		if err != nil {
@@ -163,12 +296,30 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		pp.Print(mv)
+		for b, s := range e.BlocksJSON {
+			if s.Items != "" {
+				r := e.extractMXJ(mv, s.Items, s.Details)
+				pp.Println(r)
+				if r != nil {
+					aggregate[b] = r
+				}
+			}
+			//fmt.Println(" - block_key: ", b)
+			// pp.Println(s)
+		}
 	case "rss":
 		fp := gofeed.NewParser()
 		feed, err := fp.Parse(resp.Body)
 		if err != nil {
 			return nil, err
+		}
+		for b, s := range e.BlocksJSON {
+			var results []Result
+			if results != nil {
+				aggregate[b] = results
+			}
+			fmt.Println("block_key: ", b)
+			pp.Println(s)
 		}
 		/*
 			"items":       feed.Items,
@@ -200,7 +351,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 					}
 				*/
 				htmlquery.FindEach(doc, s.Items, func(i int, node *html.Node) {
-
 					r := e.extractXpath(node, s.Details)
 					if len(r) == len(s.Details) {
 						results = append(results, r)

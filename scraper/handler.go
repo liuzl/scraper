@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/joho/godotenv"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -12,6 +13,8 @@ import (
 
 type Handler struct {
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+
+	Env EnvConfig `opts:"-" json:"env" yaml:"env" file:"environment" toml:"env"`
 
 	Config  Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
@@ -40,6 +43,10 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
+	}
+
+	if len(c.Env.Files) > 0 {
+		c.Env.Variables, _ = godotenv.Read(c.Env.Files...)
 	}
 
 	if h.Log {
