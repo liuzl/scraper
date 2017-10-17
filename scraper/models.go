@@ -307,8 +307,10 @@ type OpenAPISpecsConfig struct {
 
 type Connection struct {
 	// gorm.Model
-	ID         uint     `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	ID         uint `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	Provider   Provider
 	EndpointID uint     `json:"-" yaml:"-" toml:"-"`
+	URL        string   `json:"url" yaml:"url" toml:"url"`
 	Request    Request  `json:"request" yaml:"request" toml:"request"`
 	Response   Response `json:"response" yaml:"response" toml:"response"`
 	RecordedAt string   `json:"recorded_at" yaml:"recorded_at" toml:"recorded_at"`

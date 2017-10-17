@@ -170,6 +170,7 @@ func main() {
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...)
+		scraper.SeedAlexaTop1M()
 		initDashboard()
 		// amount to /admin, so visit `/admin` to view the admin interface
 		AdminUI.MountTo("/admin", mux)
@@ -245,14 +246,15 @@ func initDashboard() {
 	AdminUI.AddResource(&scraper.HeaderConfig{}, &admin.Config{Invisible: true})
 
 	// connection :=
-	AdminUI.AddResource(&scraper.Connection{}, &admin.Config{Menu: []string{"Activity"}})
-	//connection.Meta(&admin.Meta{Name: "Body", Type: "text"})
+	connection := AdminUI.AddResource(&scraper.Connection{}, &admin.Config{Menu: []string{"Activity"}})
+	connection.IndexAttrs("ID", "Provider", "URL", "Response.Code")
+	// connection.Meta(&admin.Meta{Name: "Name", Type: "Readonly"})
 
-	request := AdminUI.AddResource(&scraper.Request{}, &admin.Config{Menu: []string{"Activity"}})
-	request.Meta(&admin.Meta{Name: "Body", Type: "text"})
+	AdminUI.AddResource(&scraper.Request{}, &admin.Config{Invisible: true})
+	// request.Meta(&admin.Meta{Name: "Body", Type: "text"})
+	// request.IndexAttrs("ID", "VersionName", "ScheduledStartAt", "ScheduledEndAt", "Author", "Title")
 
-	response := AdminUI.AddResource(&scraper.Response{}, &admin.Config{Menu: []string{"Activity"}})
-	response.Meta(&admin.Meta{Name: "Body", Type: "text"})
+	AdminUI.AddResource(&scraper.Response{}, &admin.Config{Invisible: true})
 
 	// Endpoints
 	endpoint := AdminUI.AddResource(&scraper.Endpoint{}, &admin.Config{Menu: []string{"Web Scrapers"}})

@@ -7,6 +7,8 @@ References:
     + https://github.com/chrisdobbins/chrome-extension-back-end (go, docker and docker-compose)
     + https://github.com/sherlock-help/chrome.extensions
     + https://github.com/Loamhoof/chrome-ext-yt-dl INTERESTING (Some extension sending opened YT tabs URLs to an HTTP server downloading then with youtube-dl)
+    + https://github.com/fabioberger/chrome (GopherJS)
+    + https://github.com/azumads/selenium/blob/master/app/admin.go
     + https://github.com/research-pal/backend
         * https://github.com/research-pal/chrome-ext
 
@@ -24,5 +26,4 @@ References:
     + https://github.com/jolim24601/stackle_chrome_extension
     + https://github.com/Kiuryy/Leftside_Back REALLY INTERESTING
     + https://github.com/Kiuryy/Bookmark_Sidebar REALLY INTERESTING
-    + 
 
