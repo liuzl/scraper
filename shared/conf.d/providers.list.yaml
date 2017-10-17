@@ -29,6 +29,14 @@ routes:
   headers:
     Authorization: " token {{GITHUB_TOKEN}}"
     Accept: application/vnd.github.mercy-preview+json
+  openapi:
+    defs:
+    - link: ''
+      version: 3
+  resp_headers_intercept:
+  - X-Ratelimit-Limit
+  - X-RateLimit-Remaining
+  - X-RateLimit-Reset
   blocks:
     result:
       items: items
@@ -40,34 +48,64 @@ routes:
         - owner.id
         - owner.login
         product: full_name
+        topics: topics
 - route: "/github/notifications"
   debug: true
   disabled: false
-  name: rss-test
+  name: github-notifications-rss
   provider: github.com
   base_url: https://github.com
-  url: "/roscopecoltran.private.atom?token={{token}}"
-  example: https://github.com/roscopecoltran.private.atom?token=AXSSwttLWPQBNNv5IGCAgIMAR8IYXYMMks638g0JwA==
+  url: "/{{username}}.private.atom?token={{token}}"
+  example: https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}
+  examples:
+    remote:
+      desc: ''
+      link: https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}
+    local:
+      desc: ''
+      link: http://localhost:3000/github/notifications?token={{GITHUB_NOTIFICATION_TOKEN}}&username={{GITHUB_ACCOUNT}}
   timeout: 3
   selector: rss
   method: GET
   blocks:
     result:
-      items: results
+      items: items
+      details:
+        name: name
+        desc: description
+        owner:
+        - owner.avatar_url
+        - owner.id
+        - owner.login
+        product: full_name
 - route: "/xml/test"
   debug: true
   disabled: false
   name: xml-test
   provider: github.com
   base_url: https://github.com
-  url: "/roscopecoltran.private.atom?token={{token}}"
-  example: https://github.com/roscopecoltran.private.atom?token=AXSSwttLWPQBNNv5IGCAgIMAR8IYXYMMks638g0JwA==
+  url: "/{{GITHUB_ACCOUNT}}.private.atom?token={{token}}"
+  examples:
+    remote:
+      desc: ''
+      link: https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}
+    local:
+      desc: ''
+      link: http://localhost:3000/github/notifications?token={{GITHUB_NOTIFICATION_TOKEN}}&username={{GITHUB_ACCOUNT}}
   timeout: 3
   selector: xml
   method: GET
   blocks:
     result:
-      items: results
+      items: items
+      details:
+        name: name
+        desc: description
+        owner:
+        - owner.avatar_url
+        - owner.id
+        - owner.login
+        product: full_name
 - route: "/google/search"
   debug: true
   disabled: true

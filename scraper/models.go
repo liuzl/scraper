@@ -99,8 +99,9 @@ type Endpoint struct {
 	Body     string `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
 	Selector string `gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
 
-	HeadersJSON map[string]string         `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	BlocksJSON  map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	HeadersIntercept []string                  `gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	HeadersJSON      map[string]string         `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	BlocksJSON       map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
 	// PathsJSON   map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
 
 	Headers []*HeaderConfig   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`

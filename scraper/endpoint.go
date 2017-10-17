@@ -261,6 +261,20 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 	defer resp.Body.Close()
 
+	if e.Debug { //show received headers
+		fmt.Println("Response Headers: ")
+		pp.Println(resp.Header)
+		fmt.Println("Response Headers to intercept: ")
+		pp.Println(e.HeadersIntercept)
+	}
+	for k, v := range resp.Header {
+		if contains(e.HeadersIntercept, k) {
+			//if e.Debug {
+			logf(" [CATCH] key=%s, value=%s", k, v)
+			//}
+		}
+	}
+
 	if e.Debug || resp.StatusCode != 200 { //show results
 		logf("%s %s => %s", method, url, resp.Status)
 	}

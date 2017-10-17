@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -27,6 +28,25 @@ import (
 	*/)
 
 var templateRe = regexp.MustCompile(`\{\{\s*(\w+)\s*(:(\w+))?\s*\}\}`)
+
+func contains(input []string, match string) bool {
+	for _, value := range input {
+		if value == match {
+			return true
+		}
+	}
+	return false
+}
+
+func dedup(input []string) []string {
+	var output []string
+	for _, value := range input {
+		if !contains(output, value) {
+			output = append(output, value)
+		}
+	}
+	return output
+}
 
 func template(isurl bool, str string, vars map[string]string) (out string, err error) {
 	out = templateRe.ReplaceAllStringFunc(str, func(key string) string {
@@ -73,6 +93,23 @@ func jsonerr(err error) []byte {
 
 func logf(format string, args ...interface{}) {
 	log.Printf("[scraper] "+format, args...)
+}
+
+func HasElem(s interface{}, elem interface{}) bool {
+	arrV := reflect.ValueOf(s)
+
+	if arrV.Kind() == reflect.Slice {
+		for i := 0; i < arrV.Len(); i++ {
+
+			// XXX - panics if slice element points to an unexported struct field
+			// see https://golang.org/pkg/reflect/#Value.Interface
+			if arrV.Index(i).Interface() == elem {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 /*
