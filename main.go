@@ -1,13 +1,12 @@
 package main
 
-// luc
-
 import (
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -115,6 +114,7 @@ var (
 )
 
 func main() {
+	useGinWrap := false
 
 	logger, errInit = zap.NewProduction()
 
@@ -188,42 +188,30 @@ func main() {
 	// 	api.API.MountTo("/api", mux)
 	// }
 
-	// With GIN
-	r := gin.Default()
-
 	mux.Handle("/", h)
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config)
 	}
 
-	store := persistence.NewInMemoryStore(60 * time.Second)
-	if h.Config.Debug {
-		pp.Println(store)
-	}
-
-	// Cached Page
-	/*
-		r.GET("/ping", func(c *gin.Context) {
-			c.String(200, "pong "+fmt.Sprint(time.Now().Unix()))
-		})
-
-		r.GET("/cache_ping", cache.CachePage(store, time.Minute, func(c *gin.Context) {
-			c.String(200, "pong "+fmt.Sprint(time.Now().Unix()))
-		}))
-	*/
-
 	// https://github.com/dwarvesf/delivr-admin/blob/develop/config/api/api.go
 	// https://github.com/dwarvesf/delivr-admin/blob/develop/main.go
 
-	log.Printf("Listening on: %s:%d", c.Host, c.Port)
-	// log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
+	if useGinWrap { // With GIN
 
-	r.Any("/*w", gin.WrapH(mux))
+		r := gin.Default()
 
-	// r.Any("/admin/*w", gin.WrapH(mux))
+		store := persistence.NewInMemoryStore(60 * time.Second)
+		if h.Config.Debug {
+			pp.Println(store)
+		}
 
-	if err := r.Run(fmt.Sprintf("%s:%d", c.Host, c.Port)); err != nil {
-		log.Fatalf("Can not run server, error: %s", err)
+		r.Any("/*w", gin.WrapH(mux))
+		if err := r.Run(fmt.Sprintf("%s:%d", c.Host, c.Port)); err != nil {
+			log.Fatalf("Can not run server, error: %s", err)
+		}
+	} else {
+		log.Printf("Listening on: %s:%d", c.Host, c.Port)
+		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
 	}
 
 }
