@@ -68,7 +68,6 @@ func typedTest(path string) {
 	// from a file containing JSON
 	typ, _ := typed.JsonFile(path)
 	pp.Print(typ)
-
 }
 
 func cmapTest() {
