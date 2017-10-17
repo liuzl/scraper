@@ -34,30 +34,6 @@ import (
 		"github.com/ynqa/word-embedding/validate"
 	*/)
 
-/*
-	Refs:
-	- github.com/slotix/dataflowkit
-	- github.com/slotix/pageres-go-wrapper
-	- github.com/fern4lvarez/go-metainspector
-	- github.com/gpahal/go-meta
-	- https://github.com/scrapinghub/mdr
-	- https://github.com/scrapinghub/aile/blob/master/demo2.py
-	- https://github.com/datatogether/sentry
-	- https://github.com/sourcegraph/webloop
-	- https://github.com/107192468/sp/blob/master/src/readhtml/readhtml.go
-	- https://github.com/nikolay-turpitko/structor
-	- https://github.com/dreampuf/paw/tree/master/src/web
-	- https://github.com/rakanalh/grawler/blob/master/processors/text.go
-	- https://github.com/rakanalh/grawler/blob/master/extractor/xpath.go
-	- https://github.com/rakanalh/grawler/blob/master/extractor/css.go
-	- https://github.com/ErosZy/labour/blob/master/parser/pageItemXpathParser.go
-	- https://github.com/ErosZy/labour
-	- https://github.com/cugbliwei/crawler/blob/master/extractor/selector.go
-	- https://github.com/xlvector/higgs/blob/master/extractor/selector.go
-	- github.com/tchssk/link
-	- https://github.com/peterhellberg/link
-*/
-
 func typedTest(path string) {
 	// directly from a map[string]interace{}
 	// typed := typed.New(a_map)
@@ -120,8 +96,7 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 			} else {
 				r[field] = strings.Trim(v, " ")
 			}
-		} else { //else if e.Debug {
-			// r[field] = ""
+		} else if e.Debug {
 			logf("missing field: %s", field)
 		}
 	}
@@ -212,14 +187,20 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 }
 
 func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
-	// pp.Print(e)
+	if e.Debug {
+		pp.Print(e)
+	}
 	r := Result{}
 	for field, ext := range fields {
 		xpathRule := GetExtractorValue(ext)
-		// logf("xpathRule: %s", xpathRule)
+		if e.Debug {
+			logf("xpathRule: %s", xpathRule)
+		}
 		if v := htmlquery.FindOne(node, xpathRule); v != nil {
 			t := htmlquery.InnerText(v)
-			// logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
+			if e.Debug {
+				logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
+			}
 			switch field {
 			case "url":
 				url := htmlquery.SelectAttr(v, "href")
@@ -234,8 +215,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 			default:
 				r[field] = strings.Trim(t, " ")
 			}
-		} else { //else if e.Debug {
-			// r[field] = ""
+		} else if e.Debug {
 			logf("missing field: %s", field)
 		}
 	}
@@ -308,6 +288,21 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		if e.Debug {
 			pp.Print(mv)
+		}
+		for b, s := range e.BlocksJSON {
+			if s.Items != "" {
+				r := e.extractMXJ(mv, s.Items, s.Details)
+				if e.Debug {
+					pp.Println(r)
+				}
+				if r != nil {
+					aggregate[b] = r
+				}
+			}
+			if e.Debug {
+				fmt.Println(" - block_key: ", b)
+				pp.Println(s)
+			}
 		}
 	case "json":
 		mxj.JsonUseNumber = true
@@ -456,3 +451,27 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 	return aggregate, nil
 }
+
+/*
+	Refs:
+	- github.com/slotix/dataflowkit
+	- github.com/slotix/pageres-go-wrapper
+	- github.com/fern4lvarez/go-metainspector
+	- github.com/gpahal/go-meta
+	- https://github.com/scrapinghub/mdr
+	- https://github.com/scrapinghub/aile/blob/master/demo2.py
+	- https://github.com/datatogether/sentry
+	- https://github.com/sourcegraph/webloop
+	- https://github.com/107192468/sp/blob/master/src/readhtml/readhtml.go
+	- https://github.com/nikolay-turpitko/structor
+	- https://github.com/dreampuf/paw/tree/master/src/web
+	- https://github.com/rakanalh/grawler/blob/master/processors/text.go
+	- https://github.com/rakanalh/grawler/blob/master/extractor/xpath.go
+	- https://github.com/rakanalh/grawler/blob/master/extractor/css.go
+	- https://github.com/ErosZy/labour/blob/master/parser/pageItemXpathParser.go
+	- https://github.com/ErosZy/labour
+	- https://github.com/cugbliwei/crawler/blob/master/extractor/selector.go
+	- https://github.com/xlvector/higgs/blob/master/extractor/selector.go
+	- github.com/tchssk/link
+	- https://github.com/peterhellberg/link
+*/
