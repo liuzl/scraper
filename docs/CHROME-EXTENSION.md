@@ -11,6 +11,10 @@ References:
     + https://github.com/azumads/selenium/blob/master/app/admin.go
     + https://github.com/research-pal/backend
         * https://github.com/research-pal/chrome-ext
+    + github.com/lhside/chrome-go
+    + https://github.com/jiusanzhou/clowser/blob/master/cmd/clowser/chrome_extension/manifest.json INTERESTING
+    + https://github.com/research-pal/backend
+    + https://github.com/research-pal/chrome-ext
 
 - NodeJS:
     + https://github.com/artisologic/github-stars-tagger

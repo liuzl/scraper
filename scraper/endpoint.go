@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mmcdole/gofeed"
+	"github.com/roscopecoltran/mxj"
+
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
 	"github.com/k0kubun/pp"
@@ -148,6 +151,39 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	// https://github.com/golang/go/wiki/Switch
 	switch e.Selector {
+	case "xml":
+		mv, err := mxj.NewMapXmlReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		pp.Print(mv)
+	case "json":
+		mxj.JsonUseNumber = true
+		mv, err := mxj.NewMapJsonReaderAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		pp.Print(mv)
+	case "rss":
+		fp := gofeed.NewParser()
+		feed, err := fp.Parse(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		/*
+			"items":       feed.Items,
+			"author":      feed.Author,
+			"categories":  feed.Categories,
+			"custom":      feed.Custom,
+			"copyright":   feed.Copyright,
+			"description": feed.Description,
+			"type":        feed.FeedType,
+			"language":    feed.Language,
+			"title":       feed.Title,
+			"published":   feed.Published,
+			"updated":     feed.Updated,
+		*/
+		pp.Print(feed)
 	case "xpath":
 		doc, err := htmlquery.Parse(resp.Body)
 		if err != nil {

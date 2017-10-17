@@ -190,6 +190,25 @@ func main() {
 
 }
 
+/*
+
+// import "github.com/lhside/chrome-go"
+func chromeBridge() {
+	// Read message from standard input.
+	msg, err := chrome.Receive(os.Stdin)
+	// Post message to standard output
+	err := chrome.Post(msg, os.Stdout)
+}
+
+// import "github.com/sauyon/go-chromemessage/chromemsg"
+func chromeBridge2() {
+	msg := chromemsg.New()
+	msg.Read()
+	msg.Write()
+}
+
+*/
+
 func initDashboard() {
 
 	// Initalize
