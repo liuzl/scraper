@@ -139,15 +139,19 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
-	pp.Println(list)
+	if e.Debug {
+		pp.Println(list)
+	}
 	for i := 0; i < len(list); i++ {
-		e := Result{}
+		l := Result{}
 		for attr, field := range fields {
 			var keyPath string
 			var node []interface{}
 			if len(field) == 1 {
 				keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, field[0].val)
-				fmt.Println("field[0].val=", field[0].val, "keyPath: ", keyPath)
+				if e.Debug {
+					fmt.Println("field[0].val=", field[0].val, "keyPath: ", keyPath)
+				}
 				node, _ = mv.ValuesForPath(keyPath)
 			} else {
 				w := make(map[string]interface{}, len(field))
@@ -156,18 +160,28 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 					var keyName string
 					if strings.Contains(whl.val, "|") {
 						keyParts := strings.Split(whl.val, "|")
-						pp.Println(keyParts)
+						if e.Debug {
+							pp.Println(keyParts)
+						}
 						keyName = keyParts[len(keyParts)-1]
 						whl.val = keyParts[0]
-						fmt.Println("keyName alias: ", keyName)
+						if e.Debug {
+							fmt.Println("keyName alias: ", keyName)
+						}
 					} else {
 						keyParts := strings.Split(whl.val, ".")
-						pp.Println(keyParts)
+						if e.Debug {
+							pp.Println(keyParts)
+						}
 						keyName = keyParts[len(keyParts)-1]
-						fmt.Println("keyName alias", keyName)
+						if e.Debug {
+							fmt.Println("keyName alias", keyName)
+						}
 					}
 					keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, whl.val)
-					fmt.Println("keyName: ", keyName, ", whl.vall=", whl.val, "keyPath: ", keyPath)
+					if e.Debug {
+						fmt.Println("keyName: ", keyName, ", whl.vall=", whl.val, "keyPath: ", keyPath)
+					}
 					node, merr = mv.ValuesForPath(keyPath)
 					if merr != nil {
 						fmt.Println("Error: ", merr)
@@ -180,18 +194,20 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 						}
 					}
 				}
-				fmt.Println("subkeys whitelisted and mapped: ")
-				pp.Println(w)
-				e[attr] = w
+				if e.Debug {
+					fmt.Println("subkeys whitelisted and mapped: ")
+					pp.Println(w)
+				}
+				l[attr] = w
 				continue
 			}
 			if len(node) == 1 {
-				e[attr] = node[0]
+				l[attr] = node[0]
 			} else if len(node) > 1 {
-				e[attr] = node
+				l[attr] = node
 			}
 		}
-		r = append(r, e)
+		r = append(r, l)
 	}
 	return r
 }
@@ -228,7 +244,9 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
-	// pp.Print(e)
+	if e.Debug {
+		pp.Print(e)
+	}
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err
@@ -250,16 +268,11 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		return nil, err
 	}
 
-	/*
-		Key   string
-		Value string
-	*/
-
 	if e.HeadersJSON != nil {
 		for k, v := range e.HeadersJSON {
-			//if e.Debug {
-			logf("use header %s=%s", k, v)
-			//}
+			if e.Debug {
+				logf("use header %s=%s", k, v)
+			}
 			req.Header.Set(k, v)
 		}
 	}
@@ -275,21 +288,28 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	aggregate := make(map[string][]Result, 0)
 
-	// https://github.com/golang/go/wiki/Switch
 	switch e.Selector {
 	case "wiki":
-		fmt.Println("Using 'WIKI' extractor")
+		if e.Debug {
+			fmt.Println("Using 'WIKI' extractor")
+		}
 	case "md":
-		fmt.Println("Using 'MARKDOWN' extractor")
+		if e.Debug {
+			fmt.Println("Using 'MARKDOWN' extractor")
+		}
 	case "csv":
 	case "tsv":
-		fmt.Printf("Using '%s-DELIMITED' extractor \n", e.Selector)
+		if e.Debug {
+			fmt.Printf("Using '%s-DELIMITED' extractor \n", e.Selector)
+		}
 	case "xml":
 		mv, err := mxj.NewMapXmlReader(resp.Body)
 		if err != nil {
 			return nil, err
 		}
-		pp.Print(mv)
+		if e.Debug {
+			pp.Print(mv)
+		}
 	case "json":
 		mxj.JsonUseNumber = true
 		mv, err := mxj.NewMapJsonReaderAll(resp.Body)
@@ -299,13 +319,17 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
-				pp.Println(r)
+				if e.Debug {
+					pp.Println(r)
+				}
 				if r != nil {
 					aggregate[b] = r
 				}
 			}
-			//fmt.Println(" - block_key: ", b)
-			// pp.Println(s)
+			if e.Debug {
+				fmt.Println(" - block_key: ", b)
+				pp.Println(s)
+			}
 		}
 	case "rss":
 		fp := gofeed.NewParser()
@@ -318,8 +342,10 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			if results != nil {
 				aggregate[b] = results
 			}
-			fmt.Println("block_key: ", b)
-			pp.Println(s)
+			if e.Debug {
+				fmt.Println("block_key: ", b)
+				pp.Println(s)
+			}
 		}
 		/*
 			"items":       feed.Items,
@@ -334,7 +360,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			"published":   feed.Published,
 			"updated":     feed.Updated,
 		*/
-		pp.Print(feed)
+		if e.Debug {
+			pp.Print(feed)
+		}
 	case "xpath":
 		doc, err := htmlquery.Parse(resp.Body)
 		if err != nil {
@@ -342,7 +370,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
-				pp.Print(s)
+				if e.Debug {
+					pp.Print(s)
+				}
 				var results []Result
 				/*
 					rules, err := ConvertDetails(s.DetailsJSON)
@@ -364,9 +394,11 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 						r["id"] = strconv.Itoa(i)
 						results = append(results, r)
 					}
-					fmt.Print(" ---[ result: \n")
-					pp.Print(r)
-					fmt.Print(" ]---- \n")
+					if e.Debug {
+						fmt.Print(" ---[ result: \n")
+						pp.Print(r)
+						fmt.Print(" ]---- \n")
+					}
 				})
 				if results != nil {
 					aggregate[b] = results

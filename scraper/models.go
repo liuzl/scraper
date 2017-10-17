@@ -89,10 +89,12 @@ type Endpoint struct {
 	Host   string `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	Port   int    `gorm:"-" json:"-" yaml:"-" toml:"-"`
 
-	BaseURL    string `gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
-	PatternURL string `json:"url" yaml:"url" toml:"url"`
-	ExampleURL string `json:"example_url" yaml:"example_url" toml:"example_url"`
-	Slug       string `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	BaseURL    string                       `gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	PatternURL string                       `json:"url" yaml:"url" toml:"url"`
+	ExampleURL string                       `json:"example_url" yaml:"example_url" toml:"example_url"`
+	Examples   map[string]map[string]string `gorm:"-" json:"examples" yaml:"examples" toml:"examples"`
+
+	Slug string `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
 
 	Body     string `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
 	Selector string `gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
