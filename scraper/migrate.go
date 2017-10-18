@@ -91,7 +91,7 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 
 		endpointTemplateURL := fmt.Sprintf("%s/%s", strings.TrimSuffix(e.BaseURL, "/"), strings.TrimPrefix(e.PatternURL, "/"))
 		slugURL := slugifier.Slugify(endpointTemplateURL)
-		exampleURL := strings.Replace(endpointTemplateURL, "{{query}}", "test", -1)
+		// exampleURL := strings.Replace(endpointTemplateURL, "{{query}}", "test", -1)
 
 		endpoint := Endpoint{
 			Disabled:   false,
@@ -103,9 +103,10 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			Slug:       slugURL,
 			Headers:    headers,
 			Blocks:     selectionBlocks,
-			ExampleURL: exampleURL,
-			Debug:      e.Debug,
-			StrictMode: e.StrictMode,
+			// LeafPaths:    e.LeafPaths,
+			ExtractPaths: e.ExtractPaths,
+			Debug:        e.Debug,
+			StrictMode:   e.StrictMode,
 		}
 
 		//if c.Debug {

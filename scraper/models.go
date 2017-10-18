@@ -11,15 +11,11 @@ import (
 	"github.com/qor/media/media_library"
 	"github.com/qor/sorting"
 	"github.com/qor/validations"
-	// "github.com/qor/publish2"
-	// "github.com/qor/media"
-	// "github.com/qor/media/oss"
 )
 
 // WEB SCRAPER ///////////////////////////////////////////////////////////////
 
 // Result represents a result
-// type ResultOld map[string]string
 type Result map[string]interface{}
 
 // Create a GORM-backend model
@@ -37,25 +33,22 @@ type ProviderWebRankConfig struct {
 	gorm.Model
 	sorting.Sorting
 	ProviderID uint
-	Engine     string `json:"google,omitempty" yaml:"google,omitempty" toml:"google,omitempty"`
-	Score      string `json:"bing,omitempty" yaml:"bing,omitempty" toml:"bing,omitempty"`
+	Engine     string `json:"engine,omitempty" yaml:"engine,omitempty" toml:"engine,omitempty"`
+	Score      string `json:"score,omitempty" yaml:"score,omitempty" toml:"score,omitempty"`
 }
 
 // Config represents...
 type Config struct {
 	gorm.Model
 	sorting.Sorting
-	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-
-	Env EnvConfig `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-
+	Disabled  bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Env       EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
 	Port      int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
-	Routes    []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
 	Dashboard bool        `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
 	Truncate  bool        `default:"true" help:"Truncate previous data" json:"truncate,omitempty" yaml:"truncate,omitempty" toml:"truncate,omitempty"`
 	Migrate   bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
-
-	Debug bool `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Debug     bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Routes    []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
 }
 
 type EnvConfig struct {
@@ -70,61 +63,50 @@ type EnvConfig struct {
 type Endpoint struct {
 	gorm.Model
 	sorting.Sorting
-	Disabled bool `default:"false" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-
-	Connections []Connection `json:"-" yaml:"-" toml:"-"`
-	Update      time.Time
-
-	Source      string   `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
-	ProviderID  uint     `json:"-" yaml:"-" toml:"-"`
-	Provider    Provider `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
-	Description string   `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
-	Groups      []*Group `json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	Update             time.Time
+	Disabled           bool                         `json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Connections        []Connection                 `json:"-" yaml:"-" toml:"-"`
+	Source             string                       `gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	ProviderID         uint                         `json:"-" yaml:"-" toml:"-"`
+	Provider           Provider                     `json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
+	Description        string                       `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
+	Groups             []*Group                     `json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	Route              string                       `json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
+	Method             string                       `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
+	Domain             string                       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Host               string                       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Port               int                          `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	BaseURL            string                       `gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	PatternURL         string                       `json:"url" yaml:"url" toml:"url"`
+	Examples           map[string]map[string]string `gorm:"-" json:"examples" yaml:"examples" toml:"examples"`
+	Slug               string                       `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	ExtractPaths       bool                         `json:"extract_paths,omitempty" yaml:"extract_paths,omitempty" toml:"extract_paths,omitempty"`
+	LeafPaths          []string                     `gorm:"-" json:"leaf_paths,omitempty" yaml:"leaf_paths,omitempty" toml:"leaf_paths,omitempty"`
+	Body               string                       `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
+	Selector           string                       `gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	HeadersIntercept   []string                     `gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	HeadersJSON        map[string]string            `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	BlocksJSON         map[string]SelectorConfig    `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	Headers            []*HeaderConfig              `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
+	Blocks             []*SelectorConfig            `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
+	EndpointProperties EndpointProperties           `sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
+	Extract            ExtractConfig                `default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
+	MinFields          int                          `json:"-" yaml:"-" toml:"-"`
+	Count              string                       `gorm"-" json:"-" yaml:"-" toml:"-"`
+	Debug              bool                         `json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode         bool                         `json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"` // media_library.MediaBox `json:"-" yaml:"-" toml:"-"`
-
-	Route  string `json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
-	Method string `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
-
-	Domain string `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Host   string `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Port   int    `gorm:"-" json:"-" yaml:"-" toml:"-"`
-
-	BaseURL    string                       `gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
-	PatternURL string                       `json:"url" yaml:"url" toml:"url"`
-	ExampleURL string                       `json:"example_url" yaml:"example_url" toml:"example_url"`
-	Examples   map[string]map[string]string `gorm:"-" json:"examples" yaml:"examples" toml:"examples"`
-
-	Slug string `json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
-
-	Body     string `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
-	Selector string `gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
-
-	HeadersIntercept []string                  `gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
-	HeadersJSON      map[string]string         `gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	BlocksJSON       map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
-	// PathsJSON   map[string]SelectorConfig `gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
-
-	Headers []*HeaderConfig   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
-	Blocks  []*SelectorConfig `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
-
-	EndpointProperties EndpointProperties `sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
-
-	Extract   ExtractConfig `default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
-	MinFields int           `json:"-" yaml:"-" toml:"-"`
-	Count     string        `gorm"-" json:"-" yaml:"-" toml:"-"`
-
-	Debug      bool `default:"false" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	StrictMode bool `default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 }
 
 type Screenshot struct {
 	gorm.Model
-	Title      string
-	EndpointID uint `json:"-" yaml:"-" toml:"-"`
-	// Category     Category
-	// CategoryID   uint
+	Title        string
+	EndpointID   uint `json:"-" yaml:"-" toml:"-"`
 	SelectedType string
 	File         media_library.MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
+	// Category     Category
+	// CategoryID   uint
+
 }
 
 func (screenshot Screenshot) Validate(db *gorm.DB) {
@@ -250,7 +232,7 @@ type MatcherConfig struct {
 	gorm.Model
 	sorting.Sorting
 	SelectorConfigID uint
-	Target           string // TargetConfig
+	Target           string
 	Selects          []Matcher
 	// fn  extractorFn
 }
@@ -321,20 +303,21 @@ type OpenAPISpecsConfig struct {
 	Version string
 }
 
+// REQUESTS WEBMOCKS ///////////////////////////////////////////////////////////////
 type Connection struct {
-	// gorm.Model
-	ID         uint `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
-	Provider   Provider
+	gorm.Model
+	// ID         uint     `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
 	EndpointID uint     `json:"-" yaml:"-" toml:"-"`
 	URL        string   `json:"url" yaml:"url" toml:"url"`
 	Request    Request  `json:"request" yaml:"request" toml:"request"`
 	Response   Response `json:"response" yaml:"response" toml:"response"`
+	Provider   Provider `json:"provider" yaml:"provider" toml:"provider"`
 	RecordedAt string   `json:"recorded_at" yaml:"recorded_at" toml:"recorded_at"`
 }
 
 type Request struct {
-	// gorm.Model
-	ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	gorm.Model
+	// ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
 	ConnectionID uint   `json:"-" yaml:"-" toml:"-"`
 	Header       string `json:"header" yaml:"header" toml:"header"`
 	Body         string `json:"body" yaml:"body" toml:"body"`
@@ -343,8 +326,8 @@ type Request struct {
 }
 
 type Response struct {
-	// gorm.Model
-	ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
+	gorm.Model
+	// ID           uint   `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
 	ConnectionID uint   `json:"-" yaml:"-" toml:"-"`
 	Status       string `json:"status" yaml:"status" toml:"status"`
 	Header       string `json:"header" yaml:"header" toml:"header"`

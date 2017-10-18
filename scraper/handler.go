@@ -71,13 +71,16 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 	if h.Log {
 		for k, e := range c.Routes {
+			// Ovveride value ?! which cases ?!
+			// e.Debug = h.Debug
 			if strings.HasPrefix(e.Route, "/") {
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
-			logf("Loaded endpoint: /%s", e.Route)
+			if h.Debug {
+				logf("Loaded endpoint: /%s", e.Route)
+			}
 			Endpoints.Routes = append(Endpoints.Routes, e.Route)
-			e.Debug = h.Debug                  // Copy the Debug attribute
 			if len(h.Headers) > 0 && h.Debug { // Copy the Header attributes (only if they are not yet set)
 				fmt.Printf("h.Headers, len=%d:\n", len(h.Headers))
 				pp.Println(h.Headers)

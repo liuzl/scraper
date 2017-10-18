@@ -15,6 +15,7 @@
       "route": "/github/stars",
       "debug": true,
       "disabled": false,
+      "extract_paths": true,
       "name": "github-stars",
       "provider": "github.com",
       "base_url": "https://api.github.com",
@@ -66,59 +67,10 @@
       }
     },
     {
-      "route": "/github/notifications",
-      "debug": true,
-      "disabled": false,
-      "name": "github-notifications",
-      "provider": "github.com",
-      "base_url": "https://api.github.com",
-      "url": "/notifications",
-      "examples": {
-        "docs": {
-          "desc": "List all notifications for the current user, sorted by most recently updated.",
-          "link": "https://developer.github.com/v3/activity/notifications/#list-your-notifications"
-        },
-        "remote": {
-          "desc": "",
-          "link": "https://api.github.com/notifications"
-        },
-        "local": {
-          "desc": "",
-          "link": "http://localhost:3000/github/notifications?all=false&"
-        }
-      },
-      "timeout": 3,
-      "selector": "json",
-      "method": "GET",
-      "headers": {
-        "Authorization": " token {{GITHUB_TOKEN}}"
-      },
-      "resp_headers_intercept": [
-        "Link",
-        "X-Github-Media-Type",
-        "X-Ratelimit-Limit",
-        "X-Ratelimit-Remaining",
-        "X-Ratelimit-Reset",
-        "Content-Length"
-      ],
-      "blocks": {
-        "result": {
-          "items": ".",
-          "details": {
-            "id": "id",
-            "subject": [
-              "subject.title",
-              "subject.url",
-              "subject.type"
-            ]
-          }
-        }
-      }
-    },
-    {
       "route": "/github/search",
       "debug": true,
       "disabled": false,
+      "extract_paths": true,
       "name": "github-search",
       "provider": "github.com",
       "base_url": "https://api.github.com",
@@ -176,48 +128,12 @@
       "route": "/github/notifications",
       "debug": true,
       "disabled": false,
+      "extract_paths": true,
       "name": "github-notifications-rss",
       "provider": "github.com",
       "base_url": "https://github.com",
       "url": "/{{username}}.private.atom?token={{token}}",
       "example": "https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}",
-      "examples": {
-        "remote": {
-          "desc": "",
-          "link": "https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}"
-        },
-        "local": {
-          "desc": "",
-          "link": "http://localhost:3000/github/notifications?token={{GITHUB_NOTIFICATION_TOKEN}}&username={{GITHUB_ACCOUNT}}"
-        }
-      },
-      "timeout": 3,
-      "selector": "rss",
-      "method": "GET",
-      "blocks": {
-        "result": {
-          "items": "items",
-          "details": {
-            "name": "name",
-            "desc": "description",
-            "owner": [
-              "owner.avatar_url",
-              "owner.id",
-              "owner.login"
-            ],
-            "product": "full_name"
-          }
-        }
-      }
-    },
-    {
-      "route": "/xml/test",
-      "debug": true,
-      "disabled": false,
-      "name": "xml-test",
-      "provider": "github.com",
-      "base_url": "https://github.com",
-      "url": "/{{GITHUB_ACCOUNT}}.private.atom?token={{token}}",
       "examples": {
         "remote": {
           "desc": "",

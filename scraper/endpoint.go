@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -223,9 +224,9 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
-	if e.Debug {
-		pp.Print(e)
-	}
+	//if e.Debug {
+	//	pp.Print(e)
+	//}
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err
@@ -269,9 +270,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 	for k, v := range resp.Header {
 		if contains(e.HeadersIntercept, k) {
-			//if e.Debug {
-			logf(" [CATCH] key=%s, value=%s", k, v)
-			//}
+			if e.Debug {
+				logf(" [CATCH] key=%s, value=%s", k, v)
+			}
 		}
 	}
 
@@ -280,6 +281,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 
 	aggregate := make(map[string][]Result, 0)
+
+	fmt.Println("e.Selector: ", e.Selector)
 
 	switch e.Selector {
 	case "wiki":
@@ -295,6 +298,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if e.Debug {
 			fmt.Printf("Using '%s-DELIMITED' extractor \n", e.Selector)
 		}
+	// https://stackoverflow.com/questions/24879587/xml-newdecoderresp-body-decode-giving-eof-error-golang
 	case "xml":
 		mv, err := mxj.NewMapXmlReader(resp.Body)
 		if err != nil {
@@ -303,12 +307,21 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if e.Debug {
 			pp.Print(mv)
 		}
+		if e.ExtractPaths {
+			mxj.LeafUseDotNotation()
+			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
+			if e.Debug {
+				for _, v := range e.LeafPaths {
+					fmt.Println("path:", v) // , "value:", v.Value)
+				}
+			}
+		}
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
-				if e.Debug {
-					pp.Println(r)
-				}
+				//if e.Debug {
+				pp.Println(r)
+				//}
 				if r != nil {
 					aggregate[b] = r
 				}
@@ -323,6 +336,15 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		mv, err := mxj.NewMapJsonReaderAll(resp.Body)
 		if err != nil {
 			return nil, err
+		}
+		if e.ExtractPaths {
+			mxj.LeafUseDotNotation()
+			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
+			if e.Debug {
+				for _, v := range e.LeafPaths {
+					fmt.Println("path:", v) // , "value:", v.Value)
+				}
+			}
 		}
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
@@ -341,9 +363,17 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 	case "rss":
 		fp := gofeed.NewParser()
-		feed, err := fp.Parse(resp.Body)
+		xml := resp.Body
+		feed, err := fp.Parse(xml)
 		if err != nil {
 			return nil, err
+		}
+		if e.Debug {
+			fmt.Println("Endpoint config: ")
+			pp.Println(e)
+		}
+		if e.Debug {
+			pp.Println(feed)
 		}
 		for b, s := range e.BlocksJSON {
 			var results []Result
@@ -368,9 +398,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			"published":   feed.Published,
 			"updated":     feed.Updated,
 		*/
-		if e.Debug {
-			pp.Print(feed)
-		}
 	case "xpath":
 		doc, err := htmlquery.Parse(resp.Body)
 		if err != nil {
@@ -464,6 +491,18 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("unkown selector type")
 	}
 	return aggregate, nil
+}
+
+func leafPathsPatterns(input []string) []string {
+	var output []string
+	var re = regexp.MustCompile(`.([0-9]+)`)
+	for _, value := range input {
+		value = re.ReplaceAllString(value, `[*]`)
+		if !contains(output, value) {
+			output = append(output, value)
+		}
+	}
+	return dedup(output)
 }
 
 /*
