@@ -13,6 +13,7 @@ import (
 	// "github.com/linkosmos/mapdecor"
 	// "github.com/toukii/jsnm"
 	// "github.com/byrnedo/mapcast"
+	// "github.com/spf13/cast"
 	"github.com/PuerkitoBio/goquery"
 	// "github.com/roscopecoltran/css2xpath"
 	/*

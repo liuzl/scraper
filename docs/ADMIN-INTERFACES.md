@@ -10,4 +10,4 @@ References:
     + https://github.com/jbelmont/containerized-golang-and-vuejs INTERESTING (golang, vuejs, docker, docker-compose, coveralls, travis-ci, webpack)
     + https://github.com/rchardzhu/my-beego-todo (vuejs + angularJS + beego demo)
     + https://github.com/diogok/devshop (Go, leveldb e Vuejs)
-    + 
+    + https://github.com/bradgignac/vulcand/blob/bradgignac/dashboard (Vulcand+React+UI)

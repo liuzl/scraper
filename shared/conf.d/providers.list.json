@@ -6,7 +6,7 @@
   "dashboard": true,
   "etcd": {
     "disabled": false,
-    "debug": true,
+    "debug": false,
     "init_check": true
   },
   "env": {

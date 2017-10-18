@@ -3,30 +3,77 @@ package scraper
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	etcd "github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/pkg/transport"
+	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/e3ch"
+	"golang.org/x/net/context"
+	// etcderr "github.com/coreos/etcd/error"
+	// "github.com/coreos/etcd/mvcc/mvccpb"
+)
+
+/*
+	Refs:
+	- https://github.com/vmattos/apps-registrator/blob/master/etcd/etcd.go
+	- https://github.com/Financial-Times/vulcan-config-builder/blob/master/main.go
+*/
+
+const (
+	ETCD_CLIENT_TIMEOUT = 3 * time.Second
+)
+
+/*
+ refs:
+ - https://github.com/vulcand/vulcand/blob/master/engine/etcdv3ng/etcd.go
+ - https://github.com/vulcand/vulcand/blob/master/engine/etcdv2ng/etcd.go
+*/
+var (
+	numDirs, numKeys int
+	frontendIdRegex  = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
+	backendIdRegex   = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
+	hostnameRegex    = regexp.MustCompile("/hosts/([^/]+)(?:/host)?$")
+	listenerIdRegex  = regexp.MustCompile("/listeners/([^/]+)")
+	middlewareRegex  = regexp.MustCompile("/frontends/([^/]+)/middlewares/([^/]+)$")
+	serverRegex      = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
 )
 
 type EtcdConfig struct {
 	Disabled bool `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
 	// Clients
-	Client *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Once   *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	E3ch   *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Client     *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Once       *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	E3ch       *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Context    context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	CancelFunc context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
+
+	// Sync/Watch
+	SyncIntervalSeconds int64  `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
+	Consistency         string `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
+	RequireQuorum       bool   `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
+	// etcdKey       string
+	// nodes         []string
+	// registry      *plugin.Registry
 
 	// Errors
 	OnceError error `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	InitCheck bool  `json:"init_check,omitempty" yaml:"init_check,omitempty" toml:"init_check,omitempty"`
+	MaxDir    int   `default:"10" json:"max_dir,omitempty" yaml:"max_dir,omitempty" toml:"max_dir,omitempty"`
 
 	// Cluster endpoints
+	ApiVersion     int           `default:"3" json:"api_version,omitempty" yaml:"api_version,omitempty" toml:"api_version,omitempty"`
 	Peers          []string      `gorm:"-" json:"peers,omitempty" yaml:"peers,omitempty" toml:"peers,omitempty"`
-	Timeout        time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
-	CommandTimeout time.Duration `json:"commandTimeout,omitempty" yaml:"commandTimeout,omitempty" toml:"commandTimeout,omitempty"`
+	MaxTimeout     time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
+	DialTimeout    time.Duration `json:"dial_timeout,omitempty" yaml:"dial_timeout,omitempty" toml:"dial_timeout,omitempty"`
+	ReadTimeout    time.Duration `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty" toml:"read_timeout,omitempty"`
+	WriteTimeout   time.Duration `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty" toml:"write_timeout,omitempty"`
+	CommandTimeout time.Duration `json:"command_timeout,omitempty" yaml:"command_timeout,omitempty" toml:"command_timeout,omitempty"`
 
 	Routes []EtcdRoute `json:"routes" yaml:"routes" toml:"routes"`
 
@@ -42,11 +89,14 @@ type EtcdConfig struct {
 	TrustedCAFile string `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
 
 	// Root Key Config
-	RootKey  string `json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
-	DirValue string `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
+	RootKey            string `json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
+	DirValue           string `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
+	SealKey            string `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
+	TrustForwardHeader bool   `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
 
 	// Debug activity
-	Debug bool `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	MemProfileRate int  `json:"mem_profile_rate,omitempty" yaml:"mem_profile_rate,omitempty" toml:"mem_profile_rate,omitempty"`
+	Debug          bool `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 func (ectl *EtcdConfig) NewE3Client(conf etcd.Config) (*etcd.Client, error) {
@@ -110,73 +160,162 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	ectl.E3ch = client
 
 	if ectl.InitCheck {
-		err := ectl.CheckupE3ch()
-		fmt.Println("[ERROR] failed to check all the E3CH client actions, error: ", err)
+		report, err := ectl.CheckupE3ch()
+		//if ectl.Debug {
+		fmt.Printf("[WARNING] failed to pass all the E3CH client init tests:\n- fatal_error:\n%#v\n- warnings:\n%s\n", err, strings.Join(report, "\n"))
+		//}
 	}
 
 	return client, client.FormatRootKey()
 }
 
-func (ectl *EtcdConfig) CheckupE3ch() error {
-	if ectl.E3ch == nil {
-		return errors.New("E3ch client not initialized")
-	}
+func (ectl *EtcdConfig) CheckupE3ch() ([]string, error) {
+	var warns []string
 	var err error
+
+	if ectl.E3ch == nil {
+		return nil, errors.New("E3ch client not initialized")
+	}
+
 	err = ectl.E3ch.FormatRootKey() // set the rootKey as directory
 	if err != nil {
-		fmt.Println("[ERROR] failed to  set the rootKey as directory, error: ", err)
-		return err
-	} else {
-		fmt.Printf(" [SUCCESS] e3ch a set rootKey (%s) as directory !\n", "root")
+		warns = append(warns, fmt.Sprintf("- failed to  set the rootKey as directory, error: %s", err))
+		return warns, err
 	}
 
 	// Quick Test
 	err = ectl.E3ch.CreateDir("/dir1")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to CreateDir '/dir1', error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to CreateDir '/dir1', error: %s", err))
 	}
 
 	err = ectl.E3ch.Create("/dir1/key1", "")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to Create '/dir1/key1', error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to Create '/dir1/key1', error: %s", err))
+	}
+
+	err = ectl.E3ch.Create("/dir1/key2", "")
+	if err != nil {
+		warns = append(warns, fmt.Sprintf("- failed to Create '/dir1/key2', error: %s", err))
+	}
+
+	err = ectl.E3ch.Create("/dir2/key2", "")
+	if err != nil {
+		warns = append(warns, fmt.Sprintf("- failed to Create '/dir2/key2', error: %s", err))
 	}
 
 	err = ectl.E3ch.Create("/dir", "")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to Create '/dir', error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to Create '/dir', error: %s", err))
 	}
 
 	err = ectl.E3ch.Put("/dir1/key1", "value1")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to Put: key='/dir1/key1', val='value1' , error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to Put: key='/dir1/key1', error: %s", err))
 	}
 
-	_, err = ectl.E3ch.Get("/dir1/key1")
+	// return node value
+	var node *client.Node
+	node, err = ectl.E3ch.Get("/dir1/key1")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to Get: key='/dir1/key1', error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to Get: key='/dir1/key1', error: %s", err))
 	}
-
-	_, err = ectl.E3ch.List("/dir1")
+	//if ectl.Debug {
+	fmt.Println("- value for node='/dir1/key1':")
+	pp.Println(parseNode(node))
+	//}
+	// return nodes in dir
+	var nodes []*client.Node
+	nodes, err = ectl.E3ch.List("/")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to List keys: key='/dir1', error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to List keys: key='/dir1', error: %s", err))
 	}
+	//if ectl.Debug {
+	fmt.Println("- nodes for list='/dir1':")
+	for k, node := range nodes {
+		fmt.Printf("#%d: \n", k)
+		pp.Println(parseNode(node))
+	}
+	// }
 
 	err = ectl.E3ch.Delete("/dir")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to Delete: key='/dir' , error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to Delete: key='/dir', error: %s", err))
 	}
 
 	_, err = ectl.E3ch.List("/")
 	if err != nil {
-		fmt.Println(" [ERROR] failed to List: key='/' , error: ", err)
+		warns = append(warns, fmt.Sprintf("- failed to List: key='/', error: %s", err))
 	}
-	return err
+
+	return warns, nil // return nil as no major
+}
+
+func (ectl *EtcdConfig) AddEndpoint(path string, endpointConfig Endpoint) error {
+	return nil
+}
+
+func (ectl *EtcdConfig) RecursiveAdd(keyPath string, keyType string) error {
+	keyParts := strings.Split(keyPath, "/")
+	if len(keyParts) > ectl.MaxDir {
+		return errors.New(fmt.Sprintf("[ERROR] Input path='%s', Max directory (%d) per key exceeded: '%d'.\n", keyPath, ectl.MaxDir, len(keyParts)))
+	}
+	fmt.Println("keyType: ", keyType)
+	pp.Println(keyParts)
+	return nil
+}
+
+// printTree writes a response out in a manner similar to the `tree` command in unix.
+/*
+func printTree(nodes []*client.Node, indent string) {
+	for i, n := range nodes {
+		dirs := strings.Split(n.Key, "/")
+		k := dirs[len(dirs)-1]
+		if n.Dir {
+			if i == nodes.Len()-1 {
+				fmt.Printf("%s└── %s/\n", indent, k)
+				printTree(n, indent+"    ")
+			} else {
+				fmt.Printf("%s├── %s/\n", indent, k)
+				printTree(n, indent+"│   ")
+			}
+			numDirs++
+		} else {
+			if i == nodes.Len()-1 {
+				fmt.Printf("%s└── %s\n", indent, k)
+			} else {
+				fmt.Printf("%s├── %s\n", indent, k)
+			}
+
+			numKeys++
+		}
+	}
+}
+*/
+
+type Node struct {
+	Key   string `json:"key" yaml:"key" toml:"key"`
+	Value string `json:"value" yaml:"value" toml:"value"`
+	IsDir bool   `json:"is_dir" yaml:"is_dir" toml:"is_dir"`
+}
+
+func parseNode(node *client.Node) *Node {
+	return &Node{
+		Key:   string(node.Key),
+		Value: string(node.Value),
+		IsDir: node.IsDir,
+	}
 }
 
 // Route configuration struct.
 type EtcdRoute struct {
 	Regexp string `json:"regexp" yaml:"regexp" toml:"regexp"`
 	Schema string `json:"schema" yaml:"schema" toml:"schema"`
+}
+
+func newEtcdCtx() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), ETCD_CLIENT_TIMEOUT)
+	return ctx
 }
 
 func CloneE3chClient(username, password string, client *client.EtcdHRCHYClient) (*client.EtcdHRCHYClient, error) {
@@ -190,3 +329,115 @@ func CloneE3chClient(username, password string, client *client.EtcdHRCHYClient) 
 	}
 	return client.Clone(ectl), nil
 }
+
+func notFound(e error) bool {
+	return e == rpctypes.ErrEmptyKey
+}
+
+/*
+func convertErr(e error) error {
+	if e == nil {
+		return nil
+	}
+	switch e {
+	case rpctypes.ErrEmptyKey:
+		return &engine.NotFoundError{Message: e.Error()}
+
+	case rpctypes.ErrDuplicateKey:
+		return &engine.AlreadyExistsError{Message: e.Error()}
+	}
+	return e
+}
+
+func (n ng) path(keys ...string) string {
+	return strings.Join(append([]string{n.etcdKey}, keys...), "/")
+}
+
+func (n *ng) setJSONVal(key string, v interface{}, ttl time.Duration) error {
+	bytes, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return n.setVal(key, bytes, ttl)
+}
+
+func (n *ng) setVal(key string, val []byte, ttl time.Duration) error {
+	ops := []etcd.OpOption{}
+	if ttl > 0 {
+		lgr, err := n.client.Grant(n.context, int64(ttl.Seconds()))
+		if err != nil {
+			return err
+		}
+		ops = append(ops, etcd.WithLease(lgr.ID))
+	}
+
+	_, err := n.client.Put(n.context, key, string(val), ops...)
+	return convertErr(err)
+}
+
+func (n *ng) getJSONVal(key string, in interface{}) error {
+	val, err := n.getVal(key)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal([]byte(val), in)
+}
+
+func (n *ng) getVal(key string) (string, error) {
+	response, err := n.client.Get(n.context, key)
+	if err != nil {
+		return "", convertErr(err)
+	}
+
+	if len(response.Kvs) != 1 {
+		return "", &engine.NotFoundError{Message: "Key not found"}
+	}
+
+	return string(response.Kvs[0].Value), nil
+}
+
+func (n *ng) getKeysBySecondPrefix(keys ...string) ([]string, error) {
+	var out []string
+	targetPrefix := strings.Join(keys, "/")
+	response, err := n.client.Get(n.context, targetPrefix, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+	if err != nil {
+		if notFound(err) {
+			return out, nil
+		}
+		return nil, err
+	}
+
+	//If /this/is/prefix then
+	// allow /this/is/prefix/one/two
+	// disallow /this/is/prefix/one/two/three
+	// disallow /this/is/prefix/one
+	for _, keyValue := range response.Kvs {
+		if prefix(prefix(string(keyValue.Key))) == targetPrefix {
+			out = append(out, string(keyValue.Key))
+		}
+	}
+	return out, nil
+}
+
+func (n *ng) getVals(keys ...string) ([]Pair, error) {
+	var out []Pair
+	response, err := n.client.Get(n.context, strings.Join(keys, "/"), etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortAscend))
+	if err != nil {
+		if notFound(err) {
+			return out, nil
+		}
+		return nil, err
+	}
+
+	for _, keyValue := range response.Kvs {
+		out = append(out, Pair{string(keyValue.Key), string(keyValue.Value)})
+	}
+	return out, nil
+}
+
+func (n *ng) checkKeyExists(key string) error {
+	_, err := n.client.Get(n.context, key)
+	return convertErr(err)
+}
+
+*/

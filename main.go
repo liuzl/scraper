@@ -117,7 +117,6 @@ var (
 
 func main() {
 	useGinWrap := false
-
 	logger, errInit = zap.NewProduction()
 
 	h := &scraper.Handler{Log: true}
@@ -133,7 +132,6 @@ func main() {
 		Parse()
 
 	h.Log = !c.NoLog
-
 	go func() {
 		for {
 			sig := make(chan os.Signal, 1)
@@ -151,34 +149,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if h.Config.Debug {
-		fmt.Printf(" - IsLogger? %t \n", h.Log)
-		fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
-		fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
-		fmt.Println(" - Env params: ")
-		pp.Println(h.Config.Env.VariablesTree)
-	}
-
-	mux := http.NewServeMux() // Register route
 	var cerr error
-
+	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
+	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
+	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
 	c.Etcd.E3ch, cerr = c.Etcd.NewE3chClient()
 	if cerr != nil {
 		fmt.Println("Could not connect to the ETCD cluster, error: ", cerr)
 	}
 
-	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
-	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
-	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
+	mux := http.NewServeMux() // Register route
 
-	if h.Etcd.InitCheck {
-		c.Etcd.CheckupE3ch()
+	if h.Config.Debug {
+		fmt.Printf(" - IsLogger? %t \n", h.Log)
+		fmt.Println(" - Env params: ")
+		pp.Println(h.Config.Env.VariablesTree)
 	}
 
-	// redis.UseRedis(c.RedisHost)
-	// scraper.ConvertToJsonSchema()
-
 	if h.Config.Dashboard {
+		if h.Config.Debug {
+			fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
+			fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
+		}
 		DB, errInit = gorm.Open("sqlite3", "admin.db")
 		if errInit != nil {
 			panic("failed to connect database")
@@ -192,12 +184,16 @@ func main() {
 			}
 		}
 
-		scraper.MigrateTables(DB, h.Config.Truncate, Tables...)
-		// scraper.SeedAlexaTop1M()
+		scraper.MigrateTables(DB, h.Config.Truncate, Tables...) // Create RDB datastore
 		initDashboard()
-		// amount to /admin, so visit `/admin` to view the admin interface
-		AdminUI.MountTo("/admin", mux)
+		AdminUI.MountTo("/admin", mux) // amount to /admin, so visit `/admin` to view the admin interface
+
 	}
+
+	// Experimental
+	// redis.UseRedis(c.RedisHost)
+	// scraper.ConvertToJsonSchema()
+	// scraper.SeedAlexaTop1M()
 
 	// if h.Config.IsApi {
 	// 	api.API.MountTo("/api", mux)
