@@ -30,6 +30,8 @@ _cgo_export.*
 
 _testmain.go
 
+*.db
+
 *.exe
 *.test
 *.prof
@@ -46,6 +48,8 @@ bin/server
 shared/docker/templates
 shared/docker/templates/
 shared/docker/templates/**
+
+*.csv
 
 shared/cache/
 shared/cache/**

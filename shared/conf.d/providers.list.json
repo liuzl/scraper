@@ -12,6 +12,60 @@
   },
   "routes": [
     {
+      "route": "/github/stars",
+      "debug": true,
+      "disabled": false,
+      "name": "github-stars",
+      "provider": "github.com",
+      "base_url": "https://api.github.com",
+      "url": "/users/{{username}}/starred?per_page=5&page=1&order=desc&direction=desc",
+      "examples": {
+        "docs": {
+          "desc": "ListStarred lists all the repos starred by a user.",
+          "link": "https://developer.github.com/v3/activity/starring/#list-repositories-being-starred"
+        },
+        "remote": {
+          "desc": "",
+          "link": "https://api.github.com/users/{{GITHUB_ACCOUNT}}/starred?per_page=5&page=1&order=desc&direction=desc"
+        },
+        "local": {
+          "desc": "",
+          "link": "http://localhost:3000/github/search?query=dlib"
+        }
+      },
+      "timeout": 3,
+      "selector": "json",
+      "method": "GET",
+      "headers": {
+        "Authorization": " token {{GITHUB_TOKEN}}",
+        "Accept": "application/vnd.github.mercy-preview+json"
+      },
+      "resp_headers_intercept": [
+        "Link",
+        "X-Github-Media-Type",
+        "X-Ratelimit-Limit",
+        "X-Ratelimit-Remaining",
+        "X-Ratelimit-Reset",
+        "Content-Length"
+      ],
+      "blocks": {
+        "result": {
+          "items": "items",
+          "details": {
+            "name": "name",
+            "desc": "description",
+            "owner": [
+              "owner.avatar_url",
+              "owner.id",
+              "owner.login"
+            ],
+            "product": "full_name",
+            "topics": "topics"
+          }
+        }
+      }
+    },
+    {
       "route": "/github/search",
       "debug": true,
       "disabled": false,
@@ -48,7 +102,8 @@
         "X-Github-Media-Type",
         "X-Ratelimit-Limit",
         "X-Ratelimit-Remaining",
-        "X-Ratelimit-Reset"
+        "X-Ratelimit-Reset",
+        "Content-Length"
       ],
       "blocks": {
         "result": {

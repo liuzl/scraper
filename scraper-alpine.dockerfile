@@ -35,6 +35,22 @@ RUN \
     go get -v -u github.com/Masterminds/glide && \
     go get -v -u github.com/mitchellh/gox && \
     \
+    go get -v -u github.com/qor/media && \
+    go get -v -u github.com/qor/session && \
+    go get -v -u golang.org/x/net && \
+    go get -v -u github.com/qor/action_bar && \
+    go get -v -u github.com/qor/help && \
+    go get -v -u github.com/qor/qor && \
+    go get -v -u github.com/qor/admin && \
+    go get -v -u github.com/qor/serializable_meta && \
+    go get -v -u github.com/qor/worker && \
+    go get -v -u github.com/qor/sorting && \
+    go get -v -u github.com/qor/roles && \
+    go get -v -u github.com/qor/publish && \
+    go get -v -u github.com/qor/publish2 && \
+    go get -v -u github.com/jinzhu/gorm && \
+    go get -v -u github.com/roscopecoltran/admin && \
+    \
     glide install --strip-vendor && \
     \
     gox -verbose -os="linux" -arch="amd64" -output="/app/{{.Dir}}" ./cmd/scraper-server

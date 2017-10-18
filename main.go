@@ -25,19 +25,21 @@ import (
 
 	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
+	// "github.com/roscopecoltran/e3ch"
+	// "github.com/roscopecoltran/e3w/routers"
+	// "github.com/roscopecoltran/e3w/conf"
+	// "github.com/roscopecoltran/e3w/e3ch"
 	// "github.com/gin-contrib/cache"
-	//	"github.com/aviddiviner/gin-limit"
-	//	"github.com/gin-gonic/contrib/cache"
-	//	"github.com/gin-gonic/contrib/secure"
-	//	"github.com/gin-gonic/contrib/static"
-	//	"github.com/ashwanthkumar/slack-go-webhook"
-	//	"github.com/carlescere/scheduler"
+	// "github.com/aviddiviner/gin-limit"
+	// "github.com/gin-gonic/contrib/cache"
+	// "github.com/gin-gonic/contrib/secure"
+	// "github.com/gin-gonic/contrib/static"
+	// "github.com/ashwanthkumar/slack-go-webhook"
+	// "github.com/carlescere/scheduler"
 	// "github.com/jungju/qor_admin_auth"
 	// "github.com/qor/publish2"
 	// "github.com/qor/validations"
 	// "golang.org/x/crypto/bcrypt"
-	// etcd "github.com/coreos/etcd/clientv3"
-	// "github.com/soyking/e3ch"
 	// "github.com/roscopecoltran/scraper/db/redis"
 	// "github.com/roscopecoltran/scraper/api"
 )
@@ -46,14 +48,14 @@ var VERSION = "0.0.0"
 
 type config struct {
 	*scraper.Handler `type:"embedded"`
-	// etcdClient       *etcd.Client `json:"-"`
 
 	ConfigFile string `type:"arg" help:"Path to JSON configuration file" json:"config_file" yaml:"config_file" toml:"config_file"`
 	Host       string `default:"0.0.0.0" help:"Listening interface" json:"host" yaml:"host" toml:"host"`
 	Port       int    `default:"8092" help:"Listening port" json:"port" yaml:"port" toml:"port"`
 	NoLog      bool   `default:"false" help:"Disable access logs" json:"logs" yaml:"logs" toml:"logs"`
-	EtcdHost   string `default:"etcd-1,etcd-2" help:"Listening interface" json:"etcd_host" yaml:"etcd_host" toml:"etcd_host"`
-	EtcdPort   int    `default:"2379" help:"Listening port" json:"etcd_port" yaml:"etcd_port" toml:"etcd_port"`
+
+	EtcdHost string `default:"etcd-1,etcd-2" help:"Listening interface" json:"etcd_host" yaml:"etcd_host" toml:"etcd_host"`
+	EtcdPort int    `default:"2379" help:"Listening port" json:"etcd_port" yaml:"etcd_port" toml:"etcd_port"`
 
 	RedisAddr string `default:"127.0.0.1:6379" help:"Redis Addr" json:"redis_addr" yaml:"redis_addr" toml:"redis_addr"`
 	RedisHost string `default:"127.0.0.1" help:"Redis host" json:"redis_host" yaml:"redis_host" toml:"redis_host"`
@@ -158,8 +160,14 @@ func main() {
 	}
 
 	mux := http.NewServeMux() // Register route
+	e3ch, err := initEtcd()
+	if err != nil {
+		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
+	}
+	if h.Config.Debug {
+		pp.Println(e3ch)
+	}
 
-	// initEtcd()
 	// redis.UseRedis(c.RedisHost)
 	// scraper.ConvertToJsonSchema()
 
@@ -205,6 +213,15 @@ func main() {
 			pp.Println(store)
 		}
 
+		/*
+			client, err := e3ch.NewE3chClient(config)
+			if err != nil {
+				panic(err)
+			}
+		*/
+
+		// routers.InitRouters(r, config, client)
+
 		r.Any("/*w", gin.WrapH(mux))
 		if err := r.Run(fmt.Sprintf("%s:%d", c.Host, c.Port)); err != nil {
 			log.Fatalf("Can not run server, error: %s", err)
@@ -232,5 +249,4 @@ func chromeBridge2() {
 	msg.Read()
 	msg.Write()
 }
-
 */

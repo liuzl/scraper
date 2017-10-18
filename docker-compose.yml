@@ -12,13 +12,33 @@ services:
     - "./shared/data/deepdetect:/data"
     - "./shared/models:/opt/models"
 
-  # http://localhost:3000/bing?query=opencv
   scraper:
     container_name: scraper
     build:
       context: .
       dockerfile: "scraper-alpine.dockerfile"
-    # network_mode: "host"
+    depends_on:
+    - etcd1
+    - e3w_dev
+    links:
+    - etcd1
+    - e3w_dev
+    ports:
+    - 3000:3000
+    volumes:
+    - "${PWD}:/go/src/github.com/roscopecoltran/scraper" # change it for "$PWD:/app", if you want to share the source code with the container
+    - "./shared/cache:/data/cache"
+    - "./shared/conf.d:/app/conf.d"
+    # command: ["/bin/bash"]
+    # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
+    command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
+    # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
+
+  scraper_dist:
+    container_name: scraper
+    build:
+      context: ./dist/
+      dockerfile: "scraper-alpine.dockerfile"
     depends_on:
     - etcd1
     links:
@@ -31,7 +51,7 @@ services:
     - "./shared/conf.d:/app/conf.d"
     # command: ["/bin/bash"]
     # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
-    command: ["go", "run", "cmd/scraper-etcd/main.go", "--debug", "/app/conf.d/providers.list.json"]
+    command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
     # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
 
   aile:
@@ -113,6 +133,28 @@ services:
     # - AUTH_USER=
     links:
     - etcd1
+
+  e3w_dev:
+    container_name: e3w-dev
+    build:
+      context: ./shared/docker/templates/e3w
+      dockerfile: "e3w.alpine-dockerfile"
+    hostname: e3w-dev
+    ports:
+    - 8086:8086
+    - 3002:3002
+    - 3003:3003
+    volumes:
+    - "$PWD/shared/docker/templates/e3w:/go/src/github.com/roscopecoltran/e3w" # change it for "$PWD:/app", if you want to share the source code with the container
+    - "$PWD/shared/docker/templates/e3w/shared/dist:/app"
+    - "$PWD/shared/docker/templates/e3w/shared/conf.d/e3w:/data/conf.d/e3w"
+    environment:
+    # - GIN_MODE=release
+    - ETCDCTL_API=3
+    links:
+    - etcd1
+    working_dir: /go/src/github.com/roscopecoltran/e3w
+    command: ["go", "run", "main.go", "-conf", "/data/conf.d/e3w/config.ini", "-front-dir", "/go/src/github.com/roscopecoltran/e3w/static/dist"]
 
   etcd1:
     image: quay.io/coreos/etcd:v3.2.4
