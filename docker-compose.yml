@@ -32,7 +32,7 @@ services:
     - "./shared/conf.d:/app/conf.d"
     # command: ["/bin/bash"]
     # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
-    command: ["./run.sh"]
+    command: ["./entrypoint.sh"]
     # command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
     # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
 
@@ -156,7 +156,9 @@ services:
     links:
     - etcd1
     working_dir: /go/src/github.com/roscopecoltran/e3w
-    command: ["go", "run", "main.go", "-conf", "/data/conf.d/e3w/config.ini", "-front-dir", "/go/src/github.com/roscopecoltran/e3w/static/dist"]
+    command: ["./entrypoint.sh"]
+    # command: ["go", "run", "main.go", "-conf", "/data/conf.d/e3w/config.ini", "-front-dir", "/go/src/github.com/roscopecoltran/e3w/static/dist"]
+    # go run main.go -conf /data/conf.d/e3w/config.ini -front-dir /go/src/github.com/roscopecoltran/e3w/static/dist
 
   etcd1:
     image: quay.io/coreos/etcd:v3.2.4

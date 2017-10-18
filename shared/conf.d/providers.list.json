@@ -149,16 +149,15 @@
       "method": "GET",
       "blocks": {
         "result": {
-          "items": "items",
+          "items": "feed.entry",
           "details": {
-            "name": "name",
-            "desc": "description",
-            "owner": [
-              "owner.avatar_url",
-              "owner.id",
-              "owner.login"
-            ],
-            "product": "full_name"
+            "title": "title.#text",
+            "type": "title.-type",
+            "author": [
+              "author.name",
+              "author.uri",
+              "author.email"
+            ]
           }
         }
       }

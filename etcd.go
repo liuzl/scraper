@@ -26,6 +26,7 @@ func initEtcd() (*client.EtcdHRCHYClient, error) {
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
+		fmt.Println("failed to init initial etcd v3 client, error: ", err)
 		return nil, err
 	}
 	// pp.Print(e3Clt)
@@ -33,6 +34,7 @@ func initEtcd() (*client.EtcdHRCHYClient, error) {
 	// new e3ch client with namespace(rootKey)
 	clt, err := client.New(e3Clt, "scraper")
 	if err != nil {
+		fmt.Println("failed to init e3ch client with namespace(rootKey), error: ", err)
 		return nil, err
 	}
 	// pp.Print(clt)
@@ -40,6 +42,7 @@ func initEtcd() (*client.EtcdHRCHYClient, error) {
 	// set the rootKey as directory
 	err = clt.FormatRootKey()
 	if err != nil {
+		fmt.Println("failed to  set the rootKey as directory, error: ", err)
 		return nil, err
 	}
 

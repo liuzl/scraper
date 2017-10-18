@@ -304,31 +304,32 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		if e.Debug {
-			pp.Print(mv)
-		}
+		/*
+			if e.Debug {
+				pp.Print(mv)
+			}
+		*/
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
-			if e.Debug {
-				for _, v := range e.LeafPaths {
-					fmt.Println("path:", v) // , "value:", v.Value)
+			/*
+				if e.Debug {
+					for _, v := range e.LeafPaths {
+						fmt.Println("path:", v) // , "value:", v.Value)
+					}
 				}
-			}
+			*/
 		}
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
 				//if e.Debug {
+				fmt.Println("extractMXJ: ")
 				pp.Println(r)
 				//}
 				if r != nil {
 					aggregate[b] = r
 				}
-			}
-			if e.Debug {
-				fmt.Println(" - block_key: ", b)
-				pp.Println(s)
 			}
 		}
 	case "json":
