@@ -188,6 +188,18 @@ crane.yml
 server.rsa.crt
 server.rsa.key
 
+*.crt
+*.key
+*.csr
+
+swaggerui
+swaggerui/
+swaggerui/**
+
+.staging
+.staging/
+.staging/**
+
 panicparse
 
 shared/data/influxdb/data
@@ -198,4 +210,9 @@ shared/data/grafana/lib
 shared/data/grafana/log
 
 shared/data/etcd/member
+
+swagger.*
+flatten.*
+krakend.*
+kraken.*
 
