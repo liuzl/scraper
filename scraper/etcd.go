@@ -1,8 +1,10 @@
 package scraper
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -11,17 +13,23 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/pkg/transport"
+
 	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/e3ch"
 	"golang.org/x/net/context"
+	// "github.com/coreos/etcd/clientv3/mirror"
 	// etcderr "github.com/coreos/etcd/error"
 	// "github.com/coreos/etcd/mvcc/mvccpb"
+	// "github.com/mickep76/etcdmap"
+	// "github.com/jinuljt/getcds"
+	// "github.com/damoye/etcd-config"
 )
 
 /*
 	Refs:
 	- https://github.com/vmattos/apps-registrator/blob/master/etcd/etcd.go
 	- https://github.com/Financial-Times/vulcan-config-builder/blob/master/main.go
+	- https://github.com/xiang90/edb/blob/master/sql.go
 */
 
 const (
@@ -43,6 +51,11 @@ var (
 	serverRegex      = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
 )
 
+// Client is a wrapper around the etcd client
+type Client struct {
+	client *etcd.Client
+}
+
 type EtcdConfig struct {
 	Disabled bool `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
@@ -52,6 +65,11 @@ type EtcdConfig struct {
 	E3ch       *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	Context    context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	CancelFunc context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	kv         map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	mutex      sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	rch        etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	prefix     string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	// cluster + "/"
 
 	// Sync/Watch
 	SyncIntervalSeconds int64  `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
@@ -99,7 +117,7 @@ type EtcdConfig struct {
 	Debug          bool `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
-func (ectl *EtcdConfig) NewE3Client(conf etcd.Config) (*etcd.Client, error) {
+func (ectl *EtcdConfig) NewEtcdClient(conf etcd.Config) (*etcd.Client, error) {
 	var err error
 	ectl.Client, err = etcd.New(etcd.Config{
 		Endpoints:   []string{"etcd1:2379"},
@@ -146,7 +164,7 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 
 	if ectl.Client == nil {
 		var cerr error
-		ectl.Client, cerr = ectl.NewE3Client(etcdConfig)
+		ectl.Client, cerr = ectl.NewEtcdClient(etcdConfig)
 		if cerr != nil {
 			return nil, cerr
 		}
@@ -159,6 +177,48 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 
 	ectl.E3ch = client
 
+	/*
+		ectl.WatchEndpointsConfig()
+		if err != nil {
+			fmt.Println("WatchEndpointsConfig, error: ", err)
+			return nil, err
+		}
+	*/
+
+	ectl.kv = map[string]string{}
+	ectl.prefix = "/dir1" // ectl.RootKey + "/"
+
+	// var err error
+	// init and watch
+	err = ectl.initAndWatch()
+	if err != nil {
+		fmt.Println("initAndWatch, error: ", err)
+		ectl.Client.Close()
+		return nil, err
+	}
+
+	// loop to update
+	go func() {
+		for {
+			for wresp := range ectl.rch {
+				for _, ev := range wresp.Events {
+					fmt.Printf("ectl, set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
+					ectl.set(ev.Kv.Key, ev.Kv.Value)
+				}
+				pp.Println(ectl.kv)
+			}
+			log.Print("etcd-config watch channel closed")
+			for {
+				err = ectl.initAndWatch()
+				if err == nil {
+					break
+				}
+				log.Print("etcd-config get failed: ", err)
+				time.Sleep(time.Second)
+			}
+		}
+	}()
+
 	if ectl.InitCheck {
 		report, err := ectl.CheckupE3ch()
 		//if ectl.Debug {
@@ -167,6 +227,81 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	}
 
 	return client, client.FormatRootKey()
+}
+
+func (ectl *EtcdConfig) WatchEndpointsConfig() error {
+
+	ectl.kv = map[string]string{}
+	ectl.prefix = "/dir1" // ectl.RootKey + "/"
+
+	var err error
+	// init and watch
+	err = ectl.initAndWatch()
+	if err != nil {
+		fmt.Println("initAndWatch, error: ", err)
+		ectl.Client.Close()
+		return err
+		// return nil, err
+	}
+
+	// loop to update
+	go func() {
+		for {
+			for wresp := range ectl.rch {
+				for _, ev := range wresp.Events {
+					fmt.Printf("ectl, set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
+					ectl.set(ev.Kv.Key, ev.Kv.Value)
+				}
+			}
+			log.Print("etcd-config watch channel closed")
+			for {
+				err = ectl.initAndWatch()
+				if err == nil {
+					break
+				}
+				log.Print("etcd-config get failed: ", err)
+				time.Sleep(time.Second)
+			}
+		}
+	}()
+	return nil
+}
+
+// Get ...
+func (ectl *EtcdConfig) Get(key string) string {
+	ectl.mutex.RLock()
+	defer ectl.mutex.RUnlock()
+	return ectl.kv[key]
+}
+
+func (ectl *EtcdConfig) String() string {
+	ectl.mutex.RLock()
+	defer ectl.mutex.RUnlock()
+	b, _ := json.MarshalIndent(ectl.kv, "", "  ")
+	return string(b)
+}
+
+func (ectl *EtcdConfig) initAndWatch() error {
+	ectl.rch = ectl.Client.Watch(context.TODO(), ectl.RootKey, etcd.WithPrefix())
+	resp, err := ectl.Client.Get(context.TODO(), ectl.RootKey, etcd.WithPrefix())
+	if err != nil {
+		return err
+	}
+	for _, kv := range resp.Kvs {
+		ectl.set(kv.Key, kv.Value)
+	}
+	return nil
+}
+
+func (ectl *EtcdConfig) set(key, value []byte) {
+	strKey := strings.TrimPrefix(string(key), ectl.RootKey)
+	ectl.mutex.Lock()
+	defer ectl.mutex.Unlock()
+	if len(value) == 0 {
+		delete(ectl.kv, string(strKey))
+	} else {
+		ectl.kv[string(strKey)] = string(value)
+	}
 }
 
 func (ectl *EtcdConfig) CheckupE3ch() ([]string, error) {
@@ -249,6 +384,69 @@ func (ectl *EtcdConfig) CheckupE3ch() ([]string, error) {
 	}
 
 	return warns, nil // return nil as no major
+}
+
+/*
+	Refs:
+	- https://github.com/coreos/etcd/blob/master/clientv3/example_watch_test.go
+	- https://github.com/coreos/etcd/blob/master/clientv3/example_test.go
+	- https://github.com/kelseyhightower/confd/blob/master/backends/etcdv3/client.go
+	- https://github.com/kelseyhightower/confd/blob/master/backends/client.go
+*/
+
+// GetValues queries etcd for keys prefixed by prefix.
+func (ectl *EtcdConfig) GetValues(keys []string) (map[string]string, error) {
+	vars := make(map[string]string)
+	for _, key := range keys {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(3)*time.Second)
+		resp, err := ectl.Client.Get(ctx, key, etcd.WithPrefix(), etcd.WithSort(etcd.SortByKey, etcd.SortDescend))
+		cancel()
+		if err != nil {
+			return vars, err
+		}
+		for _, ev := range resp.Kvs {
+			vars[string(ev.Key)] = string(ev.Value)
+		}
+	}
+	return vars, nil
+}
+
+func (ectl *EtcdConfig) WatchPrefix(prefix string, keys []string, waitIndex uint64, stopChan chan bool) (uint64, error) {
+	// return something > 0 to trigger a key retrieval from the store
+	if waitIndex == 0 {
+		return 1, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancelRoutine := make(chan bool)
+	defer close(cancelRoutine)
+	var err error
+
+	go func() {
+		select {
+		case <-stopChan:
+			cancel()
+		case <-cancelRoutine:
+			return
+		}
+	}()
+
+	rch := ectl.Client.Watch(ctx, prefix, etcd.WithPrefix())
+	for wresp := range rch {
+		for _, ev := range wresp.Events {
+			fmt.Println(string(ev.Kv.Key))
+			// Only return if we have a key prefix we care about.
+			// This is not an exact match on the key so there is a chance
+			// we will still pickup on false positives. The net win here
+			// is reducing the scope of keys that can trigger updates.
+			for _, k := range keys {
+				if strings.HasPrefix(string(ev.Kv.Key), k) {
+					return uint64(ev.Kv.Version), err
+				}
+			}
+		}
+	}
+	return 0, err
 }
 
 func (ectl *EtcdConfig) AddEndpoint(path string, endpointConfig Endpoint) error {

@@ -363,6 +363,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			}
 		}
 	case "rss":
+		// "https://github.com/kkdai/githubrss"
 		fp := gofeed.NewParser()
 		xml := resp.Body
 		feed, err := fp.Parse(xml)
