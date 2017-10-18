@@ -25,13 +25,15 @@ services:
     - e3w_dev
     ports:
     - 3000:3000
+    - 4000:4000
     volumes:
     - "${PWD}:/go/src/github.com/roscopecoltran/scraper" # change it for "$PWD:/app", if you want to share the source code with the container
     - "./shared/cache:/data/cache"
     - "./shared/conf.d:/app/conf.d"
     # command: ["/bin/bash"]
     # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
-    command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
+    command: ["./run.sh"]
+    # command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
     # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
 
   scraper_dist:
@@ -49,9 +51,9 @@ services:
     - "${PWD}:/go/src/github.com/roscopecoltran/scraper" # change it for "$PWD:/app", if you want to share the source code with the container
     - "./shared/cache:/data/cache"
     - "./shared/conf.d:/app/conf.d"
-    # command: ["/bin/bash"]
+    command: ["/bin/bash"]
     # command: ["/app/scraper-server","/app/conf.d/providers.list.json"]
-    command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
+    # command: ["go", "run", "*.go", "--debug", "/app/conf.d/providers.list.json"]
     # go run cmd/scraper-etcd/main.go --debug /app/conf.d/providers.list.json
 
   aile:

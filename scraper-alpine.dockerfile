@@ -1,4 +1,4 @@
-FROM alpine:3.6
+FROM alpine:edge
 MAINTAINER Rosco Pecoltran <https://github.com/roscopecoltran>
 
 # build: docker build -t scraper:alpine -f scraper-alpine.dockerfile --no-cache .
@@ -14,10 +14,6 @@ ENV APP_BASENAME=${APP_BASENAME:-"scraper"} \
     GOPATH=${GOPATH:-"/go"}
 
 RUN \
-        echo "http://dl-4.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    \
-        apk upgrade && \
-    \
         apk add --no-cache ${APK_RUNTIME} && \
     \
         apk add --no-cache --virtual=.interactive-dependencies ${APK_INTERACTIVE} && \
@@ -32,32 +28,33 @@ COPY . /go/src/github.com/roscopecoltran/scraper
 WORKDIR /go/src/github.com/roscopecoltran/scraper
 
 RUN \
-    go get -v -u github.com/Masterminds/glide && \
-    go get -v -u github.com/mitchellh/gox && \
+    go get github.com/Masterminds/glide && \
+    go get github.com/mitchellh/gox && \
     \
-    go get -v -u github.com/qor/media && \
-    go get -v -u github.com/qor/session && \
-    go get -v -u golang.org/x/net && \
-    go get -v -u github.com/qor/action_bar && \
-    go get -v -u github.com/qor/help && \
-    go get -v -u github.com/qor/qor && \
-    go get -v -u github.com/qor/admin && \
-    go get -v -u github.com/qor/serializable_meta && \
-    go get -v -u github.com/qor/worker && \
-    go get -v -u github.com/qor/sorting && \
-    go get -v -u github.com/qor/roles && \
-    go get -v -u github.com/qor/publish && \
-    go get -v -u github.com/qor/publish2 && \
-    go get -v -u github.com/jinzhu/gorm && \
-    go get -v -u github.com/roscopecoltran/admin && \
+    go get golang.org/x/net/... && \
+    go get github.com/qor/session && \
+    go get github.com/qor/action_bar && \
+    go get github.com/qor/help && \
+    go get github.com/qor/qor && \
+    go get github.com/qor/admin && \
+    go get github.com/qor/serializable_meta && \
+    go get github.com/qor/worker && \
+    go get github.com/qor/sorting && \
+    go get github.com/qor/roles && \
+    go get github.com/qor/publish && \
+    go get github.com/qor/publish2 && \
+    go get github.com/qor/oss/... && \
+    go get github.com/jinzhu/gorm/... && \
+    go get github.com/go-sql-driver/mysql && \
+    go get github.com/roscopecoltran/admin && \
     \
-    glide install --strip-vendor && \
-    \
-    gox -verbose -os="linux" -arch="amd64" -output="/app/{{.Dir}}" ./cmd/scraper-server
+    glide install --strip-vendor
+
+    # gox -verbose -os="linux" -arch="amd64" -output="/app/{{.Dir}}" ./cmd/scraper-server
 
 VOLUME ["/data"]
 
-EXPOSE 3000
+EXPOSE 3000 4000
 
 CMD ["/bin/bash"]
 # CMD ["/app/scraper-server","/app/conf.d/providers.list.json"]

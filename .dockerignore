@@ -216,3 +216,5 @@ flatten.*
 krakend.*
 kraken.*
 
+*.csv
+
