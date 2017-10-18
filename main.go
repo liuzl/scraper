@@ -160,12 +160,19 @@ func main() {
 	}
 
 	mux := http.NewServeMux() // Register route
-	e3ch, err := initEtcd()
-	if err != nil {
-		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
+	var cerr error
+
+	c.Etcd.E3ch, cerr = c.Etcd.NewE3chClient()
+	if cerr != nil {
+		fmt.Println("Could not connect to the ETCD cluster, error: ", cerr)
 	}
-	if h.Config.Debug {
-		pp.Println(e3ch)
+
+	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
+	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
+	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
+
+	if h.Etcd.InitCheck {
+		c.Etcd.CheckupE3ch()
 	}
 
 	// redis.UseRedis(c.RedisHost)

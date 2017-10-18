@@ -4,6 +4,11 @@
   "migrate": true,
   "truncate": true,
   "dashboard": true,
+  "etcd": {
+    "disabled": false,
+    "debug": true,
+    "init_check": true
+  },
   "env": {
     "debug": true,
     "files": [

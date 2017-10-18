@@ -4,14 +4,60 @@ debug: false
 migrate: true
 truncate: true
 dashboard: true
+etcd:
+  init_check: true
 env:
   debug: true
   files:
   - ".env"
 routes:
+- route: "/github/stars"
+  debug: true
+  disabled: false
+  extract_paths: true
+  name: github-stars
+  provider: github.com
+  base_url: https://api.github.com
+  url: "/users/{{username}}/starred?per_page=5&page=1&order=desc&direction=desc"
+  examples:
+    docs:
+      desc: ListStarred lists all the repos starred by a user.
+      link: https://developer.github.com/v3/activity/starring/#list-repositories-being-starred
+    remote:
+      desc: ''
+      link: https://api.github.com/users/{{GITHUB_ACCOUNT}}/starred?per_page=5&page=1&order=desc&direction=desc
+    local:
+      desc: ''
+      link: http://localhost:3000/github/search?query=dlib
+  timeout: 3
+  selector: json
+  method: GET
+  headers:
+    Authorization: " token {{GITHUB_TOKEN}}"
+    Accept: application/vnd.github.mercy-preview+json
+  resp_headers_intercept:
+  - Link
+  - X-Github-Media-Type
+  - X-Ratelimit-Limit
+  - X-Ratelimit-Remaining
+  - X-Ratelimit-Reset
+  - Content-Length
+  blocks:
+    result:
+      items: items
+      details:
+        name: name
+        desc: description
+        owner:
+        - owner.avatar_url
+        - owner.id
+        - owner.login
+        product: full_name
+        topics: topics
 - route: "/github/search"
   debug: true
   disabled: false
+  extract_paths: true
   name: github-search
   provider: github.com
   base_url: https://api.github.com
@@ -34,9 +80,11 @@ routes:
     - link: ''
       version: 3
   resp_headers_intercept:
+  - X-Github-Media-Type
   - X-Ratelimit-Limit
-  - X-RateLimit-Remaining
-  - X-RateLimit-Reset
+  - X-Ratelimit-Remaining
+  - X-Ratelimit-Reset
+  - Content-Length
   blocks:
     result:
       items: items
@@ -52,6 +100,7 @@ routes:
 - route: "/github/notifications"
   debug: true
   disabled: false
+  extract_paths: true
   name: github-notifications-rss
   provider: github.com
   base_url: https://github.com
@@ -65,47 +114,18 @@ routes:
       desc: ''
       link: http://localhost:3000/github/notifications?token={{GITHUB_NOTIFICATION_TOKEN}}&username={{GITHUB_ACCOUNT}}
   timeout: 3
-  selector: rss
-  method: GET
-  blocks:
-    result:
-      items: items
-      details:
-        name: name
-        desc: description
-        owner:
-        - owner.avatar_url
-        - owner.id
-        - owner.login
-        product: full_name
-- route: "/xml/test"
-  debug: true
-  disabled: false
-  name: xml-test
-  provider: github.com
-  base_url: https://github.com
-  url: "/{{GITHUB_ACCOUNT}}.private.atom?token={{token}}"
-  examples:
-    remote:
-      desc: ''
-      link: https://github.com/{{GITHUB_ACCOUNT}}.private.atom?token={{GITHUB_NOTIFICATION_TOKEN}}
-    local:
-      desc: ''
-      link: http://localhost:3000/github/notifications?token={{GITHUB_NOTIFICATION_TOKEN}}&username={{GITHUB_ACCOUNT}}
-  timeout: 3
   selector: xml
   method: GET
   blocks:
     result:
-      items: items
+      items: feed.entry
       details:
-        name: name
-        desc: description
-        owner:
-        - owner.avatar_url
-        - owner.id
-        - owner.login
-        product: full_name
+        title: title.#text
+        type: title.-type
+        author:
+        - author.name
+        - author.uri
+        - author.email
 - route: "/google/search"
   debug: true
   disabled: true
