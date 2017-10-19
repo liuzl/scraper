@@ -43,16 +43,13 @@ func (h *Handler) GetConfigPaths(path string) []string {
 	if err != nil {
 		return paths
 	}
-
 	mxj.JsonUseNumber = true
 	mv, err := mxj.NewMapJson(b)
 	if err != nil {
 		fmt.Println("NewMapJson, error: ", err)
 	}
-
 	fmt.Println("NewMapJson, jdata:", string(b))
 	fmt.Printf("NewMapJson, mv: \n %#v\n", mv)
-
 	mxj.LeafUseDotNotation()
 	paths = mv.LeafPaths()
 	return paths
@@ -69,9 +66,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
 	}
-
 	h.Etcd = c.Etcd
-
 	if len(c.Env.Files) > 0 {
 		envVars, err := godotenv.Read(c.Env.Files...)
 		if err != nil {

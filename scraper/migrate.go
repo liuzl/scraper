@@ -1,18 +1,27 @@
 package scraper
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/url"
+	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/Machiel/slugify"
 	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/jinzhu/gorm"
-	// "github.com/k0kubun/pp"
+	"github.com/k0kubun/pp"
+	"github.com/roscopecoltran/e3ch"
+	"github.com/roscopecoltran/mxj"
+	// "github.com/ksinica/flatstruct"
+	// "github.com/davecgh/go-spew/spew"
+	// "github.com/shurcooL/go-goon"
+	// "github.com/kr/pretty"
 )
 
 var (
@@ -23,16 +32,12 @@ var (
 
 func MigrateTables(db *gorm.DB, isTruncate bool, tables ...interface{}) {
 	for _, table := range tables {
-		// fmt.Println("table name: ", table)
 		if isTruncate {
 			if err := db.DropTableIfExists(table).Error; err != nil {
 				fmt.Println("table creation error, error msg: ", err)
 			}
 		}
-		//fmt.Println(" ------- START ------- ")
-		//pp.Print(table)
 		db.AutoMigrate(table)
-		//fmt.Println(" ------- END ------- ")
 	}
 }
 
@@ -63,18 +68,20 @@ func FindOrCreateGroupByName(db *gorm.DB, name string) (*Group, bool, error) {
 	return &group, false, nil
 }
 
-func MigrateEndpoints(db *gorm.DB, c Config) error {
+func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error {
+
+	// h.Etcd.E3ch
+
+	// etcd := h.Etcd
+	// c := h.Config
+
+	// fs := flatstruct.NewFlatStruct()
+	// fs.PathSeparator = "/"
+
+	// etcd := &EtcdConfig{}
+	// pp.Print(e3ch)
+
 	for _, e := range c.Routes {
-		// provider := convertProviderConfig(e.ProviderStr, c.Debug)
-		//}
-		/*
-			if ok := db.NewRecord(provider); ok {
-				if err := db.Create(&provider).Error; err != nil {
-					fmt.Println("error: ", err)
-					return err
-				}
-			}
-		*/
 
 		selectionBlocks, err := convertSelectorsConfig(e.BlocksJSON, c.Debug)
 		if err != nil {
@@ -94,25 +101,19 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 		// exampleURL := strings.Replace(endpointTemplateURL, "{{query}}", "test", -1)
 
 		endpoint := Endpoint{
-			Disabled:   false,
-			Route:      e.Route,
-			Method:     strings.ToUpper(e.Method),
-			BaseURL:    e.BaseURL,
-			PatternURL: e.PatternURL,
-			Selector:   e.Selector,
-			Slug:       slugURL,
-			Headers:    headers,
-			Blocks:     selectionBlocks,
-			// LeafPaths:    e.LeafPaths,
+			Disabled:     false,
+			Route:        e.Route,
+			Method:       strings.ToUpper(e.Method),
+			BaseURL:      e.BaseURL,
+			PatternURL:   e.PatternURL,
+			Selector:     e.Selector,
+			Slug:         slugURL,
+			Headers:      headers,
+			Blocks:       selectionBlocks,
 			ExtractPaths: e.ExtractPaths,
 			Debug:        e.Debug,
 			StrictMode:   e.StrictMode,
 		}
-
-		//if c.Debug {
-		//	fmt.Printf("\n\nMigrating endpoint: %s/%s \n", e.BaseURL, e.PatternURL)
-		// pp.Print(endpoint)
-		//}
 
 		var groups []*Group
 		group, _, err := FindOrCreateGroupByName(db, "Web")
@@ -135,15 +136,7 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 			// return err
 		}
 
-		// if c.Debug {
-		// pp.Println(providerDataURL)
-		//pp.Println(providerHost)
-		//pp.Println(providerPort)
-		// }
 		providerDomain := domainutil.Domain(providerDataURL.Host)
-		//if c.Debug {
-		//	pp.Println(providerDomain)
-		//}
 
 		if providerHost != "" {
 			endpoint.Host = providerHost
@@ -176,16 +169,149 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 
 		endpoint.Description = e.Description
 
-		//pp.Print(endpoint)
 		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
 		if err != nil {
 			fmt.Println("Could not upsert the current provider in the registry. error: ", err)
 			// return err
 		}
 
-		// endpoint.ProviderID = provider.ID
-		// pp.Print(provider)
 		endpoint.Provider = provider
+
+		etcdHeadersIntercept := make(map[string]string, 0)
+		for _, v := range e.HeadersIntercept {
+			if v != "" {
+				fmt.Println("new etcdHeadersIntercept value: ")
+				parts := strings.Split(v, ":")
+				if len(parts) > 1 {
+					key := parts[0]
+					val := parts[1]
+					etcdHeadersIntercept[key] = val
+				}
+			}
+		}
+
+		etcdHeaders := make(map[string]string, 0)
+		for k, v := range e.HeadersJSON {
+			fmt.Println("new etcdHeaders value: ")
+			etcdHeaders[k] = v
+		}
+
+		etcdBlocks := make(map[string]map[string]string, 0)
+		for k, v := range e.BlocksJSON {
+			etcdBlocks[k] = make(map[string]string, 0)
+			etcdBlocks[k]["items"] = v.Items
+			for kd, vd := range v.Details {
+				var ext []string
+				for _, vdd := range vd {
+					ext = append(ext, vdd.val)
+				}
+				etcdBlocks[k][kd] = strings.Join(ext, ";")
+			}
+			// fmt.Println("new etcdBlocks value: ")
+			// pp.Println(v)
+		}
+
+		//etcdExtractStruct := reflect.ValueOf(e.Extract)
+		var ExtractorTypes = []string{"links", "meta", "opengraph"}
+		etcdExtract := make(map[string]bool, len(ExtractorTypes))
+
+		for _, v := range ExtractorTypes {
+			etcdExtract[v] = false
+		}
+
+		var etcdGroups string
+		var grp []string
+		for _, v := range e.Groups {
+			grp = append(grp, v.Name)
+		}
+		etcdGroups = strings.Join(grp, ",")
+
+		etcdRoute := EtcdRoute{
+			Disabled:         false,
+			Source:           provider.Name,
+			Route:            e.Route,
+			Method:           strings.ToUpper(e.Method),
+			BaseURL:          e.BaseURL,
+			PatternURL:       e.PatternURL,
+			TestURL:          endpointTemplateURL,
+			Selector:         e.Selector,
+			HeadersIntercept: etcdHeadersIntercept,
+			Headers:          etcdHeaders,
+			Blocks:           etcdBlocks,
+			Groups:           etcdGroups,
+			Extract:          etcdExtract,
+			StrictMode:       false,
+			Debug:            false,
+		}
+
+		b, err := json.Marshal(etcdRoute)
+		if err != nil {
+			fmt.Println(err)
+			// return
+		} else {
+
+			// fmt.Println("new etcdRoute: ")
+			// pp.Print(etcdRoute)
+
+			mv, err := mxj.NewMapJson(b)
+			if err != nil {
+				fmt.Println("err:", err)
+				// return
+			} else {
+				mxj.LeafSeparator = "/"
+				// mxj.LeafUseDotNotation()
+				p := mv.LeafPaths()
+				var tree []string
+				for _, v := range p {
+					p := strings.Split(fmt.Sprintf("/%s/%s", e.Route, v), "/")
+					j := len(p) - 1
+					for j > 1 {
+						tree = append(tree, strings.Join(p[:j], "/"))
+						// fmt.Printf("sub keys: %s \n", strings.Join(p[:j], "/"))
+						j--
+					}
+				}
+				// dedup(tree)
+				//tree = removeDuplicates(tree)
+				RemoveDuplicates(&tree)
+				sort.Strings(tree)
+				fmt.Println("LeafPaths for ETCD: ")
+				pp.Println(tree)
+				for _, d := range tree {
+					fmt.Println("create dir: ", d)
+					if d != "" {
+						err := e3ch.CreateDir(d)
+						if err != nil {
+							fmt.Printf("Could not delete dir '%s', error: %s \n", d, err)
+						}
+					}
+				}
+
+				l := mv.LeafNodes()
+				fmt.Println("LeafNodes: ")
+				for _, v := range l {
+					key := fmt.Sprintf("/%s/%s", e.Route, v.Path)
+					val := fmt.Sprintf("%v", v.Value)
+					fmt.Printf("path: %s, value: %s \n", key, val)
+					var exists bool
+					if val != "" {
+						fmt.Println("create key: ", key)
+						err := e3ch.Create(key, val)
+						if err != nil {
+							fmt.Printf("Could not create key key='%s', value='%s', error: %s \n", key, val, err)
+							exists = true
+						}
+						if exists {
+							fmt.Println("put/update key: ", key)
+							err := e3ch.Put(key, val)
+							if err != nil {
+								fmt.Printf("Could not put key='%s', value='%s', error: %s \n", key, val, err)
+							}
+						}
+					}
+				}
+			}
+		}
 
 		for _, b := range selectionBlocks {
 			if ok := db.NewRecord(b); ok {
@@ -205,6 +331,23 @@ func MigrateEndpoints(db *gorm.DB, c Config) error {
 
 	}
 	return nil
+}
+
+func RemoveDuplicates(xs *[]string) {
+	found := make(map[string]bool)
+	j := 0
+	for i, x := range *xs {
+		if !found[x] {
+			found[x] = true
+			(*xs)[j] = (*xs)[i]
+			j++
+		}
+	}
+	*xs = (*xs)[:j]
+}
+
+func typeof(v interface{}) string {
+	return reflect.TypeOf(v).String()
 }
 
 func convertProviderConfig(name string, debug bool) *Provider {
@@ -235,13 +378,6 @@ func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]
 			Matchers:   targets,
 			StrictMode: v.StrictMode,
 		}
-		//if debug {
-		//	fmt.Printf("\nConverting selector config: %s \n", k)
-		//fmt.Println("Input:")
-		//pp.Print(v)
-		//fmt.Println("Output:")
-		//pp.Print(selection)
-		//}
 		blocks = append(blocks, selection)
 	}
 	return blocks, nil
@@ -298,3 +434,45 @@ func createTopics(db *gorm.DB) {
 		}
 	}
 }
+
+/*
+func convertSelectorsToEtcd(selectors map[string]SelectorConfig, debug bool) {
+	var blocks []*SelectorConfig
+	for k, v := range selectors {
+		targets, err := convertDetailsToEtcd(v.Details, debug)
+		if err != nil {
+			return nil, err
+		}
+		selection := &SelectorConfig{
+			Collection: k,
+			Debug:      v.Debug,
+			Required:   v.Required,
+			Items:      v.Items,
+			Matchers:   targets,
+			StrictMode: v.StrictMode,
+		}
+		blocks = append(blocks, selection)
+	}
+	return blocks, nil
+}
+
+func convertDetailsToEtcd(tgts map[string]Extractors, debug bool) ([]*MatcherConfig, error) {
+	var targets []*MatcherConfig
+	for k, t := range tgts {
+		var matchers []Matcher
+		for _, e := range t {
+			matchers = append(matchers, Matcher{Expression: e.val})
+		}
+		target := &MatcherConfig{
+			Target:  k,
+			Selects: matchers,
+		}
+		targets = append(targets, target)
+	}
+	return targets, nil
+}
+
+func convertHeadersConfig(headers map[string]string, debug bool) {
+
+}
+*/

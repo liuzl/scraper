@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/pkg/transport"
+	// "github.com/mickep76/etcdmap"
 
 	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/e3ch"
@@ -22,6 +24,7 @@ import (
 	// "github.com/mickep76/etcdmap"
 	// "github.com/jinuljt/getcds"
 	// "github.com/damoye/etcd-config"
+	// "github.com/roscopecoltran/e3w/routers"
 )
 
 /*
@@ -29,26 +32,32 @@ import (
 	- https://github.com/vmattos/apps-registrator/blob/master/etcd/etcd.go
 	- https://github.com/Financial-Times/vulcan-config-builder/blob/master/main.go
 	- https://github.com/xiang90/edb/blob/master/sql.go
+	- https://github.com/rafaeljusto/etcetera/blob/master/etcetera.go
+	- https://github.com/mickep76/etcdmap
 */
 
 const (
 	ETCD_CLIENT_TIMEOUT = 3 * time.Second
 )
 
+// var etcdClient = &EtcdConfig{}
+
 type EtcdConfig struct {
-	Disabled            bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Client              *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Once                *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	E3ch                *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Context             context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	CancelFunc          context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	kv                  map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	mutex               sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	rch                 etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	prefix              string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	SyncIntervalSeconds int64                   `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
-	Consistency         string                  `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
-	RequireQuorum       bool                    `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
+	Disabled   bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Client     *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Once       *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	E3ch       *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Context    context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	CancelFunc context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	kv         map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	mutex      sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	rch        etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	prefix     string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	// info creates a correlation between a path to a info structure that stores some extra information and make the API usage easier
+	info                map[string]info `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	SyncIntervalSeconds int64           `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
+	Consistency         string          `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
+	RequireQuorum       bool            `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
 	// etcdKey       string
 	// nodes         []string
 	// registry      *plugin.Registry
@@ -169,10 +178,9 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 		for {
 			for wresp := range ectl.rch {
 				for _, ev := range wresp.Events {
-					fmt.Printf("ectl, set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
-					ectl.set(ev.Kv.Key, ev.Kv.Value)
+					fmt.Printf("[UPDATE] set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
+					// ectl.set(ev.Kv.Key, ev.Kv.Value)
 				}
-				// pp.Println(ectl.kv)
 			}
 			log.Print("etcd-config watch channel closed")
 			for {
@@ -208,7 +216,6 @@ func (ectl *EtcdConfig) WatchEndpointsConfig() error {
 		fmt.Println("initAndWatch, error: ", err)
 		ectl.Client.Close()
 		return err
-		// return nil, err
 	}
 
 	// loop to update
@@ -474,6 +481,11 @@ func parseNode(node *client.Node) *Node {
 		Value: string(node.Value),
 		IsDir: node.IsDir,
 	}
+}
+
+type info struct {
+	field   reflect.Value
+	version uint64
 }
 
 // Route configuration struct.

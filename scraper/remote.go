@@ -14,6 +14,8 @@ import (
 	- https://github.com/vmattos/apps-registrator/blob/master/etcd/etcd.go
 	- https://github.com/vulcand/vulcand/blob/master/engine/etcdv3ng/etcd.go
 	- https://github.com/vulcand/vulcand/blob/master/engine/etcdv2ng/etcd.go
+	- https://github.com/xh4n3/ohetcd/blob/master/main.go
+	- https://github.com/BlueDragonX/sentinel
 */
 
 var (
@@ -24,6 +26,7 @@ var (
 	headerRegex  = regexp.MustCompile("/routes/([^/]+)/headers/([^/]+)$")
 	blockRegex   = regexp.MustCompile("/routes/([^/]+)/blocks/([^/]+)$")
 	// reverse proxy / load balancer
+	addressRegex    = regexp.MustCompile(`^[\.\-:\/\w]*:[0-9]{2,5}$`)
 	serverRegex     = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
 	frontendIdRegex = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
 	backendIdRegex  = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
@@ -50,16 +53,17 @@ type EtcdRoute struct {
 	Route  string `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
 	Method string `etcd:"method" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
 	// remote content - extraction rules and blocks
-	BaseURL          string            `required:"true" etcd:"base_url" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
-	PatternURL       string            `required:"true" etcd:"pattern_url" json:"pattern_url" yaml:"pattern_url" toml:"pattern_url"`
-	Selector         string            `etcd:"selector" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
-	HeadersIntercept map[string]string `etcd:"resp_headers_intercept" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
-	Headers          map[string]string `etcd:"headers" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	Blocks           map[string]string `etcd:"blocks" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
-	Extract          map[string]string `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
-	Groups           string            `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
-	StrictMode       bool              `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
-	Debug            bool              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	BaseURL          string                       `required:"true" etcd:"base_url" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	PatternURL       string                       `required:"true" etcd:"pattern_url" json:"pattern_url" yaml:"pattern_url" toml:"pattern_url"`
+	TestURL          string                       `required:"true" etcd:"test_url" json:"test_url" yaml:"test_url" toml:"test_url"`
+	Selector         string                       `etcd:"selector" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	HeadersIntercept map[string]string            `etcd:"resp_headers_intercept" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	Headers          map[string]string            `etcd:"headers" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	Blocks           map[string]map[string]string `etcd:"blocks" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	Extract          map[string]bool              `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
+	Groups           string                       `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	StrictMode       bool                         `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	Debug            bool                         `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 type EtcdProxy struct {

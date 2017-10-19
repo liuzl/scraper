@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	// "strings"
 
 	"github.com/roscopecoltran/admin"
 	"github.com/roscopecoltran/scraper/scraper"
@@ -27,12 +26,6 @@ import (
 
 	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
-	// "github.com/ksinica/flatstruct"
-	// "github.com/spf13/cast"
-	// "github.com/roscopecoltran/e3ch"
-	// "github.com/roscopecoltran/e3w/routers"
-	// "github.com/roscopecoltran/e3w/conf"
-	// "github.com/roscopecoltran/e3w/e3ch"
 	// "github.com/gin-contrib/cache"
 	// "github.com/aviddiviner/gin-limit"
 	// "github.com/gin-gonic/contrib/cache"
@@ -64,6 +57,7 @@ type config struct {
 	RedisAddr string `default:"127.0.0.1:6379" help:"Redis Addr" json:"redis_addr" yaml:"redis_addr" toml:"redis_addr"`
 	RedisHost string `default:"127.0.0.1" help:"Redis host" json:"redis_host" yaml:"redis_host" toml:"redis_host"`
 	RedisPort string `default:"6379" help:"Redis port" json:"redis_port" yaml:"redis_port" toml:"redis_port"`
+
 	// redis.UseRedis(rhost)
 }
 
@@ -75,11 +69,8 @@ var (
 	// Clients
 	// clients     []sockjs.Session
 	// clientsLock sync.RWMutex
-
-	AdminUI *admin.Admin
-	DB      *gorm.DB
-
 	// Index     bleve.Index
+
 	// handler http.Handler
 	// indexLock sync.RWMutex
 	// Signalled to exit everything
@@ -87,6 +78,9 @@ var (
 
 	// Used to control when things are done
 	// wg sync.WaitGroup
+
+	AdminUI *admin.Admin
+	DB      *gorm.DB
 
 	Tables = []interface{}{
 		&scraper.Connection{},
@@ -146,58 +140,20 @@ func main() {
 		}
 	}()
 
-	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
-		log.Fatal(err)
-	}
-
-	var cerr error
+	// var cerr error
 	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
 	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
 	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
-	c.Etcd.E3ch, cerr = c.Etcd.NewE3chClient()
-	if cerr != nil {
-		fmt.Println("Could not connect to the ETCD cluster, error: ", cerr)
+	e3ch, err := c.Etcd.NewE3chClient()
+	if err != nil {
+		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
 	}
 
-	cerr = c.Etcd.E3ch.Delete("/")
-	if cerr != nil {
-		fmt.Println("Could not delete dir '/', error: ", cerr)
-	}
+	h.Etcd.E3ch = e3ch
 
-	/*
-		fs := flatstruct.NewFlatStruct()
-		fs.PathSeparator = "/"
-		for _, e := range h.Config.Routes {
-			err := c.Etcd.RecursiveCreateDir(fmt.Sprintf("/%s", e.Route)) // Create all dirs recursively...
-			if err != nil {
-				fmt.Println("error: ", err)
-			}
-			f, err := fs.Flatten(e)
-			if err != nil {
-				fmt.Println("error: ", err)
-			}
-			for k, _ := range f {
-				keyParts := strings.Split(fmt.Sprintf("/%s", k), "/")
-				if len(keyParts) > 1 {
-					dir := len(keyParts) - 2
-					key := len(keyParts) - 1
-					fmt.Printf("dir='/%s%s', key='%s', cast='%s', val='%v' \n", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key], cast.ToString(f[k].Value), f[k].Value)
-					err := c.Etcd.RecursiveCreateDir(fmt.Sprintf("/%s%s", e.Route, strings.Join(keyParts[:dir], "/"))) // Create all dirs recursively...
-					if err != nil {
-						fmt.Println("error: ", err)
-					}
-					err = c.Etcd.E3ch.Create(fmt.Sprintf("/%s%s/%s", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key]), cast.ToString(f[k].Value))
-					if err != nil {
-						fmt.Println("error: ", err)
-						err = c.Etcd.E3ch.Put(fmt.Sprintf("/%s%s/%s", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key]), cast.ToString(f[k].Value))
-						if err != nil {
-							fmt.Println("error: ", err)
-						}
-					}
-				}
-			}
-		}
-	*/
+	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+		log.Fatal(err)
+	}
 
 	mux := http.NewServeMux() // Register route
 
@@ -241,12 +197,10 @@ func main() {
 	// }
 
 	mux.Handle("/", h)
-	if h.Config.Migrate {
-		scraper.MigrateEndpoints(DB, h.Config)
-	}
 
-	// https://github.com/dwarvesf/delivr-admin/blob/develop/config/api/api.go
-	// https://github.com/dwarvesf/delivr-admin/blob/develop/main.go
+	if h.Config.Migrate {
+		scraper.MigrateEndpoints(DB, h.Config, e3ch)
+	}
 
 	if useGinWrap { // With GIN
 
@@ -254,31 +208,25 @@ func main() {
 
 		store := persistence.NewInMemoryStore(60 * time.Second)
 		if h.Config.Debug {
+			fmt.Println("store: ")
 			pp.Println(store)
 		}
-
-		/*
-			client, err := e3ch.NewE3chClient(config)
-			if err != nil {
-				panic(err)
-			}
-		*/
-
-		// routers.InitRouters(r, config, client)
 
 		r.Any("/*w", gin.WrapH(mux))
 		if err := r.Run(fmt.Sprintf("%s:%d", c.Host, c.Port)); err != nil {
 			log.Fatalf("Can not run server, error: %s", err)
 		}
+
 	} else {
+
 		log.Printf("Listening on: %s:%d", c.Host, c.Port)
 		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
+
 	}
 
 }
 
 /*
-
 // import "github.com/lhside/chrome-go"
 func chromeBridge() {
 	// Read message from standard input.
