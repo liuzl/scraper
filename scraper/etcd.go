@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -36,81 +35,45 @@ const (
 	ETCD_CLIENT_TIMEOUT = 3 * time.Second
 )
 
-/*
- refs:
- - https://github.com/vulcand/vulcand/blob/master/engine/etcdv3ng/etcd.go
- - https://github.com/vulcand/vulcand/blob/master/engine/etcdv2ng/etcd.go
-*/
-var (
-	numDirs, numKeys int
-	frontendIdRegex  = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
-	backendIdRegex   = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
-	hostnameRegex    = regexp.MustCompile("/hosts/([^/]+)(?:/host)?$")
-	listenerIdRegex  = regexp.MustCompile("/listeners/([^/]+)")
-	middlewareRegex  = regexp.MustCompile("/frontends/([^/]+)/middlewares/([^/]+)$")
-	serverRegex      = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
-)
-
-// Client is a wrapper around the etcd client
-type Client struct {
-	client *etcd.Client
-}
-
 type EtcdConfig struct {
-	Disabled bool `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-
-	// Clients
-	Client     *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Once       *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	E3ch       *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Context    context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	CancelFunc context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	kv         map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	mutex      sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	rch        etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	prefix     string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	// cluster + "/"
-
-	// Sync/Watch
-	SyncIntervalSeconds int64  `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
-	Consistency         string `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
-	RequireQuorum       bool   `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
+	Disabled            bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Client              *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Once                *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	E3ch                *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Context             context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	CancelFunc          context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	kv                  map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	mutex               sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	rch                 etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	prefix              string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	SyncIntervalSeconds int64                   `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
+	Consistency         string                  `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
+	RequireQuorum       bool                    `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
 	// etcdKey       string
 	// nodes         []string
 	// registry      *plugin.Registry
-
-	// Errors
-	OnceError error `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	InitCheck bool  `json:"init_check,omitempty" yaml:"init_check,omitempty" toml:"init_check,omitempty"`
-	MaxDir    int   `default:"10" json:"max_dir,omitempty" yaml:"max_dir,omitempty" toml:"max_dir,omitempty"`
-
-	// Cluster endpoints
-	ApiVersion     int           `default:"3" json:"api_version,omitempty" yaml:"api_version,omitempty" toml:"api_version,omitempty"`
-	Peers          []string      `gorm:"-" json:"peers,omitempty" yaml:"peers,omitempty" toml:"peers,omitempty"`
-	MaxTimeout     time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
-	DialTimeout    time.Duration `json:"dial_timeout,omitempty" yaml:"dial_timeout,omitempty" toml:"dial_timeout,omitempty"`
-	ReadTimeout    time.Duration `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty" toml:"read_timeout,omitempty"`
-	WriteTimeout   time.Duration `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty" toml:"write_timeout,omitempty"`
-	CommandTimeout time.Duration `json:"command_timeout,omitempty" yaml:"command_timeout,omitempty" toml:"command_timeout,omitempty"`
-
-	Routes []EtcdRoute `json:"routes" yaml:"routes" toml:"routes"`
-
-	// Credentials
-	Username         string `json:"username,omitempty" yaml:"username,omitempty" toml:"username,omitempty"`
-	Password         string `json:"password,omitempty" yaml:"password,omitempty" toml:"password,omitempty"`
-	PasswordFilePath string `json:"password_file,omitempty" yaml:"password_file,omitempty" toml:"password_file,omitempty"`
-
-	// Secured Transport
-	IsSecured     bool   `json:"tls,omitempty" yaml:"tls,omitempty" toml:"tls,omitempty"`
-	CertFile      string `json:"cert_file,omitempty" yaml:"cert_file,omitempty" toml:"cert_file,omitempty"`
-	KeyFile       string `json:"key_file,omitempty" yaml:"key_file,omitempty" toml:"key_file",omitempty`
-	TrustedCAFile string `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
-
-	// Root Key Config
-	RootKey            string `json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
-	DirValue           string `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
-	SealKey            string `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
-	TrustForwardHeader bool   `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
+	OnceError          error             `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	InitCheck          bool              `json:"init_check,omitempty" yaml:"init_check,omitempty" toml:"init_check,omitempty"`
+	MaxDir             int               `default:"10" json:"max_dir,omitempty" yaml:"max_dir,omitempty" toml:"max_dir,omitempty"`
+	ApiVersion         int               `default:"3" json:"api_version,omitempty" yaml:"api_version,omitempty" toml:"api_version,omitempty"`
+	Peers              []string          `gorm:"-" json:"peers,omitempty" yaml:"peers,omitempty" toml:"peers,omitempty"`
+	MaxTimeout         time.Duration     `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
+	DialTimeout        time.Duration     `json:"dial_timeout,omitempty" yaml:"dial_timeout,omitempty" toml:"dial_timeout,omitempty"`
+	ReadTimeout        time.Duration     `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty" toml:"read_timeout,omitempty"`
+	WriteTimeout       time.Duration     `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty" toml:"write_timeout,omitempty"`
+	CommandTimeout     time.Duration     `json:"command_timeout,omitempty" yaml:"command_timeout,omitempty" toml:"command_timeout,omitempty"`
+	Routes             []EtcdRouteConfig `json:"routes" yaml:"routes" toml:"routes"`
+	Username           string            `json:"username,omitempty" yaml:"username,omitempty" toml:"username,omitempty"`
+	Password           string            `json:"password,omitempty" yaml:"password,omitempty" toml:"password,omitempty"`
+	PasswordFilePath   string            `json:"password_file,omitempty" yaml:"password_file,omitempty" toml:"password_file,omitempty"`
+	IsSecured          bool              `json:"tls,omitempty" yaml:"tls,omitempty" toml:"tls,omitempty"`
+	CertFile           string            `json:"cert_file,omitempty" yaml:"cert_file,omitempty" toml:"cert_file,omitempty"`
+	KeyFile            string            `json:"key_file,omitempty" yaml:"key_file,omitempty" toml:"key_file",omitempty`
+	TrustedCAFile      string            `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
+	RootKey            string            `json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
+	DirValue           string            `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
+	SealKey            string            `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
+	TrustForwardHeader bool              `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
 
 	// Debug activity
 	MemProfileRate int  `json:"mem_profile_rate,omitempty" yaml:"mem_profile_rate,omitempty" toml:"mem_profile_rate,omitempty"`
@@ -514,7 +477,7 @@ func parseNode(node *client.Node) *Node {
 }
 
 // Route configuration struct.
-type EtcdRoute struct {
+type EtcdRouteConfig struct {
 	Regexp string `json:"regexp" yaml:"regexp" toml:"regexp"`
 	Schema string `json:"schema" yaml:"schema" toml:"schema"`
 }

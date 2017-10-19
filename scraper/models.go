@@ -30,26 +30,26 @@ type Provider struct {
 }
 
 type ProviderWebRankConfig struct {
-	gorm.Model
-	sorting.Sorting
-	ProviderID uint
-	Engine     string `json:"engine,omitempty" yaml:"engine,omitempty" toml:"engine,omitempty"`
-	Score      string `json:"score,omitempty" yaml:"score,omitempty" toml:"score,omitempty"`
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	ProviderID      uint   `json:"-" yaml:"-" toml:"-"`
+	Engine          string `json:"engine,omitempty" yaml:"engine,omitempty" toml:"engine,omitempty"`
+	Score           string `json:"score,omitempty" yaml:"score,omitempty" toml:"score,omitempty"`
 }
 
 // Config represents...
 type Config struct {
-	gorm.Model
-	sorting.Sorting
-	Disabled  bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Env       EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Etcd      EtcdConfig  `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
-	Port      int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
-	Dashboard bool        `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
-	Truncate  bool        `default:"true" help:"Truncate previous data" json:"truncate,omitempty" yaml:"truncate,omitempty" toml:"truncate,omitempty"`
-	Migrate   bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
-	Debug     bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	Routes    []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	Disabled        bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Env             EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+	Etcd            EtcdConfig  `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Port            int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
+	Dashboard       bool        `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
+	Truncate        bool        `default:"true" help:"Truncate previous data" json:"truncate,omitempty" yaml:"truncate,omitempty" toml:"truncate,omitempty"`
+	Migrate         bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
+	Debug           bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Routes          []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
 }
 
 type EnvConfig struct {
@@ -66,6 +66,7 @@ type Endpoint struct {
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                    `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                         `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	EtcdKey            string                       `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Connections        []Connection                 `json:"-" yaml:"-" toml:"-"`
 	Source             string                       `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
 	ProviderID         uint                         `json:"-" yaml:"-" toml:"-"`
@@ -96,18 +97,17 @@ type Endpoint struct {
 	Count              string                       `gorm"-" json:"-" yaml:"-" toml:"-"`
 	Debug              bool                         `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	StrictMode         bool                         `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
-	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"` // media_library.MediaBox `json:"-" yaml:"-" toml:"-"`
+	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"`
 }
 
 type Screenshot struct {
-	gorm.Model
-	Title        string
-	EndpointID   uint `json:"-" yaml:"-" toml:"-"`
-	SelectedType string
-	File         media_library.MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}"`
+	gorm.Model   `json:"-" yaml:"-" toml:"-"`
+	Title        string                            `etcd:"title" json:"title,omitempty" yaml:"title,omitempty" toml:"title,omitempty"`
+	EndpointID   uint                              `json:"-" yaml:"-" toml:"-"`
+	SelectedType string                            `etcd:"selected_type" json:"selected_type,omitempty" yaml:"selected_type,omitempty" toml:"selected_type,omitempty"`
+	File         media_library.MediaLibraryStorage `sql:"size:4294967295;" media_library:"url:/system/{{class}}/{{primary_key}}/{{column}}.{{extension}}" json:"-" yaml:"-" toml:"-"`
 	// Category     Category
 	// CategoryID   uint
-
 }
 
 func (screenshot Screenshot) Validate(db *gorm.DB) {
@@ -163,26 +163,26 @@ func (ScreenShotVariationImageStorage) GetSizes() map[string]*media.Size {
 */
 
 type Queries struct {
-	gorm.Model
-	sorting.SortingDESC
-	Keywords []Query
+	gorm.Model          `json:"-" yaml:"-" toml:"-"`
+	sorting.SortingDESC `json:"-" yaml:"-" toml:"-"`
+	Keywords            []Query `etcd:"keywords" json:"keywords,omitempty" yaml:"keywords,omitempty" toml:"keywords,omitempty"`
 }
 
 type Query struct {
-	gorm.Model
-	InputQuery string
-	Slug       string
-	MD5        string
-	SHA1       string
-	UUID       string
-	Blocked    bool
+	gorm.Model `json:"-" yaml:"-" toml:"-"`
+	InputQuery string `etcd:"input_query" json:"input_query,omitempty" yaml:"input_query,omitempty" toml:"input_query,omitempty"`
+	Slug       string `etcd:"slug" json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	MD5        string `etcd:"md5" json:"md5,omitempty" yaml:"md5,omitempty" toml:"md5,omitempty"`
+	SHA1       string `etcd:"sha1" json:"sha1,omitempty" yaml:"sha1,omitempty" toml:"sha1,omitempty"`
+	UUID       string `etcd:"uuid" json:"uuid,omitempty" yaml:"uuid,omitempty" toml:"uuid,omitempty"`
+	Blocked    bool   `etcd:"blocked" json:"blocked,omitempty" yaml:"blocked,omitempty" toml:"blocked,omitempty"`
 }
 
-type EndpointProperties []EndpointProperty
+type EndpointProperties []EndpointProperty // `etcd:"properties" json:"properties" yaml:"properties" toml:"properties"`
 
 type EndpointProperty struct {
-	Name  string
-	Value string
+	Name  string `etcd:"name" json:"name" yaml:"name" toml:"name"`
+	Value string `etcd:"value" json:"value" yaml:"value" toml:"value"`
 }
 
 func (endpointProperties *EndpointProperties) Scan(value interface{}) error {
@@ -211,6 +211,7 @@ type SelectorConfig struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
 	EndpointID      uint                  `json:"-" yaml:"-" toml:"-"`
+	EtcdKey         string                `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Collection      string                `json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
 	Description     string                `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
 	Required        bool                  `etcd:"required" default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
@@ -232,52 +233,48 @@ type Extractor struct {
 type MatcherConfig struct {
 	gorm.Model       `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting  `json:"-" yaml:"-" toml:"-"`
-	SelectorConfigID uint
-	Target           string
-	Selects          []Matcher
+	SelectorConfigID uint      `json:"-" yaml:"-" toml:"-"`
+	Target           string    `etcd:"target" json:"target,omitempty" yaml:"target,omitempty" toml:"target,omitempty"`
+	Selects          []Matcher `etcd:"selects" json:"selects,omitempty" yaml:"selects,omitempty" toml:"selects,omitempty"`
+	EtcdKey          string    `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 }
 
 //type Matchers {[]Matcher
 type Matcher struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
-	MatcherConfigID uint
-	Expression      string
+	MatcherConfigID uint   `json:"-" yaml:"-" toml:"-"`
+	Expression      string `etcd:"expr" json:"expr,omitempty" yaml:"expr,omitempty" toml:"expr,omitempty"`
 }
-
-var TargetTypes = []string{"title", "desc", "image", "price", "stock", "count", "url", "tag", "extra", "cat"}
-var TransportTypes = []string{"http", "https", "grpc", "tcp", "udp", "udp", "udp", "inproc", "ipc", "tlstcp", "ws", "wss"}
-var MethodTypes = []string{"GET", "POST"}
-var SelectorEngines = []string{"css", "xpath", "json", "xml", "csv"}
 
 type SelectorType struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	Name       string
-	Engine     string
+	Name       string `etcd:"name" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
+	Engine     string `etcd:"engine" json:"engine,omitempty" yaml:"engine,omitempty" toml:"engine,omitempty"`
 }
 
 type TargetConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	// EndpointID uint
-	Name string
+	// EndpointID uint `json:"-" yaml:"-" toml:"-"`
+	Name string `etcd:"name" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
 }
 
 type HeaderConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	EndpointID uint
-	Key        string
-	Value      string
+	EndpointID uint   `json:"-" yaml:"-" toml:"-"`
+	Key        string `etcd:"key" json:"key,omitempty" yaml:"key,omitempty" toml:"key,omitempty"`
+	Value      string `etcd:"value" json:"value,omitempty" yaml:"value,omitempty" toml:"value,omitempty"`
 }
 
 type BlocksConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	Key        string
-	Value      SelectorConfig
+	Key        string         `etcd:"key" json:"key,omitempty" yaml:"key,omitempty" toml:"key,omitempty"`
+	Value      SelectorConfig `etcd:"value" json:"value,omitempty" yaml:"value,omitempty" toml:"value,omitempty"`
 }
 
 type ExtractorsConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	Key        string
-	Value      Extractors
+	Key        string     `etcd:"key" json:"key,omitempty" yaml:"key,omitempty" toml:"key,omitempty"`
+	Value      Extractors `etcd:"value" json:"value,omitempty" yaml:"value,omitempty" toml:"value,omitempty"`
 }
 
 // ExtractConfig represents a single sub-extraction rules url content configuration.
@@ -292,18 +289,18 @@ type ExtractConfig struct {
 // OPENAPI SCRAPER ///////////////////////////////////////////////////////////////
 type OpenAPIConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	Name       string
-	Provider   Provider
-	Specs      []*OpenAPISpecsConfig
+	Name       string                `etcd:"name" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
+	Provider   Provider              `etcd:"provider" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	Specs      []*OpenAPISpecsConfig `etcd:"specs" json:"specs,omitempty" yaml:"specs,omitempty" toml:"specs,omitempty"`
 }
 
 type OpenAPISpecsConfig struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
-	Slug       string
-	Version    string
+	Slug       string `etcd:"slug" json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	Version    string `etcd:"version" json:"version,omitempty" yaml:"version,omitempty" toml:"version,omitempty"`
 }
 
-// REQUESTS WEBMOCKS ///////////////////////////////////////////////////////////////
+// REQUESTS API WEBMOCKS ///////////////////////////////////////////////////////////////
 type Connection struct {
 	gorm.Model `json:"-" yaml:"-" toml:"-"`
 	// ID         uint     `gorm:"primary_key;AUTO_INCREMENT" json:"-" yaml:"-" toml:"-"`
