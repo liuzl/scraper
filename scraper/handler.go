@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
+	"github.com/roscopecoltran/mxj"
 	// "github.com/roscopecoltran/configor"
 )
 
@@ -20,6 +21,7 @@ type Handler struct {
 	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Etcd   EtcdConfig `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
 
+	// FlatConfig map[string]interface{} `opts:"-" json:"-" yaml:"-" toml:"-"`
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
 
 	Auth  string `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
@@ -33,6 +35,27 @@ func (h *Handler) LoadConfigFile(path string) error {
 		return err
 	}
 	return h.LoadConfig(b)
+}
+
+func (h *Handler) GetConfigPaths(path string) []string {
+	var paths []string
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return paths
+	}
+
+	mxj.JsonUseNumber = true
+	mv, err := mxj.NewMapJson(b)
+	if err != nil {
+		fmt.Println("NewMapJson, error: ", err)
+	}
+
+	fmt.Println("NewMapJson, jdata:", string(b))
+	fmt.Printf("NewMapJson, mv: \n %#v\n", mv)
+
+	mxj.LeafUseDotNotation()
+	paths = mv.LeafPaths()
+	return paths
 }
 
 var Endpoints struct {
@@ -79,6 +102,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
+
 			if h.Debug {
 				logf("Loaded endpoint: /%s", e.Route)
 			}

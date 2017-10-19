@@ -5,6 +5,8 @@ migrate: true
 truncate: true
 dashboard: true
 etcd:
+  disabled: false
+  debug: false
   init_check: true
 env:
   debug: true

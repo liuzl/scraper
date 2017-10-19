@@ -135,6 +135,10 @@ func (ectl *EtcdConfig) NewEtcdClient(conf etcd.Config) (*etcd.Client, error) {
 // etcdConfig etcd.Config
 func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 
+	if ectl.MaxDir == 0 {
+		ectl.MaxDir = 10
+	}
+
 	if len(ectl.Peers) == 0 {
 		ectl.Peers = []string{"http://localhost:2379"}
 	}
@@ -205,7 +209,7 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 					fmt.Printf("ectl, set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
 					ectl.set(ev.Kv.Key, ev.Kv.Value)
 				}
-				pp.Println(ectl.kv)
+				// pp.Println(ectl.kv)
 			}
 			log.Print("etcd-config watch channel closed")
 			for {
@@ -453,13 +457,17 @@ func (ectl *EtcdConfig) AddEndpoint(path string, endpointConfig Endpoint) error 
 	return nil
 }
 
-func (ectl *EtcdConfig) RecursiveAdd(keyPath string, keyType string) error {
+func (ectl *EtcdConfig) RecursiveCreateDir(keyPath string) error {
 	keyParts := strings.Split(keyPath, "/")
 	if len(keyParts) > ectl.MaxDir {
 		return errors.New(fmt.Sprintf("[ERROR] Input path='%s', Max directory (%d) per key exceeded: '%d'.\n", keyPath, ectl.MaxDir, len(keyParts)))
 	}
-	fmt.Println("keyType: ", keyType)
-	pp.Println(keyParts)
+	for i := 0; i <= len(keyParts); i++ {
+		if strings.Join(keyParts[:i], "/") != "" {
+			fmt.Printf("input: '%s', iter='%d' , parent_dir: '%s'\n", keyPath, i, strings.Join(keyParts[:i], "/"))
+			ectl.E3ch.CreateDir(strings.Join(keyParts[:i], "/"))
+		}
+	}
 	return nil
 }
 

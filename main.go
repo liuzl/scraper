@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	// "reflect"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +19,9 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+
+	"github.com/ksinica/flatstruct"
+	"github.com/spf13/cast"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
 
@@ -115,6 +120,21 @@ var (
 	errInit error
 )
 
+func typeof(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return "string"
+	case int:
+		return "int"
+	case float64:
+		return "float64"
+	//... etc
+	default:
+		_ = t
+		return "unknown"
+	}
+}
+
 func main() {
 	useGinWrap := false
 	logger, errInit = zap.NewProduction()
@@ -156,6 +176,39 @@ func main() {
 	c.Etcd.E3ch, cerr = c.Etcd.NewE3chClient()
 	if cerr != nil {
 		fmt.Println("Could not connect to the ETCD cluster, error: ", cerr)
+	}
+	// stom.SetTag("etcd")
+	fs := flatstruct.NewFlatStruct()
+	fs.PathSeparator = "/"
+	for _, e := range h.Config.Routes {
+		err := c.Etcd.RecursiveCreateDir(fmt.Sprintf("/%s", e.Route)) // Create all dirs recursively...
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		f, err := fs.Flatten(e)
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		for k, _ := range f {
+			keyParts := strings.Split(fmt.Sprintf("/%s", k), "/")
+			if len(keyParts) > 1 {
+				dir := len(keyParts) - 2
+				key := len(keyParts) - 1
+				fmt.Printf("dir='/%s%s', key='%s', cast='%s', val='%v' \n", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key], cast.ToString(f[k].Value), f[k].Value)
+				err := c.Etcd.RecursiveCreateDir(fmt.Sprintf("/%s%s", e.Route, strings.Join(keyParts[:dir], "/"))) // Create all dirs recursively...
+				if err != nil {
+					fmt.Println("error: ", err)
+				}
+				err = c.Etcd.E3ch.Create(fmt.Sprintf("/%s%s/%s", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key]), cast.ToString(f[k].Value))
+				if err != nil {
+					fmt.Println("error: ", err)
+					err = c.Etcd.E3ch.Put(fmt.Sprintf("/%s%s/%s", e.Route, strings.Join(keyParts[:dir], "/"), keyParts[key]), cast.ToString(f[k].Value))
+					if err != nil {
+						fmt.Println("error: ", err)
+					}
+				}
+			}
+		}
 	}
 
 	mux := http.NewServeMux() // Register route
