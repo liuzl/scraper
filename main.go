@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/geekypanda/httpcache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -109,7 +110,10 @@ var (
 	errInit error
 )
 
+var cacheDuration = 3600 * time.Second
+
 func main() {
+
 	useGinWrap := false
 	logger, errInit = zap.NewProduction()
 
@@ -191,34 +195,14 @@ func main() {
 
 	}
 
-	/*
-		tokenSource := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: accessToken},
-		)
-		oauthTransport := &oauth2.Transport{
-			Source: tokenSource,
-		}
-	*/
-
-	/*
-		memoryCacheTransport := &httpcache.Transport{
-			// Transport:           oauthTransport,
-			Cache:               httpcache.NewMemoryCache(),
-			MarkCachedResponses: true,
-		}
-
-		httpClient := &http.Client{
-			Transport: cache,
-			Timeout:   30 * time.Second,
-		}*/
-
 	// Experimental
 	// redis.UseRedis(c.RedisHost)
 	// scraper.ConvertToJsonSchema()
 	// scraper.SeedAlexaTop1M()
-
-	// mux.Handle("/api/scraper", h)
+	// h = scraper.NewRequestCacher(mux, "./shared/cache/scraper")
 	mux.Handle("/", h)
+
+	cachedMux := httpcache.Cache(mux, cacheDuration)
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)
@@ -227,7 +211,6 @@ func main() {
 	if useGinWrap { // With GIN
 
 		r := gin.Default()
-
 		store := persistence.NewInMemoryStore(60 * time.Second)
 		if h.Config.Debug {
 			fmt.Println("store: ")
@@ -241,8 +224,15 @@ func main() {
 
 	} else {
 
+		/*
+			mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Cache-Control", "max-age=3600")
+			}))
+		*/
+		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
 		log.Printf("Listening on: %s:%d", c.Host, c.Port)
-		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
+		// pp.Println(mux.)
+		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), cachedMux))
 
 	}
 

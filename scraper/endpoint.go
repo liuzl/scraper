@@ -22,6 +22,8 @@ import (
 	"github.com/mmcdole/gofeed"
 	"github.com/roscopecoltran/mxj"
 	"golang.org/x/net/html"
+	// "github.com/Machiel/slugify"
+	// "github.com/ctessum/requestcache"
 	// "github.com/otiai10/cachely"
 	// "github.com/buger/jsonparser"
 	// "github.com/go-aah/aah"
@@ -249,6 +251,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		body = strings.NewReader(s)
 	}
+
+	// cacheKey := slugifier.Slugify(fmt.Sprintf("%s_%s", url))
 
 	req, err := http.NewRequest(method, url, body) //create HTTP request
 	if err != nil {

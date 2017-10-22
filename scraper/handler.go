@@ -17,6 +17,7 @@ import (
 	"github.com/k0kubun/pp"
 	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/mxj"
+	// "github.com/mikegleasonjr/forwardcache"
 	// "github.com/roscopecoltran/configor"
 )
 
@@ -153,6 +154,11 @@ func (h *Handler) LoadConfig(b []byte) error {
 	return nil
 }
 
+func NewCache(cachePath string) *httpcache.Transport {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	return newTransportWithDiskCache(cachePath, "")
+}
+
 func InitCache(cachePath string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	transportCache = newTransportWithDiskCache(cachePath, "")
@@ -186,8 +192,7 @@ func getClient() *http.Client {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// basic auth
-	if h.Auth != "" {
+	if h.Auth != "" { // basic auth
 		u, p, _ := r.BasicAuth()
 		if h.Auth != u+":"+p {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -195,10 +200,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// always JSON!
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// admin actions
-	if r.URL.Path == "" || r.URL.Path == "/" {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8") // always JSON!
+	w.Header().Set("Cache-Control", "max-age=3600")
+
+	if r.URL.Path == "" || r.URL.Path == "/" { // admin actions
 		get := false
 		if r.Method == "GET" {
 			get = true
@@ -225,17 +230,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		return
 	}
-	// endpoint id (excludes root slash)
-	id := r.URL.Path[1:]
-	// load endpoint
-	endpoint := h.Endpoint(id)
+	id := r.URL.Path[1:]       // endpoint id (excludes root slash)
+	endpoint := h.Endpoint(id) // load endpoint
+
 	if endpoint == nil {
 		w.WriteHeader(404)
 		w.Write(jsonerr(fmt.Errorf("Endpoint /%s not found", id)))
 		return
 	}
-	// convert url.Values into map[string]string
-	values := map[string]string{}
+	values := map[string]string{} // convert url.Values into map[string]string
 	for k, v := range r.URL.Query() {
 		values[k] = v[0]
 	}
@@ -244,6 +247,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.Debug {
 		pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
 	}
+
 	if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
 		ctx := context.Background()
 		resChan := make(chan *ScraperResult, endpoint.Concurrency)
@@ -279,16 +283,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	// encode as JSON
-	enc := json.NewEncoder(w)
+	enc := json.NewEncoder(w) // encode as JSON
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
-
 	if err := enc.Encode(res); err != nil {
 		w.Write([]byte("JSON Error: " + err.Error()))
 	}
-
 	/*
 		var v interface{}
 		if endpoint.List == "" && len(res) == 1 {
@@ -300,7 +300,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("JSON Error: " + err.Error()))
 		}
 	*/
-
 }
 
 // Endpoint will return the Handler's Endpoint from its Config
