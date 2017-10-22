@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/birkelund/boltdbcache"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/joho/godotenv"
@@ -19,19 +20,21 @@ import (
 	// "github.com/roscopecoltran/configor"
 )
 
+var transportCache *httpcache.Transport
+
+//var cache *httpcache.Cache
+
 type Handler struct {
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
-	Env    EnvConfig  `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Etcd   EtcdConfig `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
-	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
-
-	// FlatConfig map[string]interface{} `opts:"-" json:"-" yaml:"-" toml:"-"`
+	Env     EnvConfig         `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+	Etcd    EtcdConfig        `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Config  Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-
-	Auth  string `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
-	Log   bool   `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
-	Debug bool   `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
+	Log     bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
+	Debug   bool              `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	// transport *httpcache.Transport `opts:"-" json:"-" yaml:"-" toml:"-"`
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
@@ -143,46 +146,46 @@ func (h *Handler) LoadConfig(b []byte) error {
 	}
 
 	// c.Transport =
-	Init("./shared/cache")
+	// InitCache("./shared/cache/test.boltdb")
+	InitCache("./shared/cache")
 
 	h.Config = c //replace config
 	return nil
 }
 
-var transportCache *httpcache.Transport
-
-func Init(cachePath string) {
+func InitCache(cachePath string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	transportCache = newTransportWithDiskCache(cachePath)
+	transportCache = newTransportWithDiskCache(cachePath, "")
 }
 
-func newTransportWithDiskCache(basePath string) *httpcache.Transport {
-	d := diskv.New(diskv.Options{
-		BasePath:     basePath,
-		CacheSizeMax: 100 * 1024 * 10, // 10MB
-	})
-
-	c := diskcache.NewWithDiskv(d)
-
-	return httpcache.NewTransport(c)
+func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transport {
+	// var cache *httpcache.Cache
+	if engine == "boltdbcache" {
+		cache, err := boltdbcache.New(basePath)
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		// cache := boltdbcache.NewWithDB(d)
+		return httpcache.NewTransport(cache)
+	} else {
+		d := diskv.New(diskv.Options{
+			BasePath:     basePath,
+			CacheSizeMax: 500 * 1024 * 250, // 10MB
+		})
+		cache := diskcache.NewWithDiskv(d)
+		return httpcache.NewTransport(cache)
+	}
+	//pp.Println(cache)
+	//return httpcache.NewTransport(cache)
 }
 
 func getClient() *http.Client {
 	c := transportCache.Client()
-	//c.Timeout = time.Duration(30 * time.Second) //TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
+	// c.Timeout = time.Duration(30 * time.Second) //TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
 	return c
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	/*
-		d := diskv.New(diskv.Options{
-			BasePath:     "./shared/cache",
-			CacheSizeMax: 500 * 1024 * 1024,
-		})
-		cache = diskcache.NewWithDiskv(d)
-	*/
-
 	// basic auth
 	if h.Auth != "" {
 		u, p, _ := r.BasicAuth()
@@ -226,7 +229,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[1:]
 	// load endpoint
 	endpoint := h.Endpoint(id)
-
 	if endpoint == nil {
 		w.WriteHeader(404)
 		w.Write(jsonerr(fmt.Errorf("Endpoint /%s not found", id)))

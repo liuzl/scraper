@@ -6,7 +6,12 @@
 
 proto/
 
+shared/cache
+shared/cache/
+shared/cache/**
+
 # Folders
+*.boltdb
 _obj
 _test
 
