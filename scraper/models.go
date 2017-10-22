@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gregjones/httpcache"
+	// "github.com/gregjones/httpcache/diskcache"
 	"github.com/jinzhu/gorm"
 	"github.com/qor/media/media_library"
 	"github.com/qor/sorting"
@@ -41,15 +43,17 @@ type ProviderWebRankConfig struct {
 type Config struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
-	Disabled        bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Env             EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Etcd            EtcdConfig  `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
-	Port            int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
-	Dashboard       bool        `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
-	Truncate        bool        `default:"true" help:"Truncate previous data" json:"truncate,omitempty" yaml:"truncate,omitempty" toml:"truncate,omitempty"`
-	Migrate         bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
-	Debug           bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	Routes          []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+	Disabled        bool                 `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Env             EnvConfig            `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+	Etcd            EtcdConfig           `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Port            int                  `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
+	Dashboard       bool                 `default:"false" help:"Initialize the Administration Interface" json:"dashboard,omitempty" yaml:"dashboard,omitempty" toml:"dashboard,omitempty"`
+	Truncate        bool                 `default:"true" help:"Truncate previous data" json:"truncate,omitempty" yaml:"truncate,omitempty" toml:"truncate,omitempty"`
+	Migrate         bool                 `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
+	Debug           bool                 `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Routes          []*Endpoint          `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+	Cache           *httpcache.Cache     `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Transport       *httpcache.Transport `gorm:"-" json:"-" yaml:"-" toml:"-"`
 }
 
 type EnvConfig struct {

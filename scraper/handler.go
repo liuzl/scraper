@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 	"strings"
 
+	"github.com/gregjones/httpcache"
+	"github.com/gregjones/httpcache/diskcache"
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
+	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/mxj"
-	// "github.com/mickep76/flatten"
 	// "github.com/roscopecoltran/configor"
 )
 
@@ -68,6 +71,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
 	}
+
 	h.Etcd = c.Etcd
 	if len(c.Env.Files) > 0 {
 		envVars, err := godotenv.Read(c.Env.Files...)
@@ -137,11 +141,48 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if h.Debug {
 		logf("Enabled debug mode")
 	}
+
+	// c.Transport =
+	Init("./shared/cache")
+
 	h.Config = c //replace config
 	return nil
 }
 
+var transportCache *httpcache.Transport
+
+func Init(cachePath string) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	transportCache = newTransportWithDiskCache(cachePath)
+}
+
+func newTransportWithDiskCache(basePath string) *httpcache.Transport {
+	d := diskv.New(diskv.Options{
+		BasePath:     basePath,
+		CacheSizeMax: 100 * 1024 * 10, // 10MB
+	})
+
+	c := diskcache.NewWithDiskv(d)
+
+	return httpcache.NewTransport(c)
+}
+
+func getClient() *http.Client {
+	c := transportCache.Client()
+	//c.Timeout = time.Duration(30 * time.Second) //TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
+	return c
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	/*
+		d := diskv.New(diskv.Options{
+			BasePath:     "./shared/cache",
+			CacheSizeMax: 500 * 1024 * 1024,
+		})
+		cache = diskcache.NewWithDiskv(d)
+	*/
+
 	// basic auth
 	if h.Auth != "" {
 		u, p, _ := r.BasicAuth()

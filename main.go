@@ -22,6 +22,8 @@ import (
 	"github.com/roscopecoltran/scraper/scraper"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
+	// "github.com/birkelund/boltdbcache"
+	// "golang.org/x/oauth2"
 	// "github.com/mickep76/flatten"
 	// "github.com/gin-contrib/cache"
 	// "github.com/aviddiviner/gin-limit"
@@ -141,6 +143,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// cache
+	// https://github.com/garycarr/httpcache/blob/f039dd6ff44cf40d52e8e86ef10bff41e592fd48/README.md
+
 	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
 	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
 	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
@@ -185,6 +190,27 @@ func main() {
 		AdminUI.MountTo("/admin", mux) // amount to /admin, so visit `/admin` to view the admin interface
 
 	}
+
+	/*
+		tokenSource := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: accessToken},
+		)
+		oauthTransport := &oauth2.Transport{
+			Source: tokenSource,
+		}
+	*/
+
+	/*
+		memoryCacheTransport := &httpcache.Transport{
+			// Transport:           oauthTransport,
+			Cache:               httpcache.NewMemoryCache(),
+			MarkCachedResponses: true,
+		}
+
+		httpClient := &http.Client{
+			Transport: cache,
+			Timeout:   30 * time.Second,
+		}*/
 
 	// Experimental
 	// redis.UseRedis(c.RedisHost)

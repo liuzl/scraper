@@ -22,6 +22,7 @@ import (
 	"github.com/mmcdole/gofeed"
 	"github.com/roscopecoltran/mxj"
 	"golang.org/x/net/html"
+	// "github.com/otiai10/cachely"
 	// "github.com/buger/jsonparser"
 	// "github.com/go-aah/aah"
 	// "github.com/creack/spider"
@@ -248,6 +249,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		body = strings.NewReader(s)
 	}
+
 	req, err := http.NewRequest(method, url, body) //create HTTP request
 	if err != nil {
 		return nil, err
@@ -276,7 +278,11 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 
 	// GET request
-	resp, err := http.DefaultClient.Do(req) //make backend HTTP request
+	// res, err := http.Get(url)
+	// res, err := cachely.Get(url)
+
+	resp, err := getClient().Do(req)
+	// resp, err := http.DefaultClient.Do(req) //make backend HTTP request
 	if err != nil {
 		pp.Println(err)
 		return nil, err
@@ -307,10 +313,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if e.Debug {
 		fmt.Println("e.Selector: ", e.Selector)
 	}
-
-	// pp.Println(e)
-
-	// pp.Println(resp.Body)
 
 	switch e.Selector {
 	case "wiki":
