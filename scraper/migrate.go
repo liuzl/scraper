@@ -92,11 +92,11 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			fmt.Println("Could not parse/extract the endpoint url parts. error: ", err)
 			//return err
 		}
-		providerHost, providerPort, err := net.SplitHostPort(providerDataURL.Host)
-		if err != nil {
-			fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
-			// return err
-		}
+		providerHost, providerPort, _ := net.SplitHostPort(providerDataURL.Host)
+		//if err != nil {
+		//	fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
+		// return err
+		//}
 		providerDomain := domainutil.Domain(providerDataURL.Host)
 		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
 		if err != nil {

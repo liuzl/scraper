@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -184,6 +185,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Path[1:]
 	// load endpoint
 	endpoint := h.Endpoint(id)
+
 	if endpoint == nil {
 		w.WriteHeader(404)
 		w.Write(jsonerr(fmt.Errorf("Endpoint /%s not found", id)))
@@ -194,13 +196,48 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for k, v := range r.URL.Query() {
 		values[k] = v[0]
 	}
+
+	var err error
+	res := make(map[string][]Result, 0)
+
 	// execute query
-	res, err := endpoint.Execute(values)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(jsonerr(err))
-		return
+	pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
+	if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
+		ctx := context.Background()
+		resChan := make(chan *ScraperResult, endpoint.Concurrency)
+		go endpoint.ExecuteParallel(ctx, values, resChan)
+		totalResults, totalErrors := 0, 0
+		for endpointResult := range resChan {
+			if endpointResult.Error == nil {
+				for k, v := range endpointResult.List {
+					if _, ok := res[k]; !ok {
+						res[k] = make([]Result, 0)
+					}
+					for _, r := range v {
+						res[k] = append(res[k], r)
+					}
+					totalResults = totalResults + len(v)
+				}
+				// fmt.Printf("res lenght: %d", len(res))
+			} else {
+				totalErrors++
+			}
+		}
+		fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
+		// fmt.Printf("res lenght: %d", len(res))
+		// pp.Println(res)
+
+	} else {
+
+		res, err = endpoint.Execute(values)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(jsonerr(err))
+			return
+		}
+
 	}
+
 	// encode as JSON
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)

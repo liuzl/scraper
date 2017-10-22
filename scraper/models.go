@@ -64,41 +64,45 @@ type EnvConfig struct {
 type Endpoint struct {
 	gorm.Model         `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
-	Update             time.Time                    `json:"-" yaml:"-" toml:"-"`
-	Disabled           bool                         `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	ready              bool                         `json:"-" yaml:"-" toml:"-"`
-	EtcdKey            string                       `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
-	Connections        []Connection                 `json:"-" yaml:"-" toml:"-"`
-	Source             string                       `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
-	ProviderID         uint                         `json:"-" yaml:"-" toml:"-"`
-	Provider           Provider                     `etcd:"provider" json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
-	Comment            string                       `json:"comments,omitempty" yaml:"comments,omitempty" toml:"comments,omitempty"`
-	Description        string                       `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
-	Groups             []*Group                     `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
-	Route              string                       `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
-	Method             string                       `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
-	Domain             string                       `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Host               string                       `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Port               int                          `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	BaseURL            string                       `etcd:"base_url" gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
-	PatternURL         string                       `etcd:"url" json:"url" yaml:"url" toml:"url"`
-	Examples           map[string]map[string]string `gorm:"-" json:"examples" yaml:"examples" toml:"examples"`
-	Slug               string                       `etcd:"slug" json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
-	ExtractPaths       bool                         `etcd:"extract_paths" json:"extract_paths,omitempty" yaml:"extract_paths,omitempty" toml:"extract_paths,omitempty"`
-	LeafPaths          []string                     `gorm:"-" json:"leaf_paths,omitempty" yaml:"leaf_paths,omitempty" toml:"leaf_paths,omitempty"`
-	Body               string                       `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
-	Selector           string                       `etcd:"selector" gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
-	HeadersIntercept   []string                     `etcd:"resp_headers_intercept" gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
-	HeadersJSON        map[string]string            `etcd:"headers" gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	BlocksJSON         map[string]SelectorConfig    `etcd:"blocks" gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
-	Headers            []*HeaderConfig              `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
-	Blocks             []*SelectorConfig            `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
-	EndpointProperties EndpointProperties           `etcd:"properties" sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
-	Extract            ExtractConfig                `etcd:"extract" default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
-	MinFields          int                          `json:"-" yaml:"-" toml:"-"`
-	Count              string                       `gorm"-" json:"-" yaml:"-" toml:"-"`
-	Debug              bool                         `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	StrictMode         bool                         `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	Update             time.Time                         `json:"-" yaml:"-" toml:"-"`
+	Disabled           bool                              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	ready              bool                              `json:"-" yaml:"-" toml:"-"`
+	EtcdKey            string                            `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
+	Connections        []Connection                      `json:"-" yaml:"-" toml:"-"`
+	Source             string                            `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	ProviderID         uint                              `json:"-" yaml:"-" toml:"-"`
+	Provider           Provider                          `etcd:"provider" json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
+	Comment            string                            `json:"comments,omitempty" yaml:"comments,omitempty" toml:"comments,omitempty"`
+	Description        string                            `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
+	Groups             []*Group                          `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	Route              string                            `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
+	Method             string                            `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
+	Domain             string                            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Host               string                            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Port               int                               `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Pager              map[string]string                 `gorm:"-" json:"pager" yaml:"pager" toml:"pager"`
+	Collection         bool                              `etcd:"collection" json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
+	Concurrency        int                               `default:"1" gorm:"concurrency" json:"concurrency,omitempty" yaml:"concurrency,omitempty" toml:"concurrency,omitempty"`
+	BaseURL            string                            `etcd:"base_url" gorm:"index" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	PatternURL         string                            `etcd:"url" json:"url" yaml:"url" toml:"url"`
+	Examples           map[string]map[string]string      `gorm:"-" json:"examples" yaml:"examples" toml:"examples"`
+	Slug               string                            `etcd:"slug" json:"slug,omitempty" yaml:"slug,omitempty" toml:"slug,omitempty"`
+	ExtractPaths       bool                              `etcd:"extract_paths" json:"extract_paths,omitempty" yaml:"extract_paths,omitempty" toml:"extract_paths,omitempty"`
+	LeafPaths          []string                          `gorm:"-" json:"leaf_paths,omitempty" yaml:"leaf_paths,omitempty" toml:"leaf_paths,omitempty"`
+	Body               string                            `gorm:"-" json:"body,omitempty" yaml:"body,omitempty" toml:"body,omitempty"`
+	Selector           string                            `etcd:"selector" gorm:"index" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	HeadersIntercept   []string                          `etcd:"resp_headers_intercept" gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	Parameters         map[string]map[string]interface{} `etcd:"parameters" gorm:"-" json:"parameters,omitempty" yaml:"parameters,omitempty" toml:"parameters,omitempty"`
+	HeadersJSON        map[string]string                 `etcd:"headers" gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	BlocksJSON         map[string]SelectorConfig         `etcd:"blocks" gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	Headers            []*HeaderConfig                   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
+	Blocks             []*SelectorConfig                 `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
+	EndpointProperties EndpointProperties                `etcd:"properties" sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
+	Extract            ExtractConfig                     `etcd:"extract" default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
+	MinFields          int                               `json:"-" yaml:"-" toml:"-"`
+	Count              string                            `gorm"-" json:"-" yaml:"-" toml:"-"`
+	Debug              bool                              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode         bool                              `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"`
 }
 

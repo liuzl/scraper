@@ -1,6 +1,7 @@
 package scraper
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -63,6 +64,10 @@ import (
 	- https://github.com/jpillora/scraper/commit/0b5e5ce320ffaaaf86fb3ba9cc49458df3406a86
 	- https://github.com/KKRainbow/segmentation-server/blob/master/main.go
 	- https://github.com/mhausenblas/github-api-fetcher/blob/master/main.go
+	- https://github.com/hoop33/limo/blob/master/service/github.go#L39
+	- https://github.com/creack/spider/blob/master/example_test.go
+	- https://github.com/suwhs/go-goquery-utils/tree/master/pipes
+	- https://github.com/andrewstuart/goq
 */
 
 func typedTest(path string) {
@@ -103,29 +108,6 @@ func goModel(req http.Request) {
 	fmt.Printf("\nDestination: %#v\n", people)
 }
 
-/*
-func enhancedGet() {
-	resp, err := resty.R().
-		SetQueryParams(map[string]string{
-			"page_no": "1",
-			"limit":   "20",
-			"sort":    "name",
-			"order":   "asc",
-			"random":  strconv.FormatInt(time.Now().Unix(), 10),
-		}).
-		SetHeader("Accept", "application/json").
-		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
-		Get("/search_result")
-
-	// Sample of using Request.SetQueryString method
-	resp, err := resty.R().
-		SetQueryString("productId=232&template=fresh-sample&cat=resty&source=google&kw=buy a lot more").
-		SetHeader("Accept", "application/json").
-		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
-		Get("/show_product")
-}
-*/
-
 func cmapTest() {
 	m := cmap.New()
 	m.Set("power", 9000)
@@ -164,157 +146,92 @@ func gomergeTest(body []byte) {
 	fmt.Println(result)
 }
 
-func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
-	r := Result{}
-	if e.Debug {
-		pp.Println(fields)
-	}
-	for field, ext := range fields {
-		if v := ext.execute(sel); v != "" {
-			if field == "url" && !strings.HasPrefix(v, "http") {
-				r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, v), " ")
-			} else {
-				r[field] = strings.Trim(v, " ")
-			}
-		} else if e.Debug {
-			logf("missing field: %s", field)
-		}
-	}
-	return r
+/*
+func enhancedGet() {
+	resp, err := resty.R().
+		SetQueryParams(map[string]string{
+			"page_no": "1",
+			"limit":   "20",
+			"sort":    "name",
+			"order":   "asc",
+			"random":  strconv.FormatInt(time.Now().Unix(), 10),
+		}).
+		SetHeader("Accept", "application/json").
+		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
+		Get("/search_result")
+
+	// Sample of using Request.SetQueryString method
+	resp, err := resty.R().
+		SetQueryString("productId=232&template=fresh-sample&cat=resty&source=google&kw=buy a lot more").
+		SetHeader("Accept", "application/json").
+		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
+		Get("/show_product")
+}
+*/
+
+// StarResult wraps a star and an error
+type ScraperResult struct {
+	List  map[string][]Result
+	Error error
 }
 
-// import "github.com/jzaikovs/t"
-func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extractors) []Result { //extract 1 result using this endpoints extractor map
-	var r []Result
-	if e.Debug {
-		pp.Println(fields)
+func (e *Endpoint) ExecuteParallel(ctx context.Context, params map[string]string, resChan chan<- *ScraperResult) { // Execute will execute an Endpoint with the given params
+
+	currentPage, _ := strconv.Atoi(e.Pager["offset"])
+	lastPage, _ := strconv.Atoi(e.Pager["max"])
+
+	offsetHolder := e.Pager["offset_var"]
+	params[offsetHolder] = e.Pager["offset"]
+
+	limitHolder := e.Pager["limit_var"]
+	params[limitHolder] = e.Pager["limit"]
+
+	for k, v := range e.Parameters {
+		if _, ok := params[k]; !ok {
+			fmt.Printf("[WARNING] Parameters missing: k=%s, v=%s \n", k, v)
+		}
 	}
-	list, err := mv.ValuesForPath("items")
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
-	if e.Debug {
-		pp.Println(list)
-	}
-	for i := 0; i < len(list); i++ {
-		l := Result{}
-		for attr, field := range fields {
-			var keyPath string
-			var node []interface{}
-			if len(field) == 1 {
-				keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, field[0].val)
-				if e.Debug {
-					fmt.Println("field[0].val=", field[0].val, "keyPath: ", keyPath)
-				}
-				node, _ = mv.ValuesForPath(keyPath)
-			} else {
-				w := make(map[string]interface{}, len(field))
-				var merr error
-				for _, whl := range field {
-					var keyName string
-					if strings.Contains(whl.val, "|") {
-						keyParts := strings.Split(whl.val, "|")
-						if e.Debug {
-							pp.Println(keyParts)
-						}
-						keyName = keyParts[len(keyParts)-1]
-						whl.val = keyParts[0]
-						if e.Debug {
-							fmt.Println("keyName alias: ", keyName)
-						}
-					} else {
-						keyParts := strings.Split(whl.val, ".")
-						if e.Debug {
-							pp.Println(keyParts)
-						}
-						keyName = keyParts[len(keyParts)-1]
-						if e.Debug {
-							fmt.Println("keyName alias", keyName)
-						}
-					}
-					keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, whl.val)
-					if e.Debug {
-						fmt.Println("keyName: ", keyName, ", whl.vall=", whl.val, "keyPath: ", keyPath)
-					}
-					node, merr = mv.ValuesForPath(keyPath)
-					if merr != nil {
-						fmt.Println("Error: ", merr)
-					}
-					if node != nil {
-						if len(node) == 1 {
-							w[keyName] = node[0]
-						} else if len(node) > 1 {
-							w[keyName] = node
-						}
-					}
-				}
-				if e.Debug {
-					fmt.Println("subkeys whitelisted and mapped: ")
-					pp.Println(w)
-				}
-				l[attr] = w
-				continue
+
+	fmt.Println("params")
+	pp.Println(params)
+
+	for currentPage <= lastPage {
+		res, err := e.Execute(params)
+		if err != nil {
+			resChan <- &ScraperResult{
+				Error: err,
+				List:  nil,
 			}
-			if len(node) == 1 {
-				l[attr] = node[0]
-			} else if len(node) > 1 {
-				l[attr] = node
+		} else {
+			resChan <- &ScraperResult{
+				Error: err,
+				List:  res,
 			}
 		}
-		r = append(r, l)
+		fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
+		// Go to the next page
+		currentPage++
+		params[offsetHolder] = strconv.Itoa(currentPage)
 	}
-	return r
+
+	// fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
+	close(resChan)
 }
 
-func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
-	if e.Debug {
-		pp.Print(e)
-	}
-	r := Result{}
-	for field, ext := range fields {
-		xpathRule := GetExtractorValue(ext)
-		if e.Debug {
-			logf("xpathRule: %s", xpathRule)
-		}
-		if v := htmlquery.FindOne(node, xpathRule); v != nil {
-			t := htmlquery.InnerText(v)
-			if e.Debug {
-				logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
-			}
-			switch field {
-			case "url":
-				url := htmlquery.SelectAttr(v, "href")
-				if url == "" {
-					return nil
-				}
-				if field == "url" && !strings.HasPrefix(url, "http") {
-					r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, url), " ")
-				} else {
-					r[field] = strings.Trim(url, " ")
-				}
-			default:
-				r[field] = strings.Trim(t, " ")
-			}
-		} else if e.Debug {
-			logf("missing field: %s", field)
-		}
-	}
-	return r
-}
-
-// https://github.com/hoop33/limo/blob/master/service/github.go#L39
-// https://github.com/creack/spider/blob/master/example_test.go
-// https://github.com/suwhs/go-goquery-utils/tree/master/pipes
-// https://github.com/andrewstuart/goq
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
+
 	//if e.Debug {
-	//	pp.Print(e)
+	// fmt.Println("endpoint handler config: ")
+	// pp.Println(e)
 	//}
-	// simpleGet()
+
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("url: ", url)
+
 	method := e.Method //default method
 	if method == "" {
 		method = "GET"
@@ -340,8 +257,25 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			req.Header.Set(k, v)
 		}
 	}
+
+	isResty := false
+	if isResty {
+		// https://github.com/go-resty/resty#various-post-method-combinations
+		restyResp, err := resty.R().Get(url)
+		// explore response object
+		fmt.Printf("\nError: %v", err)
+		fmt.Printf("\nResponse Status Code: %v", restyResp.StatusCode())
+		fmt.Printf("\nResponse Status: %v", restyResp.Status())
+		fmt.Printf("\nResponse Time: %v", restyResp.Time())
+		fmt.Printf("\nResponse Received At: %v", restyResp.ReceivedAt())
+		fmt.Printf("\nResponse Body: %v", restyResp) // or resp.String() or string(resp.Body())
+		// resp
+	}
+
+	// GET request
 	resp, err := http.DefaultClient.Do(req) //make backend HTTP request
 	if err != nil {
+		pp.Println(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -352,10 +286,11 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("Response Headers to intercept: ")
 		pp.Println(e.HeadersIntercept)
 	}
+
 	for k, v := range resp.Header {
 		if contains(e.HeadersIntercept, k) {
 			if e.Debug {
-				logf(" [CATCH] key=%s, value=%s", k, v)
+				logf(" [INTERCEP] header key=%s, value=%s", k, v)
 			}
 		}
 	}
@@ -366,7 +301,13 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	aggregate := make(map[string][]Result, 0)
 
+	// if e.Debug {
 	fmt.Println("e.Selector: ", e.Selector)
+	//}
+
+	// pp.Println(e)
+
+	// pp.Println(resp.Body)
 
 	switch e.Selector {
 	case "wiki":
@@ -388,11 +329,13 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		if e.Debug {
-			pp.Print(mv)
-		}
+		//if e.Debug {
+		pp.Print(mv)
+		//}
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
+			fmt.Println("mv.LeafPaths(): ")
+			pp.Println(mv.LeafPaths())
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
 			if e.Debug {
 				for _, v := range e.LeafPaths {
@@ -414,33 +357,46 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 	case "json":
 		mxj.JsonUseNumber = true
-		mv, err := mxj.NewMapJsonReaderAll(resp.Body)
+		var mv mxj.Map
+		var err error
+		if e.Collection {
+			mv, err = mxj.NewMapJsonArrayReaderAll(resp.Body) // , "collection")
+		} else {
+			mv, err = mxj.NewMapJsonReaderAll(resp.Body)
+		}
 		if err != nil {
+			fmt.Println("NewMapJsonReaderAll: ", err)
 			return nil, err
 		}
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
-			if e.Debug {
-				for _, v := range e.LeafPaths {
-					fmt.Println("path:", v)
-				}
+			//fmt.Println("mv.LeafPaths(): ")
+			//pp.Println(mv.LeafPaths())
+			//if e.Debug {
+			for _, v := range e.LeafPaths {
+				fmt.Println("path:", v)
 			}
+			//}
 		}
 		for b, s := range e.BlocksJSON {
+			pp.Println("s.Items: ", s.Items)
+			pp.Println("s.Details: ", s.Details)
+			// fmt.Println("resp.Body: ")
+			// pp.Println(mv)
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
-				if e.Debug {
-					pp.Println(r)
-				}
+				//if e.Debug {
+				pp.Println(r)
+				//}
 				if r != nil {
 					aggregate[b] = r
 				}
 			}
-			if e.Debug {
-				fmt.Println(" - block_key: ", b)
-				pp.Println(s)
-			}
+			//if e.Debug {
+			// fmt.Println(" - block_key: ", b)
+			// pp.Println(s)
+			//}
 		}
 	case "rss":
 		// "https://github.com/kkdai/githubrss"
@@ -580,4 +536,142 @@ func leafPathsPatterns(input []string) []string {
 		}
 	}
 	return dedup(output)
+}
+
+func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
+	r := Result{}
+	if e.Debug {
+		pp.Println(fields)
+	}
+	for field, ext := range fields {
+		if v := ext.execute(sel); v != "" {
+			if field == "url" && !strings.HasPrefix(v, "http") {
+				r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, v), " ")
+			} else {
+				r[field] = strings.Trim(v, " ")
+			}
+		} else if e.Debug {
+			logf("missing field: %s", field)
+		}
+	}
+	return r
+}
+
+// import "github.com/jzaikovs/t"
+func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extractors) []Result { //extract 1 result using this endpoints extractor map
+	var r []Result
+	if e.Debug {
+		pp.Println(fields)
+	}
+	list, err := mv.ValuesForPath(items)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+	if e.Debug {
+		pp.Println(list)
+	}
+	for i := 0; i < len(list); i++ {
+		l := Result{}
+		for attr, field := range fields {
+			var keyPath string
+			var node []interface{}
+			if len(field) == 1 {
+				keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, field[0].val)
+				if e.Debug {
+					fmt.Println("field[0].val=", field[0].val, "keyPath: ", keyPath)
+				}
+				node, _ = mv.ValuesForPath(keyPath)
+			} else {
+				w := make(map[string]interface{}, len(field))
+				var merr error
+				for _, whl := range field {
+					var keyName string
+					if strings.Contains(whl.val, "|") {
+						keyParts := strings.Split(whl.val, "|")
+						if e.Debug {
+							pp.Println(keyParts)
+						}
+						keyName = keyParts[len(keyParts)-1]
+						whl.val = keyParts[0]
+						if e.Debug {
+							fmt.Println("keyName alias: ", keyName)
+						}
+					} else {
+						keyParts := strings.Split(whl.val, ".")
+						if e.Debug {
+							pp.Println(keyParts)
+						}
+						keyName = keyParts[len(keyParts)-1]
+						if e.Debug {
+							fmt.Println("keyName alias", keyName)
+						}
+					}
+					keyPath = fmt.Sprintf("%#s[%#d].%#s", items, i, whl.val)
+					if e.Debug {
+						fmt.Println("keyName: ", keyName, ", whl.vall=", whl.val, "keyPath: ", keyPath)
+					}
+					node, merr = mv.ValuesForPath(keyPath)
+					if merr != nil {
+						fmt.Println("Error: ", merr)
+					}
+					if node != nil {
+						if len(node) == 1 {
+							w[keyName] = node[0]
+						} else if len(node) > 1 {
+							w[keyName] = node
+						}
+					}
+				}
+				if e.Debug {
+					fmt.Println("subkeys whitelisted and mapped: ")
+					pp.Println(w)
+				}
+				l[attr] = w
+				continue
+			}
+			if len(node) == 1 {
+				l[attr] = node[0]
+			} else if len(node) > 1 {
+				l[attr] = node
+			}
+		}
+		r = append(r, l)
+	}
+	return r
+}
+
+func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
+	if e.Debug {
+		pp.Print(e)
+	}
+	r := Result{}
+	for field, ext := range fields {
+		xpathRule := GetExtractorValue(ext)
+		if e.Debug {
+			logf("xpathRule: %s", xpathRule)
+		}
+		if v := htmlquery.FindOne(node, xpathRule); v != nil {
+			t := htmlquery.InnerText(v)
+			if e.Debug {
+				logf("field %s, InnerText: %s", field, t) // fmt.Printf("field: %s \n", field)
+			}
+			switch field {
+			case "url":
+				url := htmlquery.SelectAttr(v, "href")
+				if url == "" {
+					return nil
+				}
+				if field == "url" && !strings.HasPrefix(url, "http") {
+					r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, url), " ")
+				} else {
+					r[field] = strings.Trim(url, " ")
+				}
+			default:
+				r[field] = strings.Trim(t, " ")
+			}
+		} else if e.Debug {
+			logf("missing field: %s", field)
+		}
+	}
+	return r
 }

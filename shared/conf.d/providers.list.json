@@ -19,13 +19,13 @@
   "routes": [
     {
       "route": "/github/stars",
-      "debug": true,
+      "debug": false,
       "disabled": false,
       "extract_paths": true,
       "name": "github-stars",
       "provider": "github.com",
       "base_url": "https://api.github.com",
-      "url": "/users/{{username}}/starred?per_page=5&page=1&order=desc&direction=desc",
+      "url": "/users/{{username}}/starred?per_page={{per_page}}&page={{page}}&order=desc&direction=desc",
       "examples": {
         "docs": {
           "desc": "ListStarred lists all the repos starred by a user.",
@@ -41,6 +41,16 @@
         }
       },
       "timeout": 3,
+      "concurrency": 20,
+      "collection": true,
+      "pager": {
+        "disabled": "false",
+        "max": "3",
+        "offset": "1",
+        "limit": "100",
+        "offset_var": "page",
+        "limit_var": "per_page"
+      },
       "selector": "json",
       "method": "GET",
       "headers": {
@@ -66,7 +76,7 @@
               "owner.id",
               "owner.login"
             ],
-            "product": "full_name",
+            "full_name": "full_name",
             "topics": "topics"
           }
         }
@@ -74,13 +84,13 @@
     },
     {
       "route": "/github/search",
-      "debug": true,
+      "debug": false,
       "disabled": false,
       "extract_paths": true,
       "name": "github-search",
       "provider": "github.com",
       "base_url": "https://api.github.com",
-      "url": "/search/repositories?q={{query}}&per_page=3&page=1&order=desc&sort=stars",
+      "url": "/search/repositories?q={{query}}&per_page={{per_page}}&page={{page}}&order=desc&sort=stars",
       "examples": {
         "remote": {
           "desc": "",
@@ -91,12 +101,33 @@
           "link": "http://localhost:3000/github/search?query=dlib"
         }
       },
+      "concurrency": 20,
+      "pager": {
+        "disabled": "false",
+        "max": "10",
+        "offset": "1",
+        "limit": "100",
+        "offset_var": "page",
+        "limit_var": "per_page"
+      },
       "timeout": 3,
       "selector": "json",
       "method": "GET",
       "headers": {
         "Authorization": " token {{GITHUB_TOKEN}}",
         "Accept": "application/vnd.github.mercy-preview+json"
+      },
+      "parameters": {
+        "per_page": {
+          "default": "100",
+          "max": "100",
+          "type": "query_string"
+        },
+        "page": {
+          "default": 1,
+          "max": 10,
+          "type": "query_string"
+        }
       },
       "openapi": {
         "defs": [
@@ -107,6 +138,7 @@
         ]
       },
       "resp_headers_intercept": [
+        "Link",
         "X-Github-Media-Type",
         "X-Ratelimit-Limit",
         "X-Ratelimit-Remaining",
@@ -124,7 +156,7 @@
               "owner.id",
               "owner.login"
             ],
-            "product": "full_name",
+            "project": "full_name",
             "topics": "topics"
           }
         }

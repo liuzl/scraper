@@ -128,6 +128,24 @@ func HasElem(s interface{}, elem interface{}) bool {
 	return false
 }
 
+func isJSONString(s string) bool {
+	var js string
+	return json.Unmarshal([]byte(s), &js) == nil
+
+}
+
+func isJSON(s string) bool {
+	var js map[string]interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
+
+}
+
+func isJsonArray(s string) bool {
+	var js []interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
+
+}
+
 /*
 func mapdecor() {
     input := map[string]interface{}{
