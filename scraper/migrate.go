@@ -106,133 +106,136 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			// return err
 		}
 
-		etcdHeadersIntercept := make(map[string]string, 0)
-		for _, v := range e.HeadersIntercept {
-			if v != "" {
-				fmt.Println("new etcdHeadersIntercept value: ")
-				parts := strings.Split(v, ":")
-				if len(parts) > 1 {
-					key := parts[0]
-					val := parts[1]
-					etcdHeadersIntercept[key] = val
+		if e3ch != nil {
+
+			etcdHeadersIntercept := make(map[string]string, 0)
+			for _, v := range e.HeadersIntercept {
+				if v != "" {
+					fmt.Println("new etcdHeadersIntercept value: ")
+					parts := strings.Split(v, ":")
+					if len(parts) > 1 {
+						key := parts[0]
+						val := parts[1]
+						etcdHeadersIntercept[key] = val
+					}
 				}
 			}
-		}
 
-		etcdHeaders := make(map[string]string, 0)
-		for k, v := range e.HeadersJSON {
-			fmt.Println("new etcdHeaders value: ")
-			etcdHeaders[k] = v
-		}
-
-		etcdBlocks := make(map[string]map[string]string, 0)
-		for k, v := range e.BlocksJSON {
-			etcdBlocks[k] = make(map[string]string, 0)
-			etcdBlocks[k]["items"] = v.Items
-			for kd, vd := range v.Details {
-				var ext []string
-				for _, vdd := range vd {
-					ext = append(ext, vdd.val)
-				}
-				etcdBlocks[k][kd] = strings.Join(ext, ";")
+			etcdHeaders := make(map[string]string, 0)
+			for k, v := range e.HeadersJSON {
+				fmt.Println("new etcdHeaders value: ")
+				etcdHeaders[k] = v
 			}
-			// fmt.Println("new etcdBlocks value: ")
-			// pp.Println(v)
-		}
 
-		var ExtractorTypes = []string{"links", "meta", "opengraph"}
-		etcdExtract := make(map[string]bool, len(ExtractorTypes))
+			etcdBlocks := make(map[string]map[string]string, 0)
+			for k, v := range e.BlocksJSON {
+				etcdBlocks[k] = make(map[string]string, 0)
+				etcdBlocks[k]["items"] = v.Items
+				for kd, vd := range v.Details {
+					var ext []string
+					for _, vdd := range vd {
+						ext = append(ext, vdd.val)
+					}
+					etcdBlocks[k][kd] = strings.Join(ext, ";")
+				}
+				// fmt.Println("new etcdBlocks value: ")
+				// pp.Println(v)
+			}
 
-		for _, v := range ExtractorTypes {
-			etcdExtract[v] = false
-		}
+			var ExtractorTypes = []string{"links", "meta", "opengraph"}
+			etcdExtract := make(map[string]bool, len(ExtractorTypes))
 
-		var etcdGroups string
-		var grp []string
-		for _, v := range e.Groups {
-			grp = append(grp, v.Name)
-		}
-		etcdGroups = strings.Join(grp, ",")
+			for _, v := range ExtractorTypes {
+				etcdExtract[v] = false
+			}
 
-		etcdRoute := EtcdRoute{
-			Loaded:           true,
-			Disabled:         false,
-			Source:           provider.Name,
-			Route:            e.Route,
-			Method:           strings.ToUpper(e.Method),
-			BaseURL:          e.BaseURL,
-			PatternURL:       e.PatternURL,
-			TestURL:          endpointTemplateURL,
-			Selector:         e.Selector,
-			HeadersIntercept: etcdHeadersIntercept,
-			Headers:          etcdHeaders,
-			Comment:          "-",
-			Blocks:           etcdBlocks,
-			Groups:           etcdGroups,
-			Extract:          etcdExtract,
-			StrictMode:       false,
-			Debug:            false,
-		}
+			var etcdGroups string
+			var grp []string
+			for _, v := range e.Groups {
+				grp = append(grp, v.Name)
+			}
+			etcdGroups = strings.Join(grp, ",")
 
-		b, err := json.Marshal(etcdRoute)
-		if err != nil {
-			fmt.Println(err)
-			// return
-		} else {
-			// fmt.Println("new etcdRoute: ")
-			// pp.Print(etcdRoute)
-			mv, err := mxj.NewMapJson(b)
+			etcdRoute := EtcdRoute{
+				Loaded:           true,
+				Disabled:         false,
+				Source:           provider.Name,
+				Route:            e.Route,
+				Method:           strings.ToUpper(e.Method),
+				BaseURL:          e.BaseURL,
+				PatternURL:       e.PatternURL,
+				TestURL:          endpointTemplateURL,
+				Selector:         e.Selector,
+				HeadersIntercept: etcdHeadersIntercept,
+				Headers:          etcdHeaders,
+				Comment:          "-",
+				Blocks:           etcdBlocks,
+				Groups:           etcdGroups,
+				Extract:          etcdExtract,
+				StrictMode:       false,
+				Debug:            false,
+			}
+
+			b, err := json.Marshal(etcdRoute)
 			if err != nil {
-				fmt.Println("err:", err)
+				fmt.Println(err)
 				// return
 			} else {
-				mxj.LeafSeparator = "/"
-				// mxj.LeafUseDotNotation()
-				p := mv.LeafPaths()
-				var tree []string
-				for _, v := range p {
-					p := strings.Split(fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v), "/")
-					j := len(p) - 1
-					for j > 1 {
-						tree = append(tree, strings.Join(p[:j], "/"))
-						// fmt.Printf("sub keys: %s \n", strings.Join(p[:j], "/"))
-						j--
-					}
-				}
-				// dedup(tree)
-				// tree = removeDuplicates(tree)
-				RemoveDuplicates(&tree)
-				sort.Strings(tree)
-				fmt.Println("LeafPaths for ETCD: ")
-				pp.Println(tree)
-				for _, d := range tree {
-					fmt.Println("create dir: ", d)
-					if d != "" {
-						err := e3ch.CreateDir(d)
-						if err != nil {
-							fmt.Printf("Could not delete dir '%s', error: %s \n", d, err)
+				// fmt.Println("new etcdRoute: ")
+				// pp.Print(etcdRoute)
+				mv, err := mxj.NewMapJson(b)
+				if err != nil {
+					fmt.Println("err:", err)
+					// return
+				} else {
+					mxj.LeafSeparator = "/"
+					// mxj.LeafUseDotNotation()
+					p := mv.LeafPaths()
+					var tree []string
+					for _, v := range p {
+						p := strings.Split(fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v), "/")
+						j := len(p) - 1
+						for j > 1 {
+							tree = append(tree, strings.Join(p[:j], "/"))
+							// fmt.Printf("sub keys: %s \n", strings.Join(p[:j], "/"))
+							j--
 						}
 					}
-				}
-				l := mv.LeafNodes()
-				fmt.Println("LeafNodes: ")
-				for _, v := range l {
-					key := fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v.Path)
-					val := fmt.Sprintf("%v", v.Value)
-					fmt.Printf("path: %s, value: %s \n", key, val)
-					var exists bool
-					if val != "" {
-						fmt.Println("create key: ", key)
-						err := e3ch.Create(key, val)
-						if err != nil {
-							fmt.Printf("Could not create key key='%s', value='%s', error: %s \n", key, val, err)
-							exists = true
-						}
-						if exists {
-							fmt.Println("put/update key: ", key)
-							err := e3ch.Put(key, val)
+					// dedup(tree)
+					// tree = removeDuplicates(tree)
+					RemoveDuplicates(&tree)
+					sort.Strings(tree)
+					fmt.Println("LeafPaths for ETCD: ")
+					pp.Println(tree)
+					for _, d := range tree {
+						fmt.Println("create dir: ", d)
+						if d != "" {
+							err := e3ch.CreateDir(d)
 							if err != nil {
-								fmt.Printf("Could not put key='%s', value='%s', error: %s \n", key, val, err)
+								fmt.Printf("Could not delete dir '%s', error: %s \n", d, err)
+							}
+						}
+					}
+					l := mv.LeafNodes()
+					fmt.Println("LeafNodes: ")
+					for _, v := range l {
+						key := fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v.Path)
+						val := fmt.Sprintf("%v", v.Value)
+						fmt.Printf("path: %s, value: %s \n", key, val)
+						var exists bool
+						if val != "" {
+							fmt.Println("create key: ", key)
+							err := e3ch.Create(key, val)
+							if err != nil {
+								fmt.Printf("Could not create key key='%s', value='%s', error: %s \n", key, val, err)
+								exists = true
+							}
+							if exists {
+								fmt.Println("put/update key: ", key)
+								err := e3ch.Put(key, val)
+								if err != nil {
+									fmt.Printf("Could not put key='%s', value='%s', error: %s \n", key, val, err)
+								}
 							}
 						}
 					}
