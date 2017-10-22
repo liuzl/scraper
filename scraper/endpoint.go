@@ -9,18 +9,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jeevatkm/go-model"
-	"github.com/mmcdole/gofeed"
-	"github.com/roscopecoltran/mxj"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
+	"github.com/jeevatkm/go-model"
 	"github.com/k0kubun/pp"
 	"github.com/karlseguin/cmap"
 	"github.com/leebenson/conform"
 	"github.com/mgbaozi/gomerge"
+	"github.com/mmcdole/gofeed"
+	"github.com/roscopecoltran/mxj"
 	"golang.org/x/net/html"
 	// "github.com/buger/jsonparser"
 	// "github.com/go-aah/aah"
@@ -34,23 +33,43 @@ import (
 	// "github.com/slotix/slugifyurl"
 	// "github.com/antchfx/xpath"
 	// "github.com/advancedlogic/GoOse"
-	/*
-		"github.com/ynqa/word-embedding/builder"
-		"github.com/ynqa/word-embedding/config"
-		"github.com/ynqa/word-embedding/validate"
-	*/)
+	// "github.com/ynqa/word-embedding/builder"
+	// "github.com/ynqa/word-embedding/config"
+	// "github.com/ynqa/word-embedding/validate"
+)
 
-// https://github.com/jpillora/scraper/commit/0b5e5ce320ffaaaf86fb3ba9cc49458df3406a86
-// https://github.com/KKRainbow/segmentation-server/blob/master/main.go
-// https://github.com/mhausenblas/github-api-fetcher/blob/master/main.go
+/*
+	Refs:
+	- github.com/slotix/dataflowkit
+	- github.com/slotix/pageres-go-wrapper
+	- github.com/fern4lvarez/go-metainspector
+	- github.com/gpahal/go-meta
+	- https://github.com/scrapinghub/mdr
+	- https://github.com/scrapinghub/aile/blob/master/demo2.py
+	- https://github.com/datatogether/sentry
+	- https://github.com/sourcegraph/webloop
+	- https://github.com/107192468/sp/blob/master/src/readhtml/readhtml.go
+	- https://github.com/nikolay-turpitko/structor
+	- https://github.com/dreampuf/paw/tree/master/src/web
+	- https://github.com/rakanalh/grawler/blob/master/processors/text.go
+	- https://github.com/rakanalh/grawler/blob/master/extractor/xpath.go
+	- https://github.com/rakanalh/grawler/blob/master/extractor/css.go
+	- https://github.com/ErosZy/labour/blob/master/parser/pageItemXpathParser.go
+	- https://github.com/ErosZy/labour
+	- https://github.com/cugbliwei/crawler/blob/master/extractor/selector.go
+	- https://github.com/xlvector/higgs/blob/master/extractor/selector.go
+	- github.com/tchssk/link
+	- https://github.com/peterhellberg/link
+	- https://github.com/jpillora/scraper/commit/0b5e5ce320ffaaaf86fb3ba9cc49458df3406a86
+	- https://github.com/KKRainbow/segmentation-server/blob/master/main.go
+	- https://github.com/mhausenblas/github-api-fetcher/blob/master/main.go
+*/
 
 func typedTest(path string) {
 	// directly from a map[string]interace{}
 	// typed := typed.New(a_map)
-
 	// from a json []byte
 	// typed, err := typed.Json(data)
-
 	// from a file containing JSON
 	typ, _ := typed.JsonFile(path)
 	pp.Print(typ)
@@ -369,29 +388,25 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		/*
-			if e.Debug {
-				pp.Print(mv)
-			}
-		*/
+		if e.Debug {
+			pp.Print(mv)
+		}
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
-			/*
-				if e.Debug {
-					for _, v := range e.LeafPaths {
-						fmt.Println("path:", v) // , "value:", v.Value)
-					}
+			if e.Debug {
+				for _, v := range e.LeafPaths {
+					fmt.Println("path:", v) // , "value:", v.Value)
 				}
-			*/
+			}
 		}
 		for b, s := range e.BlocksJSON {
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
-				//if e.Debug {
-				fmt.Println("extractMXJ: ")
-				pp.Println(r)
-				//}
+				if e.Debug {
+					fmt.Println("extractMXJ: ")
+					pp.Println(r)
+				}
 				if r != nil {
 					aggregate[b] = r
 				}
@@ -408,7 +423,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
 			if e.Debug {
 				for _, v := range e.LeafPaths {
-					fmt.Println("path:", v) // , "value:", v.Value)
+					fmt.Println("path:", v)
 				}
 			}
 		}
@@ -476,12 +491,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 					pp.Print(s)
 				}
 				var results []Result
-				/*
-					rules, err := ConvertDetails(s.DetailsJSON)
-					if err != nil {
-						return nil, err
-					}
-				*/
 				htmlquery.FindEach(doc, s.Items, func(i int, node *html.Node) {
 					r := e.extractXpath(node, s.Details)
 					if len(r) == len(s.Details) {
@@ -522,9 +531,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			var results []Result
 			if s.Items != "" {
 				sels := sel.Find(s.Items)
-				//if e.Debug {
-				logf("list: %s => #%d elements", s.Items, sels.Length())
-				//}
+				if e.Debug {
+					logf("list: %s => #%d elements", s.Items, sels.Length())
+				}
 				sels.Each(func(i int, sel *goquery.Selection) {
 					r := e.extractCss(sel, s.Details)
 					if len(r) == len(s.Details) && e.StrictMode {
@@ -572,27 +581,3 @@ func leafPathsPatterns(input []string) []string {
 	}
 	return dedup(output)
 }
-
-/*
-	Refs:
-	- github.com/slotix/dataflowkit
-	- github.com/slotix/pageres-go-wrapper
-	- github.com/fern4lvarez/go-metainspector
-	- github.com/gpahal/go-meta
-	- https://github.com/scrapinghub/mdr
-	- https://github.com/scrapinghub/aile/blob/master/demo2.py
-	- https://github.com/datatogether/sentry
-	- https://github.com/sourcegraph/webloop
-	- https://github.com/107192468/sp/blob/master/src/readhtml/readhtml.go
-	- https://github.com/nikolay-turpitko/structor
-	- https://github.com/dreampuf/paw/tree/master/src/web
-	- https://github.com/rakanalh/grawler/blob/master/processors/text.go
-	- https://github.com/rakanalh/grawler/blob/master/extractor/xpath.go
-	- https://github.com/rakanalh/grawler/blob/master/extractor/css.go
-	- https://github.com/ErosZy/labour/blob/master/parser/pageItemXpathParser.go
-	- https://github.com/ErosZy/labour
-	- https://github.com/cugbliwei/crawler/blob/master/extractor/selector.go
-	- https://github.com/xlvector/higgs/blob/master/extractor/selector.go
-	- github.com/tchssk/link
-	- https://github.com/peterhellberg/link
-*/

@@ -10,23 +10,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/roscopecoltran/admin"
-	"github.com/roscopecoltran/scraper/scraper"
-
+	"github.com/gin-contrib/cache/persistence"
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-
-	"github.com/wantedly/gorm-zap"
-	"go.uber.org/zap"
-
-	"github.com/gin-contrib/cache/persistence"
-	"github.com/gin-gonic/gin"
-
-	// "github.com/mickep76/flatten"
 	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
+	"github.com/roscopecoltran/admin"
+	"github.com/roscopecoltran/scraper/scraper"
+	"github.com/wantedly/gorm-zap"
+	"go.uber.org/zap"
+	// "github.com/mickep76/flatten"
 	// "github.com/gin-contrib/cache"
 	// "github.com/aviddiviner/gin-limit"
 	// "github.com/gin-gonic/contrib/cache"
@@ -153,8 +149,10 @@ func main() {
 		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
 	}
 
-	h.Etcd.Handler = h
-	h.Etcd.E3ch = e3ch
+	if e3ch != nil {
+		h.Etcd.Handler = h
+		h.Etcd.E3ch = e3ch
+	}
 
 	mux := http.NewServeMux() // Register route
 
@@ -183,7 +181,6 @@ func main() {
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...) // Create RDB datastore
-
 		initDashboard()
 		AdminUI.MountTo("/admin", mux) // amount to /admin, so visit `/admin` to view the admin interface
 
@@ -194,9 +191,8 @@ func main() {
 	// scraper.ConvertToJsonSchema()
 	// scraper.SeedAlexaTop1M()
 
-	mux.Handle("/api/scraper", h)
-
-	// mux.Handle("/", h)
+	// mux.Handle("/api/scraper", h)
+	mux.Handle("/", h)
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)

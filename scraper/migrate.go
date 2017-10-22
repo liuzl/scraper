@@ -97,9 +97,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
 			// return err
 		}
-
 		providerDomain := domainutil.Domain(providerDataURL.Host)
-
 		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
 		if err != nil {
 			fmt.Println("Could not upsert the current provider in the registry. error: ", err)
@@ -107,7 +105,6 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		}
 
 		if e3ch != nil {
-
 			etcdHeadersIntercept := make(map[string]string, 0)
 			for _, v := range e.HeadersIntercept {
 				if v != "" {
@@ -120,13 +117,11 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 					}
 				}
 			}
-
 			etcdHeaders := make(map[string]string, 0)
 			for k, v := range e.HeadersJSON {
 				fmt.Println("new etcdHeaders value: ")
 				etcdHeaders[k] = v
 			}
-
 			etcdBlocks := make(map[string]map[string]string, 0)
 			for k, v := range e.BlocksJSON {
 				etcdBlocks[k] = make(map[string]string, 0)
@@ -141,21 +136,17 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				// fmt.Println("new etcdBlocks value: ")
 				// pp.Println(v)
 			}
-
 			var ExtractorTypes = []string{"links", "meta", "opengraph"}
 			etcdExtract := make(map[string]bool, len(ExtractorTypes))
-
 			for _, v := range ExtractorTypes {
 				etcdExtract[v] = false
 			}
-
 			var etcdGroups string
 			var grp []string
 			for _, v := range e.Groups {
 				grp = append(grp, v.Name)
 			}
 			etcdGroups = strings.Join(grp, ",")
-
 			etcdRoute := EtcdRoute{
 				Loaded:           true,
 				Disabled:         false,
@@ -242,6 +233,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				}
 			}
 		}
+
 		endpoint := Endpoint{
 			Disabled:     false,
 			Route:        e.Route,
@@ -302,7 +294,6 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		}
 		e.ready = true
 	}
-	// boostrap
 	return nil
 }
 
