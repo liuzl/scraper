@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/mxj"
+	// "github.com/mickep76/flatten"
 	// "github.com/roscopecoltran/configor"
 )
 
@@ -18,8 +19,8 @@ type Handler struct {
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
 	Env    EnvConfig  `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Etcd   EtcdConfig `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 
 	// FlatConfig map[string]interface{} `opts:"-" json:"-" yaml:"-" toml:"-"`
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
@@ -130,6 +131,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 				fmt.Printf("e.HeadersJSON, len=%d:\n", len(e.HeadersJSON))
 				pp.Println(e.HeadersJSON)
 			}
+			// e.Loaded = true
 		}
 	}
 	if h.Debug {

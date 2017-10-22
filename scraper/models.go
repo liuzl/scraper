@@ -66,11 +66,13 @@ type Endpoint struct {
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                    `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                         `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Loaded             bool                         `json:"-" yaml:"-" toml:"-"`
 	EtcdKey            string                       `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Connections        []Connection                 `json:"-" yaml:"-" toml:"-"`
 	Source             string                       `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
 	ProviderID         uint                         `json:"-" yaml:"-" toml:"-"`
 	Provider           Provider                     `etcd:"provider" json:"provider_orm,omitempty" yaml:"provider_orm,omitempty" toml:"provider_orm,omitempty"`
+	Comment            string                       `json:"comments,omitempty" yaml:"comments,omitempty" toml:"comments,omitempty"`
 	Description        string                       `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
 	Groups             []*Group                     `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
 	Route              string                       `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
@@ -283,7 +285,7 @@ type ExtractConfig struct {
 	Debug      bool `default:"true" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	Links      bool `default:"true" json:"links,omitempty" yaml:"links,omitempty" toml:"links,omitempty"`
 	Meta       bool `default:"true" json:"meta,omitempty" yaml:"meta,omitempty" toml:"meta,omitempty"`
-	OpenGraph  bool `default:"true" json:"opengraph,omitempty" yaml:"opengraph,omitempty" toml:"opengraph,omitempty"`
+	Opengraph  bool `default:"true" json:"opengraph,omitempty" yaml:"opengraph,omitempty" toml:"opengraph,omitempty"`
 }
 
 // OPENAPI SCRAPER ///////////////////////////////////////////////////////////////

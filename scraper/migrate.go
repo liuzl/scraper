@@ -69,20 +69,7 @@ func FindOrCreateGroupByName(db *gorm.DB, name string) (*Group, bool, error) {
 }
 
 func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error {
-
-	// h.Etcd.E3ch
-
-	// etcd := h.Etcd
-	// c := h.Config
-
-	// fs := flatstruct.NewFlatStruct()
-	// fs.PathSeparator = "/"
-
-	// etcd := &EtcdConfig{}
-	// pp.Print(e3ch)
-
 	for _, e := range c.Routes {
-
 		selectionBlocks, err := convertSelectorsConfig(e.BlocksJSON, c.Debug)
 		if err != nil {
 			return err
@@ -91,40 +78,15 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		if err != nil {
 			return err
 		}
-
-		//if c.Debug {
-		//	pp.Print(selectionBlocks)
-		//}
-
 		endpointTemplateURL := fmt.Sprintf("%s/%s", strings.TrimSuffix(e.BaseURL, "/"), strings.TrimPrefix(e.PatternURL, "/"))
 		slugURL := slugifier.Slugify(endpointTemplateURL)
-		// exampleURL := strings.Replace(endpointTemplateURL, "{{query}}", "test", -1)
-
-		endpoint := Endpoint{
-			Disabled:     false,
-			Route:        e.Route,
-			Method:       strings.ToUpper(e.Method),
-			BaseURL:      e.BaseURL,
-			PatternURL:   e.PatternURL,
-			Selector:     e.Selector,
-			Slug:         slugURL,
-			Headers:      headers,
-			Blocks:       selectionBlocks,
-			ExtractPaths: e.ExtractPaths,
-			Debug:        e.Debug,
-			StrictMode:   e.StrictMode,
-		}
-
 		var groups []*Group
 		group, _, err := FindOrCreateGroupByName(db, "Web")
 		if err != nil {
 			fmt.Println("Could not upsert the group for the current endpoint. error: ", err)
+			//return err
 		}
 		groups = append(groups, group)
-		// pp.Println("Groups: ", group)
-		// pp.Println("Group: ", groups)
-		endpoint.Groups = groups
-
 		providerDataURL, err := url.Parse(e.BaseURL)
 		if err != nil {
 			fmt.Println("Could not parse/extract the endpoint url parts. error: ", err)
@@ -132,50 +94,17 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		}
 		providerHost, providerPort, err := net.SplitHostPort(providerDataURL.Host)
 		if err != nil {
-			// fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
+			fmt.Println("Could not split host and port for the current endpoint base url. error: ", err)
 			// return err
 		}
 
 		providerDomain := domainutil.Domain(providerDataURL.Host)
-
-		if providerHost != "" {
-			endpoint.Host = providerHost
-		} else {
-			endpoint.Host = providerDataURL.Host
-		}
-		endpoint.Domain = providerDomain
-
-		if providerPort != "" {
-			providerPortInt, err := strconv.Atoi(providerPort)
-			if err != nil {
-				fmt.Println("WARNING ! Missing the port number for this endpoint base url. error: ", err)
-			}
-			endpoint.Port = providerPortInt
-		} else {
-			// Move to a seperate method
-			switch providerDataURL.Scheme {
-			case "wss":
-			case "https":
-				endpoint.Port = 443
-			case "ws":
-			case "http":
-				endpoint.Port = 80
-			case "rpc":
-				endpoint.Port = 445
-			default:
-				fmt.Println("WARNING ! invalid base url scheme for the current endpoint.")
-			}
-		}
-
-		endpoint.Description = e.Description
 
 		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
 		if err != nil {
 			fmt.Println("Could not upsert the current provider in the registry. error: ", err)
 			// return err
 		}
-
-		endpoint.Provider = provider
 
 		etcdHeadersIntercept := make(map[string]string, 0)
 		for _, v := range e.HeadersIntercept {
@@ -211,7 +140,6 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			// pp.Println(v)
 		}
 
-		//etcdExtractStruct := reflect.ValueOf(e.Extract)
 		var ExtractorTypes = []string{"links", "meta", "opengraph"}
 		etcdExtract := make(map[string]bool, len(ExtractorTypes))
 
@@ -227,6 +155,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		etcdGroups = strings.Join(grp, ",")
 
 		etcdRoute := EtcdRoute{
+			Loaded:           true,
 			Disabled:         false,
 			Source:           provider.Name,
 			Route:            e.Route,
@@ -237,6 +166,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			Selector:         e.Selector,
 			HeadersIntercept: etcdHeadersIntercept,
 			Headers:          etcdHeaders,
+			Comment:          "-",
 			Blocks:           etcdBlocks,
 			Groups:           etcdGroups,
 			Extract:          etcdExtract,
@@ -249,10 +179,8 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			fmt.Println(err)
 			// return
 		} else {
-
 			// fmt.Println("new etcdRoute: ")
 			// pp.Print(etcdRoute)
-
 			mv, err := mxj.NewMapJson(b)
 			if err != nil {
 				fmt.Println("err:", err)
@@ -263,7 +191,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				p := mv.LeafPaths()
 				var tree []string
 				for _, v := range p {
-					p := strings.Split(fmt.Sprintf("/%s/%s", e.Route, v), "/")
+					p := strings.Split(fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v), "/")
 					j := len(p) - 1
 					for j > 1 {
 						tree = append(tree, strings.Join(p[:j], "/"))
@@ -272,7 +200,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 					}
 				}
 				// dedup(tree)
-				//tree = removeDuplicates(tree)
+				// tree = removeDuplicates(tree)
 				RemoveDuplicates(&tree)
 				sort.Strings(tree)
 				fmt.Println("LeafPaths for ETCD: ")
@@ -286,11 +214,10 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 						}
 					}
 				}
-
 				l := mv.LeafNodes()
 				fmt.Println("LeafNodes: ")
 				for _, v := range l {
-					key := fmt.Sprintf("/%s/%s", e.Route, v.Path)
+					key := fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v.Path)
 					val := fmt.Sprintf("%v", v.Value)
 					fmt.Printf("path: %s, value: %s \n", key, val)
 					var exists bool
@@ -312,7 +239,50 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				}
 			}
 		}
-
+		endpoint := Endpoint{
+			Disabled:     false,
+			Route:        e.Route,
+			Method:       strings.ToUpper(e.Method),
+			BaseURL:      e.BaseURL,
+			PatternURL:   e.PatternURL,
+			Selector:     e.Selector,
+			Slug:         slugURL,
+			Headers:      headers,
+			Blocks:       selectionBlocks,
+			ExtractPaths: e.ExtractPaths,
+			Debug:        e.Debug,
+			StrictMode:   e.StrictMode,
+		}
+		endpoint.Groups = groups
+		if providerHost != "" {
+			endpoint.Host = providerHost
+		} else {
+			endpoint.Host = providerDataURL.Host
+		}
+		endpoint.Domain = providerDomain
+		if providerPort != "" {
+			providerPortInt, err := strconv.Atoi(providerPort)
+			if err != nil {
+				fmt.Println("WARNING ! Missing the port number for this endpoint base url. error: ", err)
+			}
+			endpoint.Port = providerPortInt
+		} else {
+			// Move to a seperate method
+			switch providerDataURL.Scheme {
+			case "wss":
+			case "https":
+				endpoint.Port = 443
+			case "ws":
+			case "http":
+				endpoint.Port = 80
+			case "rpc":
+				endpoint.Port = 445
+			default:
+				fmt.Println("WARNING ! invalid base url scheme for the current endpoint.")
+			}
+		}
+		endpoint.Description = e.Description
+		endpoint.Provider = provider
 		for _, b := range selectionBlocks {
 			if ok := db.NewRecord(b); ok {
 				if err := db.Create(&b).Error; err != nil {
@@ -321,15 +291,15 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				}
 			}
 		}
-
 		if ok := db.NewRecord(endpoint); ok {
 			if err := db.Create(&endpoint).Error; err != nil {
 				fmt.Println("error: ", err)
 				return err
 			}
 		}
-
+		e.Loaded = true
 	}
+	// boostrap
 	return nil
 }
 

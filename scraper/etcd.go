@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -13,15 +14,16 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/pkg/transport"
-	// "github.com/mickep76/etcdmap"
 
+	// "github.com/fatih/structs"
+	"github.com/iancoleman/strcase"
 	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/e3ch"
 	"golang.org/x/net/context"
+	// "github.com/iancoleman/orderedmap"
 	// "github.com/coreos/etcd/clientv3/mirror"
 	// etcderr "github.com/coreos/etcd/error"
 	// "github.com/coreos/etcd/mvcc/mvccpb"
-	// "github.com/mickep76/etcdmap"
 	// "github.com/jinuljt/getcds"
 	// "github.com/damoye/etcd-config"
 	// "github.com/roscopecoltran/e3w/routers"
@@ -34,13 +36,48 @@ import (
 	- https://github.com/xiang90/edb/blob/master/sql.go
 	- https://github.com/rafaeljusto/etcetera/blob/master/etcetera.go
 	- https://github.com/mickep76/etcdmap
+	- https://github.com/Financial-Times/vulcan-config-builder/blob/master/main.go
+	- https://github.com/ruprict/vulcand-atd-transformer/blob/master/templates.go
+	- https://github.com/vmattos/apps-registrator/blob/master/etcd/etcd.go
+	- https://github.com/vulcand/vulcand/blob/master/engine/etcdv3ng/etcd.go
+	- https://github.com/vulcand/vulcand/blob/master/engine/etcdv2ng/etcd.go
+	- https://github.com/xh4n3/ohetcd/blob/master/main.go
+	- https://github.com/BlueDragonX/sentinel
+	- https://github.com/mickep76/etcdtool/tree/master
+	- https://github.com/jinuljt/getcds/blob/master/etcd.go
 */
 
 const (
 	ETCD_CLIENT_TIMEOUT = 3 * time.Second
 )
 
-// var etcdClient = &EtcdConfig{}
+var (
+	// etcd tree
+	numDirs, numKeys int
+	// scraper config
+	routeIdRegex = regexp.MustCompile("/routes/([^/]+)(?:/route)?$")
+	headerRegex  = regexp.MustCompile("/routes/([^/]+)/headers/([^/]+)$")
+	blockRegex   = regexp.MustCompile("/routes/([^/]+)/blocks/([^/]+)$")
+	// reverse proxy / load balancer
+	addressRegex    = regexp.MustCompile(`^[\.\-:\/\w]*:[0-9]{2,5}$`)
+	serverRegex     = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
+	frontendIdRegex = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
+	backendIdRegex  = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
+	hostnameRegex   = regexp.MustCompile("/hosts/([^/]+)(?:/host)?$")
+	listenerIdRegex = regexp.MustCompile("/listeners/([^/]+)")
+	middlewareRegex = regexp.MustCompile("/frontends/([^/]+)/middlewares/([^/]+)$")
+	// endpointRegex, scraperRegex, scraperBlocksRegex
+	// eg. root/endpoints/bitbucket/config/scraper/comment
+	endpointRegex      = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config")
+	configRegex        = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/([^/]+)")
+	scraperRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper")
+	scraperParamRegex  = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)")
+	scraperGroupRegex  = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)/([^/]+)")
+	scraperBlocksRegex = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
+	// sniperkit/endpoint/google/scholar/config/scraper/route
+
+	scraperBlockDetailRegex = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
+)
 
 type EtcdConfig struct {
 	Disabled   bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
@@ -53,11 +90,13 @@ type EtcdConfig struct {
 	mutex      sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	rch        etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	prefix     string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Handler    *Handler                `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	// info creates a correlation between a path to a info structure that stores some extra information and make the API usage easier
 	info                map[string]info `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	SyncIntervalSeconds int64           `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
 	Consistency         string          `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
 	RequireQuorum       bool            `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
+	boostrap            bool            `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	// etcdKey       string
 	// nodes         []string
 	// registry      *plugin.Registry
@@ -79,7 +118,7 @@ type EtcdConfig struct {
 	CertFile           string            `json:"cert_file,omitempty" yaml:"cert_file,omitempty" toml:"cert_file,omitempty"`
 	KeyFile            string            `json:"key_file,omitempty" yaml:"key_file,omitempty" toml:"key_file",omitempty`
 	TrustedCAFile      string            `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
-	RootKey            string            `json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
+	RootKey            string            `default:"root" json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
 	DirValue           string            `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
 	SealKey            string            `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
 	TrustForwardHeader bool              `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
@@ -116,7 +155,7 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	}
 
 	if ectl.RootKey == "" {
-		ectl.RootKey = "root"
+		ectl.RootKey = "sniperkit"
 	}
 
 	etcdConfig := etcd.Config{
@@ -164,7 +203,6 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	ectl.kv = map[string]string{}
 	ectl.prefix = "/dir1" // ectl.RootKey + "/"
 
-	// var err error
 	// init and watch
 	err = ectl.initAndWatch()
 	if err != nil {
@@ -178,9 +216,59 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 		for {
 			for wresp := range ectl.rch {
 				for _, ev := range wresp.Events {
-					fmt.Printf("[UPDATE] set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
-					// ectl.set(ev.Kv.Key, ev.Kv.Value)
+					var endpointRoute, endpointAttr, endpointConfigType, scraperConfigParameter, scraperConfigGroup, scraperConfigBlock string
+					if endpointIds := endpointRegex.FindStringSubmatch(string(ev.Kv.Key)); len(endpointIds) == 2 {
+						endpointRoute = endpointIds[2]
+						fmt.Println("[endpointIds] endpointRoute: ", endpointRoute)
+					}
+					if configIds := configRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configIds) == 3 {
+						endpointRoute = configIds[2]
+						endpointConfigType = configIds[3]
+						fmt.Println("[configIds] endpointRoute: ", endpointRoute)
+						fmt.Println("[configIds] endpointConfigType: ", endpointConfigType)
+					}
+					if scraperParamIds := scraperParamRegex.FindStringSubmatch(string(ev.Kv.Key)); len(scraperParamIds) >= 4 {
+						endpointRoute = scraperParamIds[2]
+						scraperConfigParameter = scraperParamIds[3]
+						fmt.Println("[scraperParamIds] endpointRoute: ", endpointRoute)
+						fmt.Println("[scraperParamIds] scraperConfigParameter: ", scraperConfigParameter)
+					}
+					if configGroupParamIds := scraperGroupRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configGroupParamIds) == 4 {
+						endpointRoute = configGroupParamIds[2]
+						scraperConfigGroup = configGroupParamIds[3]
+						scraperConfigParameter = configGroupParamIds[4]
+						fmt.Println("[configGroupParamIds] endpointRoute: ", endpointRoute)
+						fmt.Println("[configGroupParamIds] scraperConfigGroup: ", scraperConfigGroup)
+						fmt.Println("[configGroupParamIds] scraperConfigParameter: ", scraperConfigParameter)
+					}
+					if configBlockParamIds := scraperBlocksRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configBlockParamIds) == 5 {
+						endpointRoute = configBlockParamIds[2]
+						scraperConfigGroup = configBlockParamIds[3]
+						scraperConfigBlock = configBlockParamIds[4]
+						fmt.Println("[configBlockParamIds] endpointRoute: ", endpointRoute)
+						fmt.Println("[configBlockParamIds] block: ", scraperConfigGroup)
+						fmt.Println("[configBlockParamIds] key: ", scraperConfigBlock)
+					}
+					if scraperConfigParameter != "" {
+						endpointAttr = strcase.ToCamel(scraperConfigParameter)
+						if ectl.Handler != nil {
+							fmt.Printf("HandlerConfig for route: %s, field: %s \n", endpointRoute, endpointAttr)
+							endpoint := ectl.Handler.Endpoint(endpointRoute)
+							pp.Println("endpoint Loaded ?", endpoint.Loaded)
+							if endpoint.Loaded {
+								if scraperConfigGroup != "" && scraperConfigBlock != "" {
+									fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
+									if len(endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock]) > 0 {
+										endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock][0].val = string(ev.Kv.Value)
+									}
+								}
+								pp.Println(ectl.Handler.Endpoint(endpointRoute))
+							}
+						}
+					}
+					fmt.Printf("[UPDATE] set: attr=%s, key=%s, value=%s \n", endpointAttr, ev.Kv.Key, ev.Kv.Value)
 				}
+
 			}
 			log.Print("etcd-config watch channel closed")
 			for {
@@ -196,9 +284,9 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 
 	if ectl.InitCheck {
 		report, err := ectl.CheckupE3ch()
-		//if ectl.Debug {
-		fmt.Printf("[WARNING] failed to pass all the E3CH client init tests:\n- fatal_error:\n%#v\n- warnings:\n%s\n", err, strings.Join(report, "\n"))
-		//}
+		if ectl.Debug {
+			fmt.Printf("[WARNING] failed to pass all the E3CH client init tests:\n- fatal_error:\n%#v\n- warnings:\n%s\n", err, strings.Join(report, "\n"))
+		}
 	}
 
 	return client, client.FormatRootKey()
@@ -266,6 +354,19 @@ func (ectl *EtcdConfig) initAndWatch() error {
 	}
 	return nil
 }
+
+/*
+func (ectl *EtcdConfig) set(key, value []byte) {
+	strKey := strings.TrimPrefix(string(key), ectl.RootKey)
+	ectl.mutex.Lock()
+	defer ectl.mutex.Unlock()
+	if len(value) == 0 {
+		delete(ectl.kv, string(strKey))
+	} else {
+		ectl.kv[string(strKey)] = string(value)
+	}
+}
+*/
 
 func (ectl *EtcdConfig) set(key, value []byte) {
 	strKey := strings.TrimPrefix(string(key), ectl.RootKey)
@@ -513,6 +614,101 @@ func CloneE3chClient(username, password string, client *client.EtcdHRCHYClient) 
 
 func notFound(e error) bool {
 	return e == rpctypes.ErrEmptyKey
+}
+
+type EtcdService struct {
+	Disabled          bool              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Name              string            `etcd:"name" json:"name,omitempty" yaml:"name,omitempty" toml:"name,omitempty"`
+	HasHealthCheck    bool              `etcd:"has_health_check" json:"has_health_check,omitempty" yaml:"has_health_check,omitempty" toml:"has_health_check,omitempty"`
+	Addresses         map[string]string `etcd:"addresses" json:"addresses,omitempty" yaml:"addresses,omitempty" toml:"addresses,omitempty"`
+	PathPrefixes      map[string]string `etcd:"path_prefixes" json:"path_prefixes,omitempty" yaml:"path_prefixes,omitempty" toml:"path_prefixes,omitempty"`
+	PathHosts         map[string]string `etcd:"path_hosts" json:"path_hosts,omitempty" yaml:"path_hosts,omitempty" toml:"path_hosts,omitempty"`
+	FailoverPredicate string            `etcd:"failover_predicate" json:"failover_predicate,omitempty" yaml:"failover_predicate,omitempty" toml:"failover_predicate,omitempty"`
+	Debug             bool              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdRoute struct {
+	Loaded   bool `json:"-" yaml:"-" toml:"-"`
+	Disabled bool `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	// server - endpoint handler
+	Source  string `etcd:"source" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
+	Route   string `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
+	Method  string `etcd:"method" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
+	Comment string `etcd:"comment" json:"comment,omitempty" yaml:"comment,omitempty" toml:"comment,omitempty"`
+	// remote content - extraction rules and blocks
+	BaseURL          string                       `required:"true" etcd:"base_url" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	PatternURL       string                       `required:"true" etcd:"pattern_url" json:"pattern_url" yaml:"pattern_url" toml:"pattern_url"`
+	TestURL          string                       `required:"true" etcd:"test_url" json:"test_url" yaml:"test_url" toml:"test_url"`
+	Selector         string                       `etcd:"selector" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	HeadersIntercept map[string]string            `etcd:"resp_headers_intercept" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	Headers          map[string]string            `etcd:"headers" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	Blocks           map[string]map[string]string `etcd:"blocks" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	Extract          map[string]bool              `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
+	Groups           string                       `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
+	StrictMode       bool                         `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	Debug            bool                         `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdProxy struct {
+	Disabled  bool                    `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Frontends map[string]EtcdFrontend `etcd:"frontends" json:"frontends,omitempty" yaml:"frontends,omitempty" toml:"frontends,omitempty"`
+	Backends  map[string]EtcdBackend  `etcd:"backends" json:"backends,omitempty" yaml:"backends,omitempty" toml:"backends,omitempty"`
+	// Middlewares map[string]EtcdMiddleware `etcd:"middlewares" json:"middlewares,omitempty" yaml:"middlewares,omitempty" toml:"middlewares,omitempty"`
+	// Plugins     map[string]EtcdPlugin     `etcd:"plugins" json:"plugins,omitempty" yaml:"plugins,omitempty" toml:"plugins,omitempty"`
+	Debug bool `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdFrontend struct {
+	Disabled          bool        `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	BackendID         string      `etcd:"backend_id" json:"backend_id,omitempty" yaml:"backend_id,omitempty" toml:"backend_id,omitempty"`
+	Route             string      `etcd:"route" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
+	Type              string      `etcd:"type" json:"type,omitempty" yaml:"type,omitempty" toml:"type,omitempty"`
+	Rewrite           EtcdRewrite `etcd:"rewrite" json:"rewrite,omitempty" yaml:"rewrite,omitempty" toml:"rewrite,omitempty"`
+	FailoverPredicate string      `etcd:"failover_predicate" json:"failover_predicate,omitempty" yaml:"failover_predicate,omitempty" toml:"failover_predicate,omitempty"`
+	Debug             bool        `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdRewrite struct {
+	Disabled   bool          `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	ID         string        `etcd:"id" json:"id,omitempty" yaml:"id,omitempty" toml:"id,omitempty"`
+	Type       string        `etcd:"type" json:"type,omitempty" yaml:"type,omitempty" toml:"type,omitempty"`
+	Priority   int           `etcd:"priority" json:"priority,omitempty" yaml:"priority,omitempty" toml:"priority,omitempty"`
+	Middleware EtcdRewriteMw `etcd:"middleware" json:"middleware,omitempty" yaml:"middleware,omitempty" toml:"middleware,omitempty"`
+	Debug      bool          `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdRewriteMw struct {
+	Disabled    bool   `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Regexp      string `etcd:"regexp" json:"regexp,omitempty" yaml:"regexp,omitempty" toml:"regexp,omitempty"`
+	Replacement string `etcd:"replacement" json:"replacement,omitempty" yaml:"replacement,omitempty" toml:"replacement,omitempty"`
+	Debug       bool   `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdBackend struct {
+	Disabled bool                  `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Servers  map[string]EtcdServer `etcd:"servers" json:"servers,omitempty" yaml:"servers,omitempty" toml:"servers,omitempty"`
+	Debug    bool                  `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdServer struct {
+	Disabled bool   `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	URL      string `etcd:"url" json:"url,omitempty" yaml:"url,omitempty" toml:"url,omitempty"`
+	Debug    bool   `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type EtcdHandler struct {
+	Disabled   bool                    `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Backends   map[string]EtcdBackend  `etcd:"backends" json:"backends,omitempty" yaml:"backends,omitempty" toml:"backends,omitempty"`
+	Frontends  map[string]EtcdFrontend `etcd:"frontends" json:"frontends,omitempty" yaml:"frontends,omitempty" toml:"frontends,omitempty"`
+	Routes     map[string]EtcdRoute    `etcd:"routes" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+	Services   map[string]EtcdService  `etcd:"services" json:"services,omitempty" yaml:"services,omitempty" toml:"services,omitempty"`
+	StrictMode bool                    `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	Debug      bool                    `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+func (rc *EtcdHandler) NewEndpoint(path string, conf Endpoint) (bool, error) {
+	fmt.Printf("Register new endpoint: %s \n", path)
+	return true, nil
 }
 
 /*

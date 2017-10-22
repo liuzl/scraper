@@ -24,6 +24,7 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 
+	// "github.com/mickep76/flatten"
 	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
 	// "github.com/gin-contrib/cache"
@@ -140,7 +141,10 @@ func main() {
 		}
 	}()
 
-	// var cerr error
+	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
 	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
 	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
@@ -149,11 +153,8 @@ func main() {
 		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
 	}
 
+	h.Etcd.Handler = h
 	h.Etcd.E3ch = e3ch
-
-	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
-		log.Fatal(err)
-	}
 
 	mux := http.NewServeMux() // Register route
 
@@ -182,6 +183,7 @@ func main() {
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...) // Create RDB datastore
+
 		initDashboard()
 		AdminUI.MountTo("/admin", mux) // amount to /admin, so visit `/admin` to view the admin interface
 
@@ -192,11 +194,9 @@ func main() {
 	// scraper.ConvertToJsonSchema()
 	// scraper.SeedAlexaTop1M()
 
-	// if h.Config.IsApi {
-	// 	api.API.MountTo("/api", mux)
-	// }
+	mux.Handle("/api/scraper", h)
 
-	mux.Handle("/", h)
+	// mux.Handle("/", h)
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)

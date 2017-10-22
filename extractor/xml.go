@@ -1,5 +1,7 @@
 package extractor
 
+// https://github.com/urbint/ingest/blob/master/parse/xml.go
+
 /*
 import (
 	"io"

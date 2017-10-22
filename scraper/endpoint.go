@@ -9,17 +9,22 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jeevatkm/go-model"
 	"github.com/mmcdole/gofeed"
 	"github.com/roscopecoltran/mxj"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
 	"github.com/gebv/typed"
+	"github.com/go-resty/resty"
 	"github.com/k0kubun/pp"
 	"github.com/karlseguin/cmap"
 	"github.com/leebenson/conform"
 	"github.com/mgbaozi/gomerge"
 	"golang.org/x/net/html"
+	// "github.com/buger/jsonparser"
+	// "github.com/go-aah/aah"
+	// "github.com/creack/spider"
 	// "github.com/whyrusleeping/json-filter"
 	// "github.com/wolfeidau/unflatten"
 	// "github.com/jzaikovs/t"
@@ -35,6 +40,9 @@ import (
 		"github.com/ynqa/word-embedding/validate"
 	*/)
 
+// https://github.com/KKRainbow/segmentation-server/blob/master/main.go
+// https://github.com/mhausenblas/github-api-fetcher/blob/master/main.go
+
 func typedTest(path string) {
 	// directly from a map[string]interace{}
 	// typed := typed.New(a_map)
@@ -46,6 +54,57 @@ func typedTest(path string) {
 	typ, _ := typed.JsonFile(path)
 	pp.Print(typ)
 }
+
+func simpleGet() {
+	resp, err := resty.R().Get("http://httpbin.org/get") // GET request
+	if err != nil {
+		fmt.Println("error: ", err)
+	}
+	// explore response object
+	fmt.Printf("\nError: %v", err)
+	fmt.Printf("\nResponse Status Code: %v", resp.StatusCode())
+	fmt.Printf("\nResponse Status: %v", resp.Status())
+	fmt.Printf("\nResponse Time: %v", resp.Time())
+	fmt.Printf("\nResponse Received At: %v", resp.ReceivedAt())
+	fmt.Printf("\nResponse Body: %v", resp) // or resp.String() or string(resp.Body())
+}
+
+func goModel(req http.Request) {
+	// let's say you have just decoded/unmarshalled your request body to struct object.
+	tempPeople, _ := ParseJson(req.Body)
+	people := People{}
+	// tag your Product fields with appropriate options like
+	// -, omitempty, notraverse to get desired result.
+	// Not to worry, go-model does deep copy :)
+	errs := model.Copy(&people, tempPeople)
+	fmt.Println("Errors:", errs)
+
+	fmt.Printf("\nSource: %#v\n", tempPeople)
+	fmt.Printf("\nDestination: %#v\n", people)
+}
+
+/*
+func enhancedGet() {
+	resp, err := resty.R().
+		SetQueryParams(map[string]string{
+			"page_no": "1",
+			"limit":   "20",
+			"sort":    "name",
+			"order":   "asc",
+			"random":  strconv.FormatInt(time.Now().Unix(), 10),
+		}).
+		SetHeader("Accept", "application/json").
+		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
+		Get("/search_result")
+
+	// Sample of using Request.SetQueryString method
+	resp, err := resty.R().
+		SetQueryString("productId=232&template=fresh-sample&cat=resty&source=google&kw=buy a lot more").
+		SetHeader("Accept", "application/json").
+		SetAuthToken("BC594900518B4F7EAC75BD37F019E08FBC594900518B4F7EAC75BD37F019E08F").
+		Get("/show_product")
+}
+*/
 
 func cmapTest() {
 	m := cmap.New()
@@ -223,10 +282,15 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 	return r
 }
 
+// https://github.com/hoop33/limo/blob/master/service/github.go#L39
+// https://github.com/creack/spider/blob/master/example_test.go
+// https://github.com/suwhs/go-goquery-utils/tree/master/pipes
+// https://github.com/andrewstuart/goq
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 	//if e.Debug {
 	//	pp.Print(e)
 	//}
+	// simpleGet()
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err

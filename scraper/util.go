@@ -2,8 +2,11 @@ package scraper
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"reflect"
@@ -47,6 +50,18 @@ func dedup(input []string) []string {
 		}
 	}
 	return output
+}
+
+func ParseJson(body io.ReadCloser) (jsonBody map[string]interface{}, err error) {
+	bytes, err := ioutil.ReadAll(body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	json.Unmarshal(bytes, &jsonBody)
+
+	return
 }
 
 func template(isurl bool, str string, vars map[string]string) (out string, err error) {
