@@ -14,12 +14,11 @@ import (
 	etcd "github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/coreos/etcd/pkg/transport"
-
-	// "github.com/fatih/structs"
 	"github.com/iancoleman/strcase"
 	"github.com/k0kubun/pp"
 	"github.com/roscopecoltran/e3ch"
 	"golang.org/x/net/context"
+	// "github.com/fatih/structs"
 	// "github.com/iancoleman/orderedmap"
 	// "github.com/coreos/etcd/clientv3/mirror"
 	// etcderr "github.com/coreos/etcd/error"
@@ -45,6 +44,10 @@ import (
 	- https://github.com/BlueDragonX/sentinel
 	- https://github.com/mickep76/etcdtool/tree/master
 	- https://github.com/jinuljt/getcds/blob/master/etcd.go
+	- https://github.com/coreos/etcd/blob/master/clientv3/example_watch_test.go
+	- https://github.com/coreos/etcd/blob/master/clientv3/example_test.go
+	- https://github.com/kelseyhightower/confd/blob/master/backends/etcdv3/client.go
+	- https://github.com/kelseyhightower/confd/blob/master/backends/client.go
 */
 
 const (
@@ -52,80 +55,66 @@ const (
 )
 
 var (
-	// etcd tree
-	numDirs, numKeys int
-	// scraper config
-	routeIdRegex = regexp.MustCompile("/routes/([^/]+)(?:/route)?$")
-	headerRegex  = regexp.MustCompile("/routes/([^/]+)/headers/([^/]+)$")
-	blockRegex   = regexp.MustCompile("/routes/([^/]+)/blocks/([^/]+)$")
-	// reverse proxy / load balancer
-	addressRegex    = regexp.MustCompile(`^[\.\-:\/\w]*:[0-9]{2,5}$`)
-	serverRegex     = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
-	frontendIdRegex = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
-	backendIdRegex  = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
-	hostnameRegex   = regexp.MustCompile("/hosts/([^/]+)(?:/host)?$")
-	listenerIdRegex = regexp.MustCompile("/listeners/([^/]+)")
-	middlewareRegex = regexp.MustCompile("/frontends/([^/]+)/middlewares/([^/]+)$")
-	// endpointRegex, scraperRegex, scraperBlocksRegex
-	// eg. root/endpoints/bitbucket/config/scraper/comment
-	endpointRegex      = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config")
-	configRegex        = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/([^/]+)")
-	scraperRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper")
-	scraperParamRegex  = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)")
-	scraperGroupRegex  = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)/([^/]+)")
-	scraperBlocksRegex = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
-	// sniperkit/endpoint/google/scholar/config/scraper/route
-
+	numDirs, numKeys        int
+	routeIdRegex            = regexp.MustCompile("/routes/([^/]+)(?:/route)?$")
+	headerRegex             = regexp.MustCompile("/routes/([^/]+)/headers/([^/]+)$")
+	blockRegex              = regexp.MustCompile("/routes/([^/]+)/blocks/([^/]+)$")
+	addressRegex            = regexp.MustCompile(`^[\.\-:\/\w]*:[0-9]{2,5}$`)
+	serverRegex             = regexp.MustCompile("/backends/([^/]+)/servers/([^/]+)$")
+	frontendIdRegex         = regexp.MustCompile("/frontends/([^/]+)(?:/frontend)?$")
+	backendIdRegex          = regexp.MustCompile("/backends/([^/]+)(?:/backend)?$")
+	hostnameRegex           = regexp.MustCompile("/hosts/([^/]+)(?:/host)?$")
+	listenerIdRegex         = regexp.MustCompile("/listeners/([^/]+)")
+	middlewareRegex         = regexp.MustCompile("/frontends/([^/]+)/middlewares/([^/]+)$")
+	endpointRegex           = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config")
+	configRegex             = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/([^/]+)")
+	scraperRegex            = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper")
+	scraperParamRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)")
+	scraperGroupRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)/([^/]+)")
+	scraperBlocksRegex      = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
 	scraperBlockDetailRegex = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
 )
 
 type EtcdConfig struct {
-	Disabled   bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Client     *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Once       *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	E3ch       *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Context    context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	CancelFunc context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	kv         map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	mutex      sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	rch        etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	prefix     string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	Handler    *Handler                `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	// info creates a correlation between a path to a info structure that stores some extra information and make the API usage easier
-	info                map[string]info `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	SyncIntervalSeconds int64           `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
-	Consistency         string          `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
-	RequireQuorum       bool            `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
-	boostrap            bool            `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	// etcdKey       string
-	// nodes         []string
-	// registry      *plugin.Registry
-	OnceError          error             `gorm:"-" json:"-" yaml:"-" toml:"-"`
-	InitCheck          bool              `json:"init_check,omitempty" yaml:"init_check,omitempty" toml:"init_check,omitempty"`
-	MaxDir             int               `default:"10" json:"max_dir,omitempty" yaml:"max_dir,omitempty" toml:"max_dir,omitempty"`
-	ApiVersion         int               `default:"3" json:"api_version,omitempty" yaml:"api_version,omitempty" toml:"api_version,omitempty"`
-	Peers              []string          `gorm:"-" json:"peers,omitempty" yaml:"peers,omitempty" toml:"peers,omitempty"`
-	MaxTimeout         time.Duration     `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
-	DialTimeout        time.Duration     `json:"dial_timeout,omitempty" yaml:"dial_timeout,omitempty" toml:"dial_timeout,omitempty"`
-	ReadTimeout        time.Duration     `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty" toml:"read_timeout,omitempty"`
-	WriteTimeout       time.Duration     `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty" toml:"write_timeout,omitempty"`
-	CommandTimeout     time.Duration     `json:"command_timeout,omitempty" yaml:"command_timeout,omitempty" toml:"command_timeout,omitempty"`
-	Routes             []EtcdRouteConfig `json:"routes" yaml:"routes" toml:"routes"`
-	Username           string            `json:"username,omitempty" yaml:"username,omitempty" toml:"username,omitempty"`
-	Password           string            `json:"password,omitempty" yaml:"password,omitempty" toml:"password,omitempty"`
-	PasswordFilePath   string            `json:"password_file,omitempty" yaml:"password_file,omitempty" toml:"password_file,omitempty"`
-	IsSecured          bool              `json:"tls,omitempty" yaml:"tls,omitempty" toml:"tls,omitempty"`
-	CertFile           string            `json:"cert_file,omitempty" yaml:"cert_file,omitempty" toml:"cert_file,omitempty"`
-	KeyFile            string            `json:"key_file,omitempty" yaml:"key_file,omitempty" toml:"key_file",omitempty`
-	TrustedCAFile      string            `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
-	RootKey            string            `default:"root" json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
-	DirValue           string            `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
-	SealKey            string            `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
-	TrustForwardHeader bool              `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
-
-	// Debug activity
-	MemProfileRate int  `json:"mem_profile_rate,omitempty" yaml:"mem_profile_rate,omitempty" toml:"mem_profile_rate,omitempty"`
-	Debug          bool `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Disabled            bool                    `default:"false" help:"Disable etcd client" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Client              *etcd.Client            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Once                *sync.Once              `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	E3ch                *client.EtcdHRCHYClient `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Context             context.Context         `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	CancelFunc          context.CancelFunc      `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	kv                  map[string]string       `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	mutex               sync.RWMutex            `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	rch                 etcd.WatchChan          `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	prefix              string                  `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	Handler             *Handler                `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	info                map[string]info         `gorm:"-" json:"-" yaml:"-" toml:"-"` // info creates a correlation between a path to a info structure that stores some extra information and make the API usage easier
+	SyncIntervalSeconds int64                   `json:"sync_interval_seconds,omitempty" yaml:"sync_interval_seconds,omitempty" toml:"sync_interval_seconds,omitempty"`
+	Consistency         string                  `json:"consistency,omitempty" yaml:"consistency,omitempty" toml:"consistency,omitempty"`
+	RequireQuorum       bool                    `json:"require_quorum,omitempty" yaml:"require_quorum,omitempty" toml:"require_quorum,omitempty"`
+	OnceError           error                   `gorm:"-" json:"-" yaml:"-" toml:"-"`
+	InitCheck           bool                    `json:"init_check,omitempty" yaml:"init_check,omitempty" toml:"init_check,omitempty"`
+	MaxDir              int                     `default:"10" json:"max_dir,omitempty" yaml:"max_dir,omitempty" toml:"max_dir,omitempty"`
+	ApiVersion          int                     `default:"3" json:"api_version,omitempty" yaml:"api_version,omitempty" toml:"api_version,omitempty"`
+	Peers               []string                `gorm:"-" json:"peers,omitempty" yaml:"peers,omitempty" toml:"peers,omitempty"`
+	MaxTimeout          time.Duration           `json:"timeout,omitempty" yaml:"timeout,omitempty" toml:"timeout,omitempty"`
+	DialTimeout         time.Duration           `json:"dial_timeout,omitempty" yaml:"dial_timeout,omitempty" toml:"dial_timeout,omitempty"`
+	ReadTimeout         time.Duration           `json:"read_timeout,omitempty" yaml:"read_timeout,omitempty" toml:"read_timeout,omitempty"`
+	WriteTimeout        time.Duration           `json:"write_timeout,omitempty" yaml:"write_timeout,omitempty" toml:"write_timeout,omitempty"`
+	CommandTimeout      time.Duration           `json:"command_timeout,omitempty" yaml:"command_timeout,omitempty" toml:"command_timeout,omitempty"`
+	Routes              []EtcdRouteConfig       `json:"routes" yaml:"routes" toml:"routes"`
+	Username            string                  `json:"username,omitempty" yaml:"username,omitempty" toml:"username,omitempty"`
+	Password            string                  `json:"password,omitempty" yaml:"password,omitempty" toml:"password,omitempty"`
+	PasswordFilePath    string                  `json:"password_file,omitempty" yaml:"password_file,omitempty" toml:"password_file,omitempty"`
+	IsSecured           bool                    `json:"tls,omitempty" yaml:"tls,omitempty" toml:"tls,omitempty"`
+	CertFile            string                  `json:"cert_file,omitempty" yaml:"cert_file,omitempty" toml:"cert_file,omitempty"`
+	KeyFile             string                  `json:"key_file,omitempty" yaml:"key_file,omitempty" toml:"key_file",omitempty`
+	TrustedCAFile       string                  `json:"trusted_ca_file,omitempty" yaml:"trusted_ca_file,omitempty" toml:"trusted_ca_file,omitempty"`
+	RootKey             string                  `default:"root" json:"root_key,omitempty" yaml:"root_key,omitempty" toml:"root_ke,omitemptyy"`
+	DirValue            string                  `json:"dir_value,omitempty" yaml:"dir_value,omitempty" toml:"dir_value,omitempty"`
+	SealKey             string                  `json:"seal_key,omitempty" yaml:"seal_key,omitempty" toml:"seal_key,omitempty"`
+	TrustForwardHeader  bool                    `json:"trust_forward_header,omitempty" yaml:"trust_forward_header,omitempty" toml:"trust_forward_header,omitempty"`
+	MemProfileRate      int                     `json:"mem_profile_rate,omitempty" yaml:"mem_profile_rate,omitempty" toml:"mem_profile_rate,omitempty"`
+	Debug               bool                    `help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 func (ectl *EtcdConfig) NewEtcdClient(conf etcd.Config) (*etcd.Client, error) {
@@ -143,27 +132,21 @@ func (ectl *EtcdConfig) NewEtcdClient(conf etcd.Config) (*etcd.Client, error) {
 	return ectl.Client, nil
 }
 
-// etcdConfig etcd.Config
 func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
-
 	if ectl.MaxDir == 0 {
 		ectl.MaxDir = 10
 	}
-
 	if len(ectl.Peers) == 0 {
 		ectl.Peers = []string{"http://localhost:2379"}
 	}
-
 	if ectl.RootKey == "" {
 		ectl.RootKey = "sniperkit"
 	}
-
 	etcdConfig := etcd.Config{
 		Endpoints: ectl.Peers,
 		Username:  ectl.Username,
 		Password:  ectl.Password,
 	}
-
 	if ectl.IsSecured {
 		tlsInfo := transport.TLSInfo{
 			CertFile:      ectl.CertFile,
@@ -176,7 +159,6 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 		}
 		etcdConfig.TLS = tlsConfig
 	}
-
 	if ectl.Client == nil {
 		var cerr error
 		ectl.Client, cerr = ectl.NewEtcdClient(etcdConfig)
@@ -184,22 +166,11 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 			return nil, cerr
 		}
 	}
-
 	client, err := client.New(ectl.Client, ectl.RootKey, ectl.DirValue)
 	if err != nil {
 		return nil, err
 	}
-
 	ectl.E3ch = client
-
-	/*
-		ectl.WatchEndpointsConfig()
-		if err != nil {
-			fmt.Println("WatchEndpointsConfig, error: ", err)
-			return nil, err
-		}
-	*/
-
 	ectl.kv = map[string]string{}
 	ectl.prefix = "/dir1" // ectl.RootKey + "/"
 
@@ -254,8 +225,8 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 						if ectl.Handler != nil {
 							fmt.Printf("HandlerConfig for route: %s, field: %s \n", endpointRoute, endpointAttr)
 							endpoint := ectl.Handler.Endpoint(endpointRoute)
-							pp.Println("endpoint Loaded ?", endpoint.Loaded)
-							if endpoint.Loaded {
+							pp.Println("endpoint ready ?", endpoint.ready)
+							if endpoint.ready {
 								if scraperConfigGroup != "" && scraperConfigBlock != "" {
 									fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
 									if len(endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock]) > 0 {
@@ -290,43 +261,6 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	}
 
 	return client, client.FormatRootKey()
-}
-
-func (ectl *EtcdConfig) WatchEndpointsConfig() error {
-
-	ectl.kv = map[string]string{}
-	ectl.prefix = "/dir1" // ectl.RootKey + "/"
-
-	var err error
-	// init and watch
-	err = ectl.initAndWatch()
-	if err != nil {
-		fmt.Println("initAndWatch, error: ", err)
-		ectl.Client.Close()
-		return err
-	}
-
-	// loop to update
-	go func() {
-		for {
-			for wresp := range ectl.rch {
-				for _, ev := range wresp.Events {
-					fmt.Printf("ectl, set: key=%s, value=%s \n", ev.Kv.Key, ev.Kv.Value)
-					ectl.set(ev.Kv.Key, ev.Kv.Value)
-				}
-			}
-			log.Print("etcd-config watch channel closed")
-			for {
-				err = ectl.initAndWatch()
-				if err == nil {
-					break
-				}
-				log.Print("etcd-config get failed: ", err)
-				time.Sleep(time.Second)
-			}
-		}
-	}()
-	return nil
 }
 
 // Get ...
@@ -430,44 +364,33 @@ func (ectl *EtcdConfig) CheckupE3ch() ([]string, error) {
 	if err != nil {
 		warns = append(warns, fmt.Sprintf("- failed to Get: key='/dir1/key1', error: %s", err))
 	}
-	//if ectl.Debug {
-	fmt.Println("- value for node='/dir1/key1':")
-	pp.Println(parseNode(node))
-	//}
+	if ectl.Debug {
+		fmt.Println("- value for node='/dir1/key1':")
+		pp.Println(parseNode(node))
+	}
 	// return nodes in dir
 	var nodes []*client.Node
 	nodes, err = ectl.E3ch.List("/")
 	if err != nil {
 		warns = append(warns, fmt.Sprintf("- failed to List keys: key='/dir1', error: %s", err))
 	}
-	//if ectl.Debug {
-	fmt.Println("- nodes for list='/dir1':")
-	for k, node := range nodes {
-		fmt.Printf("#%d: \n", k)
-		pp.Println(parseNode(node))
+	if ectl.Debug {
+		fmt.Println("- nodes for list='/dir1':")
+		for k, node := range nodes {
+			fmt.Printf("#%d: \n", k)
+			pp.Println(parseNode(node))
+		}
 	}
-	// }
-
 	err = ectl.E3ch.Delete("/dir")
 	if err != nil {
 		warns = append(warns, fmt.Sprintf("- failed to Delete: key='/dir', error: %s", err))
 	}
-
 	_, err = ectl.E3ch.List("/")
 	if err != nil {
 		warns = append(warns, fmt.Sprintf("- failed to List: key='/', error: %s", err))
 	}
-
 	return warns, nil // return nil as no major
 }
-
-/*
-	Refs:
-	- https://github.com/coreos/etcd/blob/master/clientv3/example_watch_test.go
-	- https://github.com/coreos/etcd/blob/master/clientv3/example_test.go
-	- https://github.com/kelseyhightower/confd/blob/master/backends/etcdv3/client.go
-	- https://github.com/kelseyhightower/confd/blob/master/backends/client.go
-*/
 
 // GetValues queries etcd for keys prefixed by prefix.
 func (ectl *EtcdConfig) GetValues(keys []string) (map[string]string, error) {
@@ -541,34 +464,6 @@ func (ectl *EtcdConfig) RecursiveCreateDir(keyPath string) error {
 	}
 	return nil
 }
-
-// printTree writes a response out in a manner similar to the `tree` command in unix.
-/*
-func printTree(nodes []*client.Node, indent string) {
-	for i, n := range nodes {
-		dirs := strings.Split(n.Key, "/")
-		k := dirs[len(dirs)-1]
-		if n.Dir {
-			if i == nodes.Len()-1 {
-				fmt.Printf("%s└── %s/\n", indent, k)
-				printTree(n, indent+"    ")
-			} else {
-				fmt.Printf("%s├── %s/\n", indent, k)
-				printTree(n, indent+"│   ")
-			}
-			numDirs++
-		} else {
-			if i == nodes.Len()-1 {
-				fmt.Printf("%s└── %s\n", indent, k)
-			} else {
-				fmt.Printf("%s├── %s\n", indent, k)
-			}
-
-			numKeys++
-		}
-	}
-}
-*/
 
 type Node struct {
 	Key   string `json:"key" yaml:"key" toml:"key"`

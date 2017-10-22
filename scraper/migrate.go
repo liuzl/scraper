@@ -297,7 +297,7 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 				return err
 			}
 		}
-		e.Loaded = true
+		e.ready = true
 	}
 	// boostrap
 	return nil

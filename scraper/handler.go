@@ -131,7 +131,6 @@ func (h *Handler) LoadConfig(b []byte) error {
 				fmt.Printf("e.HeadersJSON, len=%d:\n", len(e.HeadersJSON))
 				pp.Println(e.HeadersJSON)
 			}
-			// e.Loaded = true
 		}
 	}
 	if h.Debug {
