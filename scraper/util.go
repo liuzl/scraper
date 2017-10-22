@@ -113,10 +113,8 @@ func logf(format string, args ...interface{}) {
 
 func HasElem(s interface{}, elem interface{}) bool {
 	arrV := reflect.ValueOf(s)
-
 	if arrV.Kind() == reflect.Slice {
 		for i := 0; i < arrV.Len(); i++ {
-
 			// XXX - panics if slice element points to an unexported struct field
 			// see https://golang.org/pkg/reflect/#Value.Interface
 			if arrV.Index(i).Interface() == elem {
@@ -143,7 +141,6 @@ func isJSON(s string) bool {
 func isJsonArray(s string) bool {
 	var js []interface{}
 	return json.Unmarshal([]byte(s), &js) == nil
-
 }
 
 /*

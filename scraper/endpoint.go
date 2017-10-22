@@ -146,6 +146,57 @@ func gomergeTest(body []byte) {
 	fmt.Println(result)
 }
 
+// StarResult wraps a star and an error
+type ScraperResult struct {
+	List  map[string][]Result
+	Error error
+}
+
+func (e *Endpoint) ExecuteParallel(ctx context.Context, params map[string]string, resChan chan<- *ScraperResult) { // Execute will execute an Endpoint with the given params
+
+	currentPage, _ := strconv.Atoi(e.Pager["offset"])
+	lastPage, _ := strconv.Atoi(e.Pager["max"])
+
+	offsetHolder := e.Pager["offset_var"]
+	params[offsetHolder] = e.Pager["offset"]
+
+	limitHolder := e.Pager["limit_var"]
+	params[limitHolder] = e.Pager["limit"]
+	for k, v := range e.Parameters {
+		if _, ok := params[k]; !ok {
+			if e.Debug {
+				fmt.Printf("[WARNING] Parameters missing: k=%s, v=%s \n", k, v)
+			}
+		}
+	}
+	if e.Debug {
+		fmt.Println("params")
+		pp.Println(params)
+	}
+	for currentPage <= lastPage {
+		res, err := e.Execute(params)
+		if err != nil {
+			resChan <- &ScraperResult{
+				Error: err,
+				List:  nil,
+			}
+		} else {
+			resChan <- &ScraperResult{
+				Error: err,
+				List:  res,
+			}
+		}
+		if e.Debug {
+			fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
+		}
+		// Go to the next page
+		currentPage++
+		params[offsetHolder] = strconv.Itoa(currentPage)
+	}
+
+	close(resChan)
+}
+
 /*
 func enhancedGet() {
 	resp, err := resty.R().
@@ -169,68 +220,21 @@ func enhancedGet() {
 }
 */
 
-// StarResult wraps a star and an error
-type ScraperResult struct {
-	List  map[string][]Result
-	Error error
-}
-
-func (e *Endpoint) ExecuteParallel(ctx context.Context, params map[string]string, resChan chan<- *ScraperResult) { // Execute will execute an Endpoint with the given params
-
-	currentPage, _ := strconv.Atoi(e.Pager["offset"])
-	lastPage, _ := strconv.Atoi(e.Pager["max"])
-
-	offsetHolder := e.Pager["offset_var"]
-	params[offsetHolder] = e.Pager["offset"]
-
-	limitHolder := e.Pager["limit_var"]
-	params[limitHolder] = e.Pager["limit"]
-
-	for k, v := range e.Parameters {
-		if _, ok := params[k]; !ok {
-			fmt.Printf("[WARNING] Parameters missing: k=%s, v=%s \n", k, v)
-		}
-	}
-
-	fmt.Println("params")
-	pp.Println(params)
-
-	for currentPage <= lastPage {
-		res, err := e.Execute(params)
-		if err != nil {
-			resChan <- &ScraperResult{
-				Error: err,
-				List:  nil,
-			}
-		} else {
-			resChan <- &ScraperResult{
-				Error: err,
-				List:  res,
-			}
-		}
-		fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
-		// Go to the next page
-		currentPage++
-		params[offsetHolder] = strconv.Itoa(currentPage)
-	}
-
-	// fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
-	close(resChan)
-}
-
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 
-	//if e.Debug {
-	// fmt.Println("endpoint handler config: ")
-	// pp.Println(e)
-	//}
+	if e.Debug {
+		fmt.Println("endpoint handler config: ")
+		pp.Println(e)
+	}
 
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println("url: ", url)
+	if e.Debug {
+		fmt.Println("url: ", url)
+	}
 
 	method := e.Method //default method
 	if method == "" {
@@ -269,7 +273,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Printf("\nResponse Time: %v", restyResp.Time())
 		fmt.Printf("\nResponse Received At: %v", restyResp.ReceivedAt())
 		fmt.Printf("\nResponse Body: %v", restyResp) // or resp.String() or string(resp.Body())
-		// resp
 	}
 
 	// GET request
@@ -301,9 +304,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	aggregate := make(map[string][]Result, 0)
 
-	// if e.Debug {
-	fmt.Println("e.Selector: ", e.Selector)
-	//}
+	if e.Debug {
+		fmt.Println("e.Selector: ", e.Selector)
+	}
 
 	// pp.Println(e)
 
@@ -329,13 +332,15 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
-		//if e.Debug {
-		pp.Print(mv)
-		//}
+		if e.Debug {
+			pp.Print(mv)
+		}
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
-			fmt.Println("mv.LeafPaths(): ")
-			pp.Println(mv.LeafPaths())
+			if e.Debug {
+				fmt.Println("mv.LeafPaths(): ")
+				pp.Println(mv.LeafPaths())
+			}
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
 			if e.Debug {
 				for _, v := range e.LeafPaths {
@@ -356,47 +361,49 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			}
 		}
 	case "json":
-		mxj.JsonUseNumber = true
 		var mv mxj.Map
 		var err error
+		mxj.JsonUseNumber = true
 		if e.Collection {
-			mv, err = mxj.NewMapJsonArrayReaderAll(resp.Body) // , "collection")
+			mv, err = mxj.NewMapJsonArrayReaderAll(resp.Body)
 		} else {
 			mv, err = mxj.NewMapJsonReaderAll(resp.Body)
 		}
 		if err != nil {
-			fmt.Println("NewMapJsonReaderAll: ", err)
+			if e.Debug {
+				fmt.Println("NewMapJsonReaderAll: ", err)
+			}
 			return nil, err
 		}
 		if e.ExtractPaths {
 			mxj.LeafUseDotNotation()
 			e.LeafPaths = leafPathsPatterns(mv.LeafPaths())
-			//fmt.Println("mv.LeafPaths(): ")
-			//pp.Println(mv.LeafPaths())
-			//if e.Debug {
-			for _, v := range e.LeafPaths {
-				fmt.Println("path:", v)
+			if e.Debug {
+				fmt.Println("mv.LeafPaths(): ")
+				pp.Println(mv.LeafPaths())
+				for _, v := range e.LeafPaths {
+					fmt.Println("path:", v)
+				}
 			}
-			//}
 		}
 		for b, s := range e.BlocksJSON {
-			pp.Println("s.Items: ", s.Items)
-			pp.Println("s.Details: ", s.Details)
-			// fmt.Println("resp.Body: ")
-			// pp.Println(mv)
+			if e.Debug {
+				pp.Println("s.Items: ", s.Items)
+				pp.Println("s.Details: ", s.Details)
+			}
 			if s.Items != "" {
 				r := e.extractMXJ(mv, s.Items, s.Details)
-				//if e.Debug {
-				pp.Println(r)
-				//}
+				if e.Debug {
+					pp.Println(r)
+				}
 				if r != nil {
 					aggregate[b] = r
 				}
 			}
-			//if e.Debug {
-			// fmt.Println(" - block_key: ", b)
-			// pp.Println(s)
-			//}
+			if e.Debug {
+				fmt.Println(" - block_key: ", b)
+				pp.Println(s)
+			}
 		}
 	case "rss":
 		// "https://github.com/kkdai/githubrss"

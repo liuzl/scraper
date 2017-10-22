@@ -196,12 +196,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for k, v := range r.URL.Query() {
 		values[k] = v[0]
 	}
-
 	var err error
 	res := make(map[string][]Result, 0)
-
-	// execute query
-	pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
+	if h.Debug {
+		pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
+	}
 	if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
 		ctx := context.Background()
 		resChan := make(chan *ScraperResult, endpoint.Concurrency)
@@ -218,24 +217,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 					totalResults = totalResults + len(v)
 				}
-				// fmt.Printf("res lenght: %d", len(res))
+				if h.Debug {
+					fmt.Printf("res length: %d", len(res))
+				}
 			} else {
 				totalErrors++
 			}
 		}
-		fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
-		// fmt.Printf("res lenght: %d", len(res))
-		// pp.Println(res)
+		if h.Debug {
+			fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
+		}
 
 	} else {
-
 		res, err = endpoint.Execute(values)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(jsonerr(err))
 			return
 		}
-
 	}
 
 	// encode as JSON
