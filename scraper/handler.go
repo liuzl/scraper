@@ -205,9 +205,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	enc.SetEscapeHTML(false)
 	enc.SetIndent("", "  ")
+
 	if err := enc.Encode(res); err != nil {
 		w.Write([]byte("JSON Error: " + err.Error()))
 	}
+
+	/*
+		var v interface{}
+		if endpoint.List == "" && len(res) == 1 {
+			v = res[0]
+		} else {
+			v = res
+		}
+		if err := enc.Encode(v); err != nil {
+			w.Write([]byte("JSON Error: " + err.Error()))
+		}
+	*/
+
 }
 
 // Endpoint will return the Handler's Endpoint from its Config

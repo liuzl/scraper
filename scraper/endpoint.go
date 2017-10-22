@@ -40,6 +40,7 @@ import (
 		"github.com/ynqa/word-embedding/validate"
 	*/)
 
+// https://github.com/jpillora/scraper/commit/0b5e5ce320ffaaaf86fb3ba9cc49458df3406a86
 // https://github.com/KKRainbow/segmentation-server/blob/master/main.go
 // https://github.com/mhausenblas/github-api-fetcher/blob/master/main.go
 
@@ -547,6 +548,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 				*/
 			} else {
 				results[0] = e.extractCss(sel, s.Details)
+				// results = append(results, e.extract(sel))
 			}
 
 			if results != nil {
