@@ -197,10 +197,7 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		}
 		return httpcache.NewTransport(cache)
 	case "staticfilecache":
-		cache, err := staticfilecache.New(basePath)
-		if err != nil {
-			fmt.Println("error: ", err)
-		}
+		cache := staticfilecache.New(basePath)
 		return httpcache.NewTransport(cache)
 	case "leveldbcache":
 		cache, err := leveldbcache.New(filepath.Join(basePath, "cache"))
