@@ -6,24 +6,39 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/birkelund/boltdbcache"
+	"github.com/cabify/go-couchdb"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
+	"github.com/gregjones/httpcache/leveldbcache"
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
+	"github.com/klaidliadon/go-couch-cache"
+	"github.com/klaidliadon/go-memcached"
+	"github.com/klaidliadon/go-redis-cache"
 	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/mxj"
+	"gopkg.in/redis.v3"
+	// "github.com/bradfitz/gomemcache/memcache"
+	// "github.com/gregjones/httpcache/memcache"
 	// "github.com/mikegleasonjr/forwardcache"
 	// "github.com/roscopecoltran/configor"
 )
 
-var transportCache *httpcache.Transport
-
-//var cache *httpcache.Cache
+var (
+	transportCache *httpcache.Transport
+	// httpCache      httpcache.Cache
+	// redisClient    *redis.Client
+	// couchdbClient  *couchdb.Client
+	// memcacheClient *memcache.Client
+)
 
 type Handler struct {
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
@@ -35,7 +50,6 @@ type Handler struct {
 	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
 	Log     bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
 	Debug   bool              `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	// transport *httpcache.Transport `opts:"-" json:"-" yaml:"-" toml:"-"`
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
@@ -165,15 +179,47 @@ func InitCache(cachePath string) {
 }
 
 func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transport {
-	// var cache *httpcache.Cache
-	if engine == "boltdbcache" {
-		cache, err := boltdbcache.New(basePath)
+	switch engine {
+	case "boltdbcache":
+		cache, err := boltdbcache.New(filepath.Join(basePath, "cache"))
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
-		// cache := boltdbcache.NewWithDB(d)
 		return httpcache.NewTransport(cache)
-	} else {
+	case "leveldbcache":
+		cache, err := leveldbcache.New(filepath.Join(basePath, "cache"))
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		return httpcache.NewTransport(cache)
+	case "couchdb":
+		trans := &http.Transport{
+			MaxIdleConnsPerHost: 10,
+			Proxy:               http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 60 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}
+		client, err := couchdb.NewClient("http://localhost:5984", trans)
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		cache := couchcache.New(client.DB("cache"))
+		cache.Indexes()
+		return httpcache.NewTransport(cache)
+	case "memcache":
+		cache := memcached.New("localhost:11211", time.Minute*10)
+		cache.Indexes()
+		return httpcache.NewTransport(cache)
+	case "redis":
+		client := redis.NewClient(&redis.Options{Addr: "127.0.0.1:6379"})
+		cache := rediscache.New(client, time.Second/3)
+		cache.Indexes()
+		return httpcache.NewTransport(cache)
+	case "diskv":
+	case "default":
 		d := diskv.New(diskv.Options{
 			BasePath:     basePath,
 			CacheSizeMax: 500 * 1024 * 250, // 10MB
@@ -181,8 +227,7 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		cache := diskcache.NewWithDiskv(d)
 		return httpcache.NewTransport(cache)
 	}
-	//pp.Println(cache)
-	//return httpcache.NewTransport(cache)
+	return nil
 }
 
 func getClient() *http.Client {

@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/geekypanda/httpcache"
+	// "github.com/geekypanda/httpcache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -202,7 +202,7 @@ func main() {
 	// h = scraper.NewRequestCacher(mux, "./shared/cache/scraper")
 	mux.Handle("/", h)
 
-	cachedMux := httpcache.Cache(mux, cacheDuration)
+	// cachedMux := httpcache.Cache(mux, cacheDuration)
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)
@@ -232,7 +232,7 @@ func main() {
 		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
 		log.Printf("Listening on: %s:%d", c.Host, c.Port)
 		// pp.Println(mux.)
-		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), cachedMux))
+		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
 
 	}
 
