@@ -29,6 +29,7 @@ import (
 	"github.com/klaidliadon/go-redis-cache"
 	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/mxj"
+	"github.com/victortrac/disks3cache"
 	"gopkg.in/redis.v3"
 	// "github.com/bradfitz/gomemcache/memcache"
 	// "github.com/gregjones/httpcache/memcache"
@@ -198,6 +199,16 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		return httpcache.NewTransport(cache)
 	case "staticfilecache":
 		cache := staticfilecache.New(basePath)
+		return httpcache.NewTransport(cache)
+	case "disks3cache":
+		cacheDir, err := ioutil.TempDir("", "myTempDir")
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		var cacheSize uint64
+		cacheSize = 512 // in megabytes
+		s3CacheURL := "s3://s3-us-west-2.amazonaws.com/my-bucket"
+		cache := disks3cache.New(cacheDir, cacheSize, s3CacheURL)
 		return httpcache.NewTransport(cache)
 	case "leveldbcache":
 		cache, err := leveldbcache.New(filepath.Join(basePath, "cache"))

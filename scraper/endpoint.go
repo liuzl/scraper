@@ -81,6 +81,8 @@ import (
 	- https://github.com/andrewstuart/goq
 */
 
+var cacheDuration = 3600 * time.Second
+
 func csvWriterTest() {
 	// Create `dump.csv` in `./shared/data` directory
 	csv, err := ccsv.NewCsvWriter("./shared/data/dump.csv")
@@ -292,8 +294,6 @@ func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will exec
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
 
-var cacheDuration = 3600 * time.Second
-
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 
 	if e.Debug {
@@ -322,8 +322,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 		body = strings.NewReader(s)
 	}
-
-	// cacheKey := slugifier.Slugify(fmt.Sprintf("%s_%s", url))
 
 	req, err := http.NewRequest(method, url, body) //create HTTP request
 	if err != nil {
@@ -364,7 +362,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	}
 
 	resp, err := getClient().Do(req)
-	// resp, err := http.DefaultClient.Do(req) //make backend HTTP request
 	if err != nil {
 		pp.Println(err)
 		return nil, err
