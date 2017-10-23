@@ -114,7 +114,7 @@ var cacheDuration = 3600 * time.Second
 
 func main() {
 
-	useGinWrap := false
+	useGinWrap := true
 	logger, errInit = zap.NewProduction()
 
 	h := &scraper.Handler{Log: true}
@@ -202,8 +202,6 @@ func main() {
 	// h = scraper.NewRequestCacher(mux, "./shared/cache/scraper")
 	mux.Handle("/", h)
 
-	// cachedMux := httpcache.Cache(mux, cacheDuration)
-
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)
 	}
@@ -224,14 +222,7 @@ func main() {
 
 	} else {
 
-		/*
-			mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Cache-Control", "max-age=3600")
-			}))
-		*/
-		// https://medium.com/@nate510/don-t-use-go-s-default-http-client-4804cb19f779
 		log.Printf("Listening on: %s:%d", c.Host, c.Port)
-		// pp.Println(mux.)
 		log.Fatal(http.ListenAndServe(c.Host+":"+strconv.Itoa(c.Port), mux))
 
 	}

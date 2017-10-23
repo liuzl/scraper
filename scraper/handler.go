@@ -13,11 +13,15 @@ import (
 	"strings"
 	"time"
 
+	ctx "golang.org/x/net/context"
+	"golang.org/x/oauth2"
+
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/gregjones/httpcache/leveldbcache"
+	"github.com/if1live/staticfilecache"
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
 	"github.com/klaidliadon/go-couch-cache"
@@ -170,18 +174,30 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 func NewCache(cachePath string) *httpcache.Transport {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	return newTransportWithDiskCache(cachePath, "")
+	return newTransportWithDiskCache(cachePath, "default")
 }
 
 func InitCache(cachePath string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	transportCache = newTransportWithDiskCache(cachePath, "")
+	transportCache = newTransportWithDiskCache(cachePath, "default")
+}
+
+func newTransportContext(cachePath string, cacheEngine string) ctx.Context {
+	transportCache = newTransportWithDiskCache(cachePath, cacheEngine)
+	c := &http.Client{Transport: transportCache}
+	return context.WithValue(context.Background(), oauth2.HTTPClient, c)
 }
 
 func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transport {
 	switch engine {
 	case "boltdbcache":
 		cache, err := boltdbcache.New(filepath.Join(basePath, "cache"))
+		if err != nil {
+			fmt.Println("error: ", err)
+		}
+		return httpcache.NewTransport(cache)
+	case "staticfilecache":
+		cache, err := staticfilecache.New(basePath)
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
@@ -210,6 +226,13 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		cache.Indexes()
 		return httpcache.NewTransport(cache)
 	case "memcache":
+		/*
+			if memcachedURL := os.Getenv("MEMCACHE_URL"); memcachedURL != "" {
+				return httpcache.NewTransport(memcache.New(memcachedURL, time.Minute*10)).Client()
+			} else {
+				return httpcache.NewTransport(httpcache.NewMemoryCache()).Client()
+			}
+		*/
 		cache := memcached.New("localhost:11211", time.Minute*10)
 		cache.Indexes()
 		return httpcache.NewTransport(cache)

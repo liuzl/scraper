@@ -2,22 +2,28 @@ package scraper
 
 import (
 	"bytes"
+	"crypto/md5"
+	"crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
+	"github.com/cnf/structhash"
+	"github.com/k0kubun/pp"
 	// "github.com/linkosmos/mapdecor"
 	// "github.com/toukii/jsnm"
 	// "github.com/byrnedo/mapcast"
 	// "github.com/spf13/cast"
-	"github.com/PuerkitoBio/goquery"
 	// "github.com/roscopecoltran/css2xpath"
 	/*
 		"github.com/rakanalh/goscrape"
@@ -142,6 +148,69 @@ func isJsonArray(s string) bool {
 	var js []interface{}
 	return json.Unmarshal([]byte(s), &js) == nil
 }
+
+func debugHttpReqResp(req *http.Request, resp *http.Response) {
+	reqDump, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		log.Fatalln("error while loging request", err)
+	}
+	fmt.Printf("--- REQUEST START ---\n%s\n--- REQUEST END ---", reqDump)
+	respDump, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		log.Fatalln("error while loging response", err)
+	}
+	fmt.Printf("--- RESPONSE START ---\n%s\n--- RESPONSE END ---", respDump)
+}
+
+func generateCacheKey(req *http.Request, debug bool) (string, error) {
+	reqBytes, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return "", errors.New("dump request")
+	}
+	if debug {
+		pp.Println(string(reqBytes))
+	}
+	return fmt.Sprintf("%s-%s-%x", req.Method, req.URL.String(), md5.Sum(reqBytes)), nil
+}
+
+type S struct {
+	Str string
+	Num int
+}
+
+// func getRequestHash(e *Endpoint) {
+//
+// }
+
+func generateStructhashTest() {
+	s := S{"hello", 123}
+
+	hash, err := structhash.Hash(s, 1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(hash)
+	// Prints: v1_41011bfa1a996db6d0b1075981f5aa8f
+
+	fmt.Println(structhash.Version(hash))
+	// Prints: 1
+
+	fmt.Printf("%x\n", structhash.Md5(s, 1))
+	// Prints: 41011bfa1a996db6d0b1075981f5aa8f
+
+	fmt.Printf("%x\n", structhash.Sha1(s, 1))
+	// Prints: 5ff72df7212ce8c55838fb3ec6ad0c019881a772
+
+	fmt.Printf("%x\n", md5.Sum(structhash.Dump(s, 1)))
+	// Prints: 41011bfa1a996db6d0b1075981f5aa8f
+
+	fmt.Printf("%x\n", sha1.Sum(structhash.Dump(s, 1)))
+	// Prints: 5ff72df7212ce8c55838fb3ec6ad0c019881a772
+}
+
+// https://github.com/thbourlove/restc/blob/master/transport.go
+// https://github.com/lox/package-proxy/blob/master/cache/http.go#L39
+// https://golang.org/pkg/net/http/httputil/#example_DumpRequest
 
 /*
 func mapdecor() {

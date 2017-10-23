@@ -2,6 +2,8 @@ package scraper
 
 import (
 	"context"
+	"crypto/md5"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
+	"github.com/cnf/structhash"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
 	"github.com/jeevatkm/go-model"
@@ -22,7 +25,6 @@ import (
 	"github.com/mmcdole/gofeed"
 	"github.com/roscopecoltran/mxj"
 	"golang.org/x/net/html"
-	// "github.com/Machiel/slugify"
 	// "github.com/ctessum/requestcache"
 	// "github.com/otiai10/cachely"
 	// "github.com/buger/jsonparser"
@@ -223,6 +225,36 @@ func enhancedGet() {
 }
 */
 
+func (e *Endpoint) GetHash(req *http.Request, crypto string) (string, error) { // Execute will execute an Endpoint with the given params
+
+	hash, err := structhash.Hash(e, 1)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("hash: ", hash)
+
+	cacheKey, err := generateCacheKey(req, e.Debug)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("cacheKey: ", cacheKey)
+	cacheSlug := slugifier.Slugify(cacheKey)
+	fmt.Println("cacheSlug: ", cacheSlug)
+
+	fmt.Println(structhash.Version(hash))
+	if crypto == "md5" {
+		fmt.Printf("structhash.Md5: %x\n", structhash.Md5(e, 1))
+		fmt.Printf(" md5.Sum: %x\n", md5.Sum(structhash.Dump(e, 1)))
+	}
+
+	if crypto == "sha1" {
+		fmt.Printf("structhash.Sha1: %x\n", structhash.Sha1(e, 1))
+		fmt.Printf("sha1.Sum: %x\n", sha1.Sum(structhash.Dump(e, 1)))
+	}
+	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
+}
+
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 
 	if e.Debug {
@@ -292,6 +324,20 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	cacheKey, err := generateCacheKey(req, e.Debug)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("cacheKey: ", cacheKey)
+	generateStructhashTest()
+	endpointHash, err := e.GetHash(req, "sha1")
+	if err != nil {
+		pp.Println(err)
+		return nil, err
+	}
+	fmt.Println("endpointHash: ", endpointHash)
 
 	if e.Debug { //show received headers
 		fmt.Println("Response Headers: ")
