@@ -5,12 +5,17 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
@@ -24,6 +29,7 @@ import (
 	"github.com/mgbaozi/gomerge"
 	"github.com/mmcdole/gofeed"
 	"github.com/roscopecoltran/mxj"
+	"github.com/tsak/concurrent-csv-writer"
 	"golang.org/x/net/html"
 	// "github.com/ctessum/requestcache"
 	// "github.com/otiai10/cachely"
@@ -74,6 +80,32 @@ import (
 	- https://github.com/suwhs/go-goquery-utils/tree/master/pipes
 	- https://github.com/andrewstuart/goq
 */
+
+func csvWriterTest() {
+	// Create `dump.csv` in `./shared/data` directory
+	csv, err := ccsv.NewCsvWriter("./shared/data/dump.csv")
+	if err != nil {
+		panic("Could not open `sample.csv` for writing")
+	}
+
+	// Flush pending writes and close file upon exit of main()
+	defer csv.Close()
+
+	count := 99
+
+	done := make(chan bool)
+
+	for i := count; i > 0; i-- {
+		go func(i int) {
+			csv.Write([]string{strconv.Itoa(i), "bottles", "of", "beer"})
+			done <- true
+		}(i)
+	}
+
+	for i := 0; i < count; i++ {
+		<-done
+	}
+}
 
 func typedTest(path string) {
 	// directly from a map[string]interace{}
@@ -225,23 +257,28 @@ func enhancedGet() {
 }
 */
 
-func (e *Endpoint) GetHash(req *http.Request, crypto string) (string, error) { // Execute will execute an Endpoint with the given params
+func (e *Endpoint) getCacheKey(req *http.Request, debug bool) (string, string, string, error) {
+	reqBytes, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		return "", "", "", errors.New("dump request")
+	}
+	if debug {
+		pp.Println(string(reqBytes))
+	}
+	cacheKey := fmt.Sprintf("%s_%x-%s_%s", e.hash, md5.Sum(reqBytes), req.Method, req.URL.String())
+	cacheSlug := slugifier.Slugify(cacheKey)
+	fmt.Println("cacheSlug: ", cacheSlug)
+	cacheFile := fmt.Sprintf("./shared/cache/internal/%s.json", cacheSlug)
+	return cacheKey, cacheSlug, cacheFile, nil
+}
+
+func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will execute an Endpoint with the given params
 
 	hash, err := structhash.Hash(e, 1)
 	if err != nil {
 		return "", err
 	}
 	fmt.Println("hash: ", hash)
-
-	cacheKey, err := generateCacheKey(req, e.Debug)
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Println("cacheKey: ", cacheKey)
-	cacheSlug := slugifier.Slugify(cacheKey)
-	fmt.Println("cacheSlug: ", cacheSlug)
-
 	fmt.Println(structhash.Version(hash))
 	if crypto == "md5" {
 		fmt.Printf("structhash.Md5: %x\n", structhash.Md5(e, 1))
@@ -254,6 +291,8 @@ func (e *Endpoint) GetHash(req *http.Request, crypto string) (string, error) { /
 	}
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
+
+var cacheDuration = 3600 * time.Second
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 
@@ -313,9 +352,16 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Printf("\nResponse Body: %v", restyResp) // or resp.String() or string(resp.Body())
 	}
 
-	// GET request
-	// res, err := http.Get(url)
-	// res, err := cachely.Get(url)
+	_, _, cacheFile, err := e.getCacheKey(req, e.Debug)
+	if err != nil {
+		return nil, err
+	}
+
+	isCacheExpired := cacheValid(cacheFile, cacheDuration)
+	fmt.Println("isCacheExpired: ", isCacheExpired, ", cacheFile: ", cacheFile)
+	if !isCacheExpired {
+		return cacheContent(cacheFile)
+	}
 
 	resp, err := getClient().Do(req)
 	// resp, err := http.DefaultClient.Do(req) //make backend HTTP request
@@ -324,20 +370,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	cacheKey, err := generateCacheKey(req, e.Debug)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println("cacheKey: ", cacheKey)
-	generateStructhashTest()
-	endpointHash, err := e.GetHash(req, "sha1")
-	if err != nil {
-		pp.Println(err)
-		return nil, err
-	}
-	fmt.Println("endpointHash: ", endpointHash)
 
 	if e.Debug { //show received headers
 		fmt.Println("Response Headers: ")
@@ -357,6 +389,16 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if e.Debug || resp.StatusCode != 200 { //show results
 		logf("%s %s => %s", method, url, resp.Status)
 	}
+
+	/*
+		generateStructhashTest()
+		endpointHash, err := e.GetHash(req, "sha1")
+		if err != nil {
+			pp.Println(err)
+			return nil, err
+		}
+		fmt.Println("endpointHash: ", endpointHash)
+	*/
 
 	aggregate := make(map[string][]Result, 0)
 
@@ -582,7 +624,48 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	default:
 		fmt.Println("unkown selector type")
 	}
+
+	err = cacheResponse(cacheFile, aggregate) // dump response
+	if err != nil {
+		return nil, err
+	}
+
 	return aggregate, nil
+}
+
+func cacheValid(cacheFile string, maxAge time.Duration) bool {
+	fi, err := os.Stat(cacheFile)
+	if err != nil {
+		return true
+	}
+	expireTime := fi.ModTime().Add(maxAge)
+	fmt.Println("maxAge: ", maxAge)
+	fmt.Println("expireTime: ", expireTime)
+	fmt.Println("expired: ", time.Now().After(expireTime))
+	return time.Now().After(expireTime)
+}
+
+func cacheContent(cacheFile string) (map[string][]Result, error) {
+	aggregate := make(map[string][]Result, 0)
+	file, err := ioutil.ReadFile(cacheFile)
+	if err != nil {
+		fmt.Printf("File error: %v\n", err)
+		return nil, err
+	}
+	json.Unmarshal(file, &aggregate)
+	return aggregate, nil
+}
+
+func cacheResponse(cacheSlug string, aggregate map[string][]Result) error {
+	dump, err := json.MarshalIndent(aggregate, "", "    ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(cacheSlug, dump, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func leafPathsPatterns(input []string) []string {

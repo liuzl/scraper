@@ -66,7 +66,8 @@ type Endpoint struct {
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                         `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	ready              bool                              `json:"-" yaml:"-" toml:"-"`
+	ready              bool                              `etcd:"-" json:"-" yaml:"-" toml:"-"`
+	hash               string                            `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	EtcdKey            string                            `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Connections        []Connection                      `json:"-" yaml:"-" toml:"-"`
 	Source             string                            `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`

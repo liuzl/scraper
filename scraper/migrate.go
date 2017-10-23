@@ -293,6 +293,10 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			}
 		}
 		e.ready = true
+		e.hash, err = e.getHash("sha1")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

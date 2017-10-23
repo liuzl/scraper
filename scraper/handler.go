@@ -166,7 +166,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 	// c.Transport =
 	// InitCache("./shared/cache/test.boltdb")
-	InitCache("./shared/cache")
+	InitCache("./shared/cache/external")
 
 	h.Config = c //replace config
 	return nil
@@ -174,12 +174,12 @@ func (h *Handler) LoadConfig(b []byte) error {
 
 func NewCache(cachePath string) *httpcache.Transport {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	return newTransportWithDiskCache(cachePath, "default")
+	return newTransportWithDiskCache(cachePath, "diskv")
 }
 
 func InitCache(cachePath string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	transportCache = newTransportWithDiskCache(cachePath, "default")
+	transportCache = newTransportWithDiskCache(cachePath, "diskv")
 }
 
 func newTransportContext(cachePath string, cacheEngine string) ctx.Context {
@@ -239,7 +239,6 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		cache.Indexes()
 		return httpcache.NewTransport(cache)
 	case "diskv":
-	case "default":
 		d := diskv.New(diskv.Options{
 			BasePath:     basePath,
 			CacheSizeMax: 500 * 1024 * 250, // 10MB
@@ -266,7 +265,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8") // always JSON!
-	w.Header().Set("Cache-Control", "max-age=3600")
+	// w.Header().Set("Cache-Control", "max-age=3600")
 
 	if r.URL.Path == "" || r.URL.Path == "/" { // admin actions
 		get := false
