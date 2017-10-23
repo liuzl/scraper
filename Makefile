@@ -1,11 +1,11 @@
 SWAGGER_UI_VERSION=3.3.2
 
 run:
-	@go run main.go $(CURDIR)/shared/conf.d/providers.list.json
+	@go run main.go $(CURDIR)/shared/conf.d/providers.json
 
 build:
 	@go build -o $(CURDIR)/dist/scraper-local main.go
-	@echo "$ ./dist/scraper-local ./shared/conf.d/providers.list.json"
+	@echo "$ ./dist/scraper-local ./shared/conf.d/providers.json"
 	@echo ""
 	@./dist/scraper-local ./shared/conf.d/providers.list.json
 

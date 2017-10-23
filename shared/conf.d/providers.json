@@ -45,11 +45,12 @@
       "collection": true,
       "pager": {
         "disabled": "false",
-        "max": "3",
+        "max": "500",
         "offset": "1",
         "limit": "100",
         "offset_var": "page",
-        "limit_var": "per_page"
+        "limit_var": "per_page",
+        "limit_checker": "per_page"
       },
       "selector": "json",
       "method": "GET",

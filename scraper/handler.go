@@ -1,6 +1,8 @@
 package scraper
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,13 +10,10 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
-
-	ctx "golang.org/x/net/context"
-	"golang.org/x/oauth2"
 
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
@@ -30,8 +29,9 @@ import (
 	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/mxj"
 	"github.com/victortrac/disks3cache"
+	ctx "golang.org/x/net/context"
+	"golang.org/x/oauth2"
 	"gopkg.in/redis.v3"
-	// "github.com/bradfitz/gomemcache/memcache"
 	// "github.com/gregjones/httpcache/memcache"
 	// "github.com/mikegleasonjr/forwardcache"
 	// "github.com/roscopecoltran/configor"
@@ -174,12 +174,10 @@ func (h *Handler) LoadConfig(b []byte) error {
 }
 
 func NewCache(cachePath string) *httpcache.Transport {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	return newTransportWithDiskCache(cachePath, "diskv")
 }
 
 func InitCache(cachePath string) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	transportCache = newTransportWithDiskCache(cachePath, "diskv")
 }
 
@@ -262,11 +260,19 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 
 func getClient() *http.Client {
 	c := transportCache.Client()
-	// c.Timeout = time.Duration(30 * time.Second) //TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
+	// c.Timeout = time.Duration(30 * time.Second)
+	// TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
 	return c
 }
 
+func FaviconHandler(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "./shared/data/favicon.ico")
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	// oauth2 ?!
+
 	if h.Auth != "" { // basic auth
 		u, p, _ := r.BasicAuth()
 		if h.Auth != u+":"+p {
@@ -276,7 +282,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8") // always JSON!
-	// w.Header().Set("Cache-Control", "max-age=3600")
+	// w.Header().Set("Content-Encoding", "gzip")
+	// w.Header().Set("Cache-Control", "max-age=120")
 
 	if r.URL.Path == "" || r.URL.Path == "/" { // admin actions
 		get := false
@@ -323,58 +330,133 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
 	}
 
-	if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
-		ctx := context.Background()
-		resChan := make(chan *ScraperResult, endpoint.Concurrency)
-		go endpoint.ExecuteParallel(ctx, values, resChan)
-		totalResults, totalErrors := 0, 0
-		for endpointResult := range resChan {
-			if endpointResult.Error == nil {
-				for k, v := range endpointResult.List {
-					if _, ok := res[k]; !ok {
-						res[k] = make([]Result, 0)
-					}
-					for _, r := range v {
-						res[k] = append(res[k], r)
-					}
-					totalResults = totalResults + len(v)
-				}
-				if h.Debug {
-					fmt.Printf("res length: %d", len(res))
-				}
-			} else {
-				totalErrors++
-			}
-		}
-		if h.Debug {
-			fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
-		}
+	_, _, cacheFile, err := endpoint.getCacheKey(r, h.Debug)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(jsonerr(err))
+		return
+	}
 
-	} else {
-		res, err = endpoint.Execute(values)
+	isCacheExpired := cacheExpired(cacheFile, 3600*time.Second)
+	//if h.Debug {
+	fmt.Printf("[HANDLER] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
+	//}
+	if !isCacheExpired {
+		//if h.Debug {
+		fmt.Printf("reading cache content: %s \n", cacheFile)
+		file, err := os.Open(cacheFile)
 		if err != nil {
+			fmt.Println("os.Open, error: ", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(jsonerr(err))
 			return
 		}
-	}
-	enc := json.NewEncoder(w) // encode as JSON
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(res); err != nil {
-		w.Write([]byte("JSON Error: " + err.Error()))
-	}
-	/*
-		var v interface{}
-		if endpoint.List == "" && len(res) == 1 {
-			v = res[0]
-		} else {
-			v = res
+		defer file.Close()
+
+		b, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Println("ioutil.ReadAll, error: ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(jsonerr(err))
+			return
 		}
-		if err := enc.Encode(v); err != nil {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Write(gzipFast(&b))
+		return
+	} else {
+		//if h.Debug {
+		fmt.Printf("new content to fetch/cache: %s \n", cacheFile)
+		//}
+		if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
+			ctx := context.Background()
+			resChan := make(chan *ScraperResult, endpoint.Concurrency)
+			go endpoint.ExecuteParallel(ctx, values, resChan)
+			totalResults, totalErrors := 0, 0
+			for endpointResult := range resChan {
+				if endpointResult.Error == nil {
+					for k, v := range endpointResult.List {
+						if _, ok := res[k]; !ok {
+							res[k] = make([]Result, 0)
+						}
+						for _, r := range v {
+							res[k] = append(res[k], r)
+						}
+						totalResults = totalResults + len(v)
+					}
+					//if h.Debug {
+					fmt.Printf("res length: %d \n", len(res))
+					//}
+				} else {
+					totalErrors++
+				}
+			}
+			//if h.Debug {
+			fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
+			//}
+		} else {
+			res, err = endpoint.Execute(values)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write(jsonerr(err))
+				return
+			}
+			fmt.Printf("totalResults: %d \n", len(res["result"]))
+		}
+		//if h.Debug {
+		fmt.Println("[OUTPUT] isCacheExpired: ", isCacheExpired, ", cacheFile: ", cacheFile)
+		//if h.Debug {}
+		if len(res) > 0 {
+			err = cacheResponse(cacheFile, res) // dump response
+			if err != nil {
+				return
+			}
+			// if h.Debug {
+			fmt.Printf("new content cached to file: %s\n", cacheFile)
+			// }
+		}
+
+		enc := json.NewEncoder(w) // encode as JSON
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(res); err != nil {
 			w.Write([]byte("JSON Error: " + err.Error()))
 		}
-	*/
+
+		/*
+			writer, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+			if err != nil {
+				// Your error handling
+				return
+			}
+
+			defer writer.Close()
+			writer.Write(enc)
+		*/
+
+		/*
+			var v interface{}
+			if endpoint.List == "" && len(res) == 1 {
+				v = res[0]
+			} else {
+				v = res
+			}
+			if err := enc.Encode(v); err != nil {
+				w.Write([]byte("JSON Error: " + err.Error()))
+			}
+		*/
+	}
+	// fmt.Fprintf(w, "luc")
+}
+
+func gzipFast(a *[]byte) []byte {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write(*a); err != nil {
+		gz.Close()
+		panic(err)
+	}
+	gz.Close()
+	return b.Bytes()
 }
 
 // Endpoint will return the Handler's Endpoint from its Config

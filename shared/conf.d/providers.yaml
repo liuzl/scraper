@@ -8,19 +8,20 @@ etcd:
   disabled: false
   debug: false
   init_check: true
+  root_key: sniperkit
 env:
   debug: true
   files:
   - ".env"
 routes:
 - route: "/github/stars"
-  debug: true
+  debug: false
   disabled: false
   extract_paths: true
   name: github-stars
   provider: github.com
   base_url: https://api.github.com
-  url: "/users/{{username}}/starred?per_page=5&page=1&order=desc&direction=desc"
+  url: "/users/{{username}}/starred?per_page={{per_page}}&page={{page}}&order=desc&direction=desc"
   examples:
     docs:
       desc: ListStarred lists all the repos starred by a user.
@@ -32,6 +33,15 @@ routes:
       desc: ''
       link: http://localhost:3000/github/search?query=dlib
   timeout: 3
+  concurrency: 20
+  collection: true
+  pager:
+    disabled: 'false'
+    max: '3'
+    offset: '1'
+    limit: '100'
+    offset_var: page
+    limit_var: per_page
   selector: json
   method: GET
   headers:
@@ -54,16 +64,16 @@ routes:
         - owner.avatar_url
         - owner.id
         - owner.login
-        product: full_name
+        full_name: full_name
         topics: topics
 - route: "/github/search"
-  debug: true
+  debug: false
   disabled: false
   extract_paths: true
   name: github-search
   provider: github.com
   base_url: https://api.github.com
-  url: "/search/repositories?q={{query}}&per_page=3&page=1&order=desc&sort=stars"
+  url: "/search/repositories?q={{query}}&per_page={{per_page}}&page={{page}}&order=desc&sort=stars"
   examples:
     remote:
       desc: ''
@@ -71,17 +81,35 @@ routes:
     local:
       desc: ''
       link: http://localhost:3000/github/search?query=dlib
+  concurrency: 20
+  pager:
+    disabled: 'false'
+    max: '10'
+    offset: '1'
+    limit: '100'
+    offset_var: page
+    limit_var: per_page
   timeout: 3
   selector: json
   method: GET
   headers:
     Authorization: " token {{GITHUB_TOKEN}}"
     Accept: application/vnd.github.mercy-preview+json
+  parameters:
+    per_page:
+      default: '100'
+      max: '100'
+      type: query_string
+    page:
+      default: 1
+      max: 10
+      type: query_string
   openapi:
     defs:
     - link: ''
       version: 3
   resp_headers_intercept:
+  - Link
   - X-Github-Media-Type
   - X-Ratelimit-Limit
   - X-Ratelimit-Remaining
@@ -97,10 +125,10 @@ routes:
         - owner.avatar_url
         - owner.id
         - owner.login
-        product: full_name
+        project: full_name
         topics: topics
 - route: "/github/notifications"
-  debug: true
+  debug: false
   disabled: false
   extract_paths: true
   name: github-notifications-rss
@@ -129,7 +157,7 @@ routes:
         - author.uri
         - author.email
 - route: "/google/search"
-  debug: true
+  debug: false
   disabled: true
   name: google-search
   provider: google.com
@@ -156,7 +184,7 @@ routes:
         - a
         - "@href"
 - route: "/ccc-tv"
-  debug: true
+  debug: false
   disabled: true
   name: ccc-tv
   provider: media.ccc.de
@@ -277,7 +305,7 @@ routes:
         - div[@class='entry'] p a[class='title']
         - "@href"
 - route: "/bing/news"
-  debug: true
+  debug: false
   base_url: https://www.bing.com
   provider: bing.com
   method: GET
@@ -297,7 +325,7 @@ routes:
         - div[class=t_t] a
         - "@href"
 - route: "/bing"
-  debug: true
+  debug: false
   strict_mode: true
   base_url: https://www.bing.com
   provider: bing.com
@@ -322,7 +350,7 @@ routes:
         - li a
         - "@href"
 - route: "/google/play/apps"
-  debug: true
+  debug: false
   selector: css
   name: google play apps
   provider: google.com
@@ -357,7 +385,7 @@ routes:
         url:
         - "//a[@class='post__title_link']/@href"
 - route: "/google/play/movies"
-  debug: true
+  debug: false
   name: google play movies
   provider: google.com
   method: GET
@@ -390,7 +418,7 @@ routes:
         url:
         - "//a[@class='title']/@href"
 - route: "/google/play/music"
-  debug: true
+  debug: false
   name: google play music
   base_url: https://play.google.com
   provider: google.com
@@ -423,7 +451,7 @@ routes:
         url:
         - "//a[@class='title']/@href"
 - route: "/google/scholar"
-  debug: true
+  debug: false
   selector: css
   provider: google.com
   name: Google Scholar

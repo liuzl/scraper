@@ -220,19 +220,23 @@ func (e *Endpoint) ExecuteParallel(ctx context.Context, params map[string]string
 				List:  nil,
 			}
 		} else {
-			resChan <- &ScraperResult{
-				Error: err,
-				List:  res,
+			if len(res) == 0 {
+				lastPage = currentPage
+				break
+			} else {
+				resChan <- &ScraperResult{
+					Error: err,
+					List:  res,
+				}
 			}
 		}
-		if e.Debug {
-			fmt.Println("currentPage: ", currentPage, "lastPage: ", lastPage)
-		}
-		// Go to the next page
-		currentPage++
+		//if e.Debug {
+		fmt.Println("res count: ", len(res), ", currentPage: ", currentPage, ", lastPage: ", lastPage)
+		//}
+		currentPage++ // Go to the next page
 		params[offsetHolder] = strconv.Itoa(currentPage)
 	}
-
+	fmt.Println("closing resChan...")
 	close(resChan)
 }
 
@@ -355,8 +359,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		return nil, err
 	}
 
-	isCacheExpired := cacheValid(cacheFile, cacheDuration)
-	fmt.Println("isCacheExpired: ", isCacheExpired, ", cacheFile: ", cacheFile)
+	isCacheExpired := cacheExpired(cacheFile, cacheDuration)
+	fmt.Printf("[ENDPOINT] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
 	if !isCacheExpired {
 		return cacheContent(cacheFile)
 	}
@@ -385,17 +389,10 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 
 	if e.Debug || resp.StatusCode != 200 { //show results
 		logf("%s %s => %s", method, url, resp.Status)
-	}
-
-	/*
-		generateStructhashTest()
-		endpointHash, err := e.GetHash(req, "sha1")
-		if err != nil {
-			pp.Println(err)
-			return nil, err
+		if resp.StatusCode == 403 {
+			return nil, errors.New("Unauthorized request")
 		}
-		fmt.Println("endpointHash: ", endpointHash)
-	*/
+	}
 
 	aggregate := make(map[string][]Result, 0)
 
@@ -622,15 +619,17 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("unkown selector type")
 	}
 
-	err = cacheResponse(cacheFile, aggregate) // dump response
-	if err != nil {
-		return nil, err
+	if len(aggregate) > 0 {
+		err = cacheResponse(cacheFile, aggregate) // dump response
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return aggregate, nil
 }
 
-func cacheValid(cacheFile string, maxAge time.Duration) bool {
+func cacheExpired(cacheFile string, maxAge time.Duration) bool {
 	fi, err := os.Stat(cacheFile)
 	if err != nil {
 		return true
@@ -640,6 +639,16 @@ func cacheValid(cacheFile string, maxAge time.Duration) bool {
 	fmt.Println("expireTime: ", expireTime)
 	fmt.Println("expired: ", time.Now().After(expireTime))
 	return time.Now().After(expireTime)
+}
+
+func cacheContentRaw(cacheFile string) ([]byte, error) {
+	file, err := os.Open(cacheFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	b, err := ioutil.ReadAll(file)
+	return b, nil
 }
 
 func cacheContent(cacheFile string) (map[string][]Result, error) {
@@ -654,7 +663,8 @@ func cacheContent(cacheFile string) (map[string][]Result, error) {
 }
 
 func cacheResponse(cacheSlug string, aggregate map[string][]Result) error {
-	dump, err := json.MarshalIndent(aggregate, "", "    ")
+	dump, err := json.Marshal(aggregate)
+	// dump, err := json.MarshalIndent(aggregate, "", "    ")
 	if err != nil {
 		return err
 	}

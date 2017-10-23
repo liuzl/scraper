@@ -111,6 +111,10 @@ func jsonerr(err error) []byte {
 	return []byte(`{"error":"` + err.Error() + `"}`)
 }
 
+func jsoncache(content []byte) []byte {
+	return []byte(content)
+}
+
 func logf(format string, args ...interface{}) {
 	log.Printf("[scraper] "+format, args...)
 }

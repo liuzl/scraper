@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -114,7 +115,9 @@ var cacheDuration = 3600 * time.Second
 
 func main() {
 
-	useGinWrap := true
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	useGinWrap := false
 	logger, errInit = zap.NewProduction()
 
 	h := &scraper.Handler{Log: true}
@@ -201,6 +204,8 @@ func main() {
 	// scraper.SeedAlexaTop1M()
 	// h = scraper.NewRequestCacher(mux, "./shared/cache/scraper")
 	mux.Handle("/", h)
+
+	mux.HandleFunc("/favicon.ico", scraper.FaviconHandler)
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)
