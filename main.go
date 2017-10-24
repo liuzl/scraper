@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	// "github.com/geekypanda/httpcache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -25,6 +24,9 @@ import (
 	"github.com/roscopecoltran/scraper/scraper"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
+	// "github.com/valyala/fasthttp"
+	// "github.com/geekypanda/httpcache"
+	// "github.com/meission/router"
 	// "github.com/go-zoo/bone"
 	// "github.com/birkelund/boltdbcache"
 	// "golang.org/x/oauth2"

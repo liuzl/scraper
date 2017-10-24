@@ -218,6 +218,52 @@
       }
     },
     {
+      "route": "/deezer",
+      "debug": false,
+      "disabled": true,
+      "cache": true,
+      "name": "deezer",
+      "provider": "deezer.com",
+      "base_url": "https://api.deezer.com",
+      "url": "/search?q={{query}}",
+      "timeout": 3,
+      "concurrency": 3,
+      "pager": {
+        "disabled": "false",
+        "max": "10",
+        "offset": "1",
+        "limit": "100",
+        "offset_var": "index"
+      },
+      "examples": {
+        "remote": {
+          "desc": "",
+          "link": "https://api.deezer.com/search?q=justice&index=0"
+        },
+        "local": {
+          "desc": "",
+          "link": "http://localhost:3000/deezer?query=justice"
+        }
+      },
+      "timeout": 3,
+      "selector": "json",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": true,
+          "items": "data",
+          "details": {
+            "title": "title",
+            "content": [
+              "artist.name",
+              "album.title"
+            ],
+            "url": "link"
+          }
+        }
+      }
+    },
+    {
       "route": "/google/search",
       "debug": false,
       "disabled": true,
