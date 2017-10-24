@@ -264,6 +264,44 @@
       }
     },
     {
+      "route": "/9docu",
+      "debug": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "golanglibs",
+      "provider": "9docu.com",
+      "base_url": "http://9docu.com",
+      "method": "GET",
+      "concurrency": 10,
+      "url": "/page/{{page}}/?s={{query}}",
+      "pager": {
+        "max": "10",
+        "offset": "1",
+        "offset_var": "page"
+      },
+      "timeout": 3,
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "strict_mode": false,
+          "items": ".item-post",
+          "count": "i[class='count']",
+          "details": {
+            "title": ".entry-title a",
+            "desc": "p:nth-child(3)",
+            "img": [
+              "img",
+              "@src"
+            ],
+            "url": [
+              ".entry-title a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+    {
       "route": "/golanglibs",
       "debug": true,
       "strict_mode": true,

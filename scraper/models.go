@@ -42,6 +42,7 @@ type Config struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
 	Disabled        bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Cache           CacheConfig `gorm:"-" help:"Cache handler opts" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 	Env             EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
 	Etcd            EtcdConfig  `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
 	Port            int         `default:"3000" json:"port,omitempty" yaml:"port,omitempty" toml:"port,omitempty"`
@@ -50,6 +51,15 @@ type Config struct {
 	Migrate         bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
 	Debug           bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	Routes          []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+}
+
+type CacheConfig struct {
+	Disabled       bool          `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Engine         string        `json:"engine,omitempty" yaml:"engine,omitempty" toml:"engine,omitempty"`
+	ListenAddr     string        `json:"listen_addr,omitempty" yaml:"listen_addr,omitempty" toml:"listen_addr,omitempty"`
+	ExpirationTime time.Duration `json:"expiration_time,omitempty" yaml:"expiration_time,omitempty" toml:"expiration_time,omitempty"`
+	PrefixPath     string        `json:"prefix_path,omitempty" yaml:"prefix_path,omitempty" toml:"prefix_path,omitempty"`
+	Debug          bool          `default:"false" help:"Enable debug output for env vars processing" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 type EnvConfig struct {
@@ -66,6 +76,7 @@ type Endpoint struct {
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                         `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Cache              bool                              `etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 	ready              bool                              `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	hash               string                            `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	EtcdKey            string                            `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
