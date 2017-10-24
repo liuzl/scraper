@@ -602,10 +602,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 						results = append(results, r)
 					} else if len(r) > 0 && !e.StrictMode {
 						results = append(results, r)
+					} else if e.Debug {
+						logf("excluded #%d: has %d fields, expected %d", i, len(r), len(s.Details))
 					}
-					// else if e.Debug {
-					logf("excluded #%d: has %d fields, expected %d", i, len(r), len(s.Details))
-					//}
 				})
 				/*
 					g := goose.New()

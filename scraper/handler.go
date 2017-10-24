@@ -75,9 +75,12 @@ func (h *Handler) GetConfigPaths(path string) []string {
 	mv, err := mxj.NewMapJson(b)
 	if err != nil {
 		fmt.Println("NewMapJson, error: ", err)
+		return paths
 	}
-	fmt.Println("NewMapJson, jdata:", string(b))
-	fmt.Printf("NewMapJson, mv: \n %#v\n", mv)
+	if h.Debug {
+		fmt.Println("NewMapJson, jdata:", string(b))
+		fmt.Printf("NewMapJson, mv: \n %#v\n", mv)
+	}
 	mxj.LeafUseDotNotation()
 	paths = mv.LeafPaths()
 	return paths
@@ -130,7 +133,8 @@ func (h *Handler) LoadConfig(b []byte) error {
 			if h.Debug {
 				logf("Loaded endpoint: /%s", e.Route)
 			}
-			e.Cache = false
+			// if
+			// e.Cache = true
 			Endpoints.Routes = append(Endpoints.Routes, e.Route)
 			if len(h.Headers) > 0 && h.Debug { // Copy the Header attributes (only if they are not yet set)
 				fmt.Printf("h.Headers, len=%d:\n", len(h.Headers))
@@ -267,7 +271,7 @@ func getClient() *http.Client {
 }
 
 func FaviconHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./shared/data/favicon.ico")
+	http.ServeFile(w, r, "./shared/www/favicon.ico")
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

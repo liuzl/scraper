@@ -213,6 +213,7 @@ func main() {
 
 	if useGinWrap { // With GIN
 
+		gin.SetMode(gin.ReleaseMode)
 		r := gin.Default()
 		store := persistence.NewInMemoryStore(60 * time.Second)
 		if h.Config.Debug {
