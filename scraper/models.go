@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -15,8 +16,20 @@ import (
 
 // WEB SCRAPER ///////////////////////////////////////////////////////////////
 
-// Result represents a result
-type Result map[string]interface{}
+type Result map[string]interface{} // Result represents a result
+
+type BaseConfig struct {
+	sync.Mutex
+	v2KeysUrl  string
+	serviceUrl string
+	foo        string
+	Port       int
+}
+
+type SimpleNode struct {
+	Key   string
+	Value string
+}
 
 // Create a GORM-backend model
 type Provider struct {

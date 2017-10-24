@@ -6,7 +6,7 @@
   "dashboard": true,
   "etcd": {
     "disabled": false,
-    "debug": false,
+    "debug": true,
     "init_check": true,
     "root_key": "sniperkit"
   },

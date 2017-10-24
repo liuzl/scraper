@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +16,7 @@ import (
 	"github.com/coreos/etcd/pkg/transport"
 	"github.com/iancoleman/strcase"
 	"github.com/k0kubun/pp"
+	"github.com/oleiade/reflections"
 	"github.com/roscopecoltran/e3ch"
 	"golang.org/x/net/context"
 	// "github.com/fatih/structs"
@@ -71,6 +72,7 @@ var (
 	scraperRegex            = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper")
 	scraperParamRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)")
 	scraperGroupRegex       = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/([^/]+)/([^/]+)")
+	scraperExtractRegex     = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/extract/([^/]+)")
 	scraperBlocksRegex      = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
 	scraperBlockDetailRegex = regexp.MustCompile("([A-Za-z0-9/]+)/endpoint/([A-Za-z0-9/]+)/config/scraper/blocks/([^/]+)/([^/]+)")
 )
@@ -172,12 +174,14 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	}
 	ectl.E3ch = client
 	ectl.kv = map[string]string{}
-	ectl.prefix = "/dir1" // ectl.RootKey + "/"
+	ectl.prefix = ectl.RootKey // ectl.RootKey + "/"
 
 	// init and watch
 	err = ectl.initAndWatch()
 	if err != nil {
-		fmt.Println("initAndWatch, error: ", err)
+		if ectl.Debug {
+			fmt.Println("initAndWatch, error: ", err)
+		}
 		ectl.Client.Close()
 		return nil, err
 	}
@@ -187,67 +191,156 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 		for {
 			for wresp := range ectl.rch {
 				for _, ev := range wresp.Events {
-					var endpointRoute, endpointAttr, endpointConfigType, scraperConfigParameter, scraperConfigGroup, scraperConfigBlock string
-					if endpointIds := endpointRegex.FindStringSubmatch(string(ev.Kv.Key)); len(endpointIds) == 2 {
+					endpointKey := string(ev.Kv.Key)
+					var isScraperBlock, isScraperBlockDetails bool
+					var endpointRoute, endpointField, endpointConfigType, scraperConfigParameter, scraperConfigGroup, scraperConfigBlock string
+					if endpointIds := endpointRegex.FindStringSubmatch(endpointKey); len(endpointIds) == 2 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] endpointIds: ", len(endpointIds))
+							pp.Println("[PARTS] endpointIds: ", endpointIds)
+						}
 						endpointRoute = endpointIds[2]
-						fmt.Println("[endpointIds] endpointRoute: ", endpointRoute)
 					}
-					if configIds := configRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configIds) == 3 {
+					if configIds := configRegex.FindStringSubmatch(endpointKey); len(configIds) == 3 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] configIds: ", len(configIds))
+							pp.Println("[PARTS] configIds: ", configIds)
+						}
 						endpointRoute = configIds[2]
 						endpointConfigType = configIds[3]
-						fmt.Println("[configIds] endpointRoute: ", endpointRoute)
-						fmt.Println("[configIds] endpointConfigType: ", endpointConfigType)
 					}
-					if scraperParamIds := scraperParamRegex.FindStringSubmatch(string(ev.Kv.Key)); len(scraperParamIds) >= 4 {
+					if scraperParamIds := scraperParamRegex.FindStringSubmatch(endpointKey); len(scraperParamIds) >= 3 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] scraperParamIds: ", len(scraperParamIds))
+							pp.Println("[PARTS] scraperParamIds: ", scraperParamIds)
+						}
 						endpointRoute = scraperParamIds[2]
 						scraperConfigParameter = scraperParamIds[3]
-						fmt.Println("[scraperParamIds] endpointRoute: ", endpointRoute)
-						fmt.Println("[scraperParamIds] scraperConfigParameter: ", scraperConfigParameter)
 					}
-					if configGroupParamIds := scraperGroupRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configGroupParamIds) == 4 {
+					if scraperExtractIds := scraperExtractRegex.FindStringSubmatch(endpointKey); len(scraperExtractIds) >= 3 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] scraperExtractIds: ", len(scraperExtractIds))
+							pp.Println("[PARTS] scraperExtractIds: ", scraperExtractIds)
+						}
+						endpointRoute = scraperExtractIds[2]
+						endpointField = scraperExtractIds[3]
+					}
+
+					if configGroupParamIds := scraperGroupRegex.FindStringSubmatch(endpointKey); len(configGroupParamIds) >= 4 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] configGroupParamIds: ", len(configGroupParamIds))
+							pp.Println("[PARTS] configGroupParamIds: ", configGroupParamIds)
+						}
 						endpointRoute = configGroupParamIds[2]
 						scraperConfigGroup = configGroupParamIds[3]
 						scraperConfigParameter = configGroupParamIds[4]
-						fmt.Println("[configGroupParamIds] endpointRoute: ", endpointRoute)
-						fmt.Println("[configGroupParamIds] scraperConfigGroup: ", scraperConfigGroup)
-						fmt.Println("[configGroupParamIds] scraperConfigParameter: ", scraperConfigParameter)
+						isScraperBlock = true
 					}
-					if configBlockParamIds := scraperBlocksRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configBlockParamIds) == 5 {
+					if configBlockParamIds := scraperBlocksRegex.FindStringSubmatch(string(ev.Kv.Key)); len(configBlockParamIds) >= 5 {
+						if ectl.Debug {
+							fmt.Println("[COUNT] configBlockParamIds: ", len(configBlockParamIds))
+							pp.Println("[PARTS] configBlockParamIds: ", configBlockParamIds)
+						}
 						endpointRoute = configBlockParamIds[2]
 						scraperConfigGroup = configBlockParamIds[3]
 						scraperConfigBlock = configBlockParamIds[4]
-						fmt.Println("[configBlockParamIds] endpointRoute: ", endpointRoute)
-						fmt.Println("[configBlockParamIds] block: ", scraperConfigGroup)
-						fmt.Println("[configBlockParamIds] key: ", scraperConfigBlock)
+						isScraperBlockDetails = true
 					}
 					if scraperConfigParameter != "" {
-						endpointAttr = strcase.ToCamel(scraperConfigParameter)
+						endpointField = strcase.ToCamel(scraperConfigParameter)
 						if ectl.Handler != nil {
-							fmt.Printf("HandlerConfig for route: %s, field: %s \n", endpointRoute, endpointAttr)
 							endpoint := ectl.Handler.Endpoint(endpointRoute)
-							pp.Println("endpoint ready ?", endpoint.ready)
+							if ectl.Debug {
+								fmt.Println("[VARS] endpointRoute: ", endpointRoute)
+								fmt.Println("[VARS] endpointConfigType: ", endpointConfigType)
+								fmt.Println("[VARS] endpointField: ", endpointField)
+								fmt.Println("[VARS] endpoint.ready: ", endpoint.ready)
+								fmt.Println("[VARS] scraperConfigParameter: ", scraperConfigParameter)
+								fmt.Println("[VARS] scraperConfigGroup: ", scraperConfigGroup)
+								fmt.Println("[VARS] scraperConfigBlock: ", scraperConfigBlock)
+								fmt.Printf("[FLAG] isScraperBlock: %t\n", isScraperBlock)
+								fmt.Printf("[FLAG] isScraperBlockDetails: %t\n", isScraperBlockDetails)
+							}
 							if endpoint.ready {
+								endpointFieldExists, err := reflections.HasField(endpoint, endpointField)
+								if err != nil {
+									if ectl.Debug {
+										fmt.Println("error: ", err)
+									}
+								}
+								if ectl.Debug {
+									pp.Println("[VARS] endpointFieldExists: ", endpointFieldExists)
+								}
+								if endpointFieldExists {
+									endpointFieldKind, err := reflections.GetFieldKind(endpoint, endpointField)
+									if err != nil {
+										if ectl.Debug {
+											fmt.Println("error: ", err)
+										}
+									}
+									switch endpointFieldKind {
+									case reflect.String:
+										if err := reflections.SetField(endpoint, endpointField, string(ev.Kv.Value)); err != nil {
+											if ectl.Debug {
+												fmt.Println("SetField() error: ", err)
+											}
+										}
+									case reflect.Int:
+										i, err := strconv.Atoi(string(ev.Kv.Value))
+										if ectl.Debug {
+											fmt.Println("SetField() error: ", err)
+										}
+										if err := reflections.SetField(endpoint, endpointField, i); err != nil {
+											if ectl.Debug {
+												fmt.Println("SetField() error: ", err)
+											}
+										}
+									case reflect.Bool:
+										b, err := strconv.ParseBool(string(ev.Kv.Value))
+										if ectl.Debug {
+											fmt.Println("SetField() error: ", err)
+										}
+										if err := reflections.SetField(endpoint, endpointField, b); err != nil {
+											if ectl.Debug {
+												fmt.Println("SetField() error: ", err)
+											}
+										}
+									default:
+										fmt.Println("Unkown type, SetField() ignored...")
+									}
+								}
+								// nested struct (extractBlocks,...)
 								if scraperConfigGroup != "" && scraperConfigBlock != "" {
-									fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
+									if ectl.Debug {
+										fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
+									}
 									if len(endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock]) > 0 {
 										endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock][0].val = string(ev.Kv.Value)
 									}
 								}
-								pp.Println(ectl.Handler.Endpoint(endpointRoute))
+								if ectl.Debug {
+									pp.Println(ectl.Handler.Endpoint(endpointRoute))
+								}
+							}
+							if ectl.Debug {
+								fmt.Printf("[UPDATE] set: field=%s, key=%s, value=%s \n", endpointField, ev.Kv.Key, ev.Kv.Value)
 							}
 						}
 					}
-					fmt.Printf("[UPDATE] set: attr=%s, key=%s, value=%s \n", endpointAttr, ev.Kv.Key, ev.Kv.Value)
 				}
 
 			}
-			log.Print("etcd-config watch channel closed")
+			if ectl.Debug {
+				fmt.Println("etcd-config watch channel closed")
+			}
 			for {
 				err = ectl.initAndWatch()
 				if err == nil {
 					break
 				}
-				log.Print("etcd-config get failed: ", err)
+				if ectl.Debug {
+					fmt.Println("etcd-config get failed: ", err)
+				}
 				time.Sleep(time.Second)
 			}
 		}

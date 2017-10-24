@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"os"
@@ -206,6 +207,10 @@ func main() {
 	mux.Handle("/", h)
 
 	mux.HandleFunc("/favicon.ico", scraper.FaviconHandler)
+
+	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	})
 
 	if h.Config.Migrate {
 		scraper.MigrateEndpoints(DB, h.Config, e3ch)

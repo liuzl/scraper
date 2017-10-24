@@ -19,6 +19,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xquery/html"
+	"github.com/archivers-space/warc"
 	"github.com/cnf/structhash"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
@@ -33,6 +34,14 @@ import (
 	"github.com/roscopecoltran/mxj"
 	"github.com/tsak/concurrent-csv-writer"
 	"golang.org/x/net/html"
+	// "golang.org/x/net/context/ctxhttp"
+	// "github.com/datatogether/pdf"
+	// "github.com/datatogether/linked_data"
+	// "github.com/datatogether/linked_data/dcat"
+	// "github.com/datatogether/linked_data/pod"
+	// "github.com/datatogether/linked_data/sciencebase"
+	// "github.com/datatogether/linked_data/jsonld"
+	// "github.com/datatogether/linked_data/xmp"
 	// "github.com/ctessum/requestcache"
 	// "github.com/otiai10/cachely"
 	// "github.com/buger/jsonparser"
@@ -108,6 +117,30 @@ func csvWriterTest() {
 
 	for i := 0; i < count; i++ {
 		<-done
+	}
+}
+
+func warcReadAllTest() {
+	f, err := os.Open("./shared/testdata/test.warc")
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+	defer f.Close()
+
+	records, err := warc.NewReader(f).ReadAll()
+	if err != nil {
+		fmt.Println("error: ", err)
+		return
+	}
+
+	if len(records) <= 0 {
+		fmt.Printf("record length mismatch: %d isn't enough records", len(records))
+		return
+	}
+
+	for _, r := range records {
+		fmt.Println(r.Type().String())
 	}
 }
 
@@ -275,7 +308,9 @@ func (e *Endpoint) getCacheKey(req *http.Request, debug bool) (string, string, s
 	}
 	cacheKey := fmt.Sprintf("%s_%x-%s_%s", e.hash, md5.Sum(reqBytes), req.Method, req.URL.String())
 	cacheSlug := slugifier.Slugify(cacheKey)
-	fmt.Println("cacheSlug: ", cacheSlug)
+	if e.Debug {
+		fmt.Println("cacheSlug: ", cacheSlug)
+	}
 	cacheFile := fmt.Sprintf("./shared/cache/internal/%s.json", cacheSlug)
 	return cacheKey, cacheSlug, cacheFile, nil
 }
@@ -301,14 +336,10 @@ func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will exec
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
-
-	/*
-		if e.Debug {
-			fmt.Println("endpoint handler config: ")
-			pp.Println(e)
-		}
-	*/
-
+	if e.Debug {
+		fmt.Println("endpoint handler config: ")
+		pp.Println(e)
+	}
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
 		return nil, err

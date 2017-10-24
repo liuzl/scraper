@@ -5,7 +5,7 @@ import (
 )
 
 type RedisConfig struct {
-	BaseConfig
+	// BaseConfig
 	Client *redis.Client
 }
 
@@ -17,11 +17,13 @@ func NewRedisConfig() *RedisConfig {
 		DB:       0,
 	})
 	return &RedisConfig{
-		BaseConfig: BaseConfig{
-			v2KeysUrl:  host,
-			foo:        "bar",
-			serviceUrl: "http://localhost:8020",
-		},
+		/*
+			BaseConfig: BaseConfig{
+				v2KeysUrl:  host,
+				foo:        "bar",
+				serviceUrl: "http://localhost:8020",
+			},
+		*/
 		Client: client,
 	}
 }

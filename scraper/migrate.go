@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
+	// "log"
 	"net"
 	"net/url"
 	"reflect"
@@ -83,13 +83,17 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		var groups []*Group
 		group, _, err := FindOrCreateGroupByName(db, "Web")
 		if err != nil {
-			fmt.Println("Could not upsert the group for the current endpoint. error: ", err)
+			if c.Debug {
+				fmt.Println("Could not upsert the group for the current endpoint. error: ", err)
+			}
 			//return err
 		}
 		groups = append(groups, group)
 		providerDataURL, err := url.Parse(e.BaseURL)
 		if err != nil {
-			fmt.Println("Could not parse/extract the endpoint url parts. error: ", err)
+			if c.Debug {
+				fmt.Println("Could not parse/extract the endpoint url parts. error: ", err)
+			}
 			//return err
 		}
 		providerHost, providerPort, _ := net.SplitHostPort(providerDataURL.Host)
@@ -100,7 +104,9 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		providerDomain := domainutil.Domain(providerDataURL.Host)
 		provider, _, err := FindOrCreateProviderByName(db, providerDomain)
 		if err != nil {
-			fmt.Println("Could not upsert the current provider in the registry. error: ", err)
+			if c.Debug {
+				fmt.Println("Could not upsert the current provider in the registry. error: ", err)
+			}
 			// return err
 		}
 
@@ -108,7 +114,9 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			etcdHeadersIntercept := make(map[string]string, 0)
 			for _, v := range e.HeadersIntercept {
 				if v != "" {
-					fmt.Println("new etcdHeadersIntercept value: ")
+					if c.Debug {
+						fmt.Println("new etcdHeadersIntercept value: ")
+					}
 					parts := strings.Split(v, ":")
 					if len(parts) > 1 {
 						key := parts[0]
@@ -119,7 +127,9 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			}
 			etcdHeaders := make(map[string]string, 0)
 			for k, v := range e.HeadersJSON {
-				fmt.Println("new etcdHeaders value: ")
+				if c.Debug {
+					fmt.Println("new etcdHeaders value: ")
+				}
 				etcdHeaders[k] = v
 			}
 			etcdBlocks := make(map[string]map[string]string, 0)
@@ -196,36 +206,54 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 					// tree = removeDuplicates(tree)
 					RemoveDuplicates(&tree)
 					sort.Strings(tree)
-					fmt.Println("LeafPaths for ETCD: ")
-					pp.Println(tree)
+					if c.Debug {
+						fmt.Println("LeafPaths for ETCD: ")
+						pp.Println(tree)
+					}
 					for _, d := range tree {
-						fmt.Println("create dir: ", d)
+						if c.Debug {
+							fmt.Println("create dir: ", d)
+						}
 						if d != "" {
 							err := e3ch.CreateDir(d)
 							if err != nil {
-								fmt.Printf("Could not delete dir '%s', error: %s \n", d, err)
+								if c.Debug {
+									fmt.Printf("Could not delete dir '%s', error: %s \n", d, err)
+								}
 							}
 						}
 					}
 					l := mv.LeafNodes()
-					fmt.Println("LeafNodes: ")
+					if c.Debug {
+						fmt.Println("LeafNodes: ")
+					}
 					for _, v := range l {
 						key := fmt.Sprintf("/endpoint/%s/config/scraper/%s", e.Route, v.Path)
 						val := fmt.Sprintf("%v", v.Value)
-						fmt.Printf("path: %s, value: %s \n", key, val)
+						if c.Debug {
+							fmt.Printf("path: %s, value: %s \n", key, val)
+						}
 						var exists bool
 						if val != "" {
-							fmt.Println("create key: ", key)
+							if c.Debug {
+								fmt.Println("create key: ", key)
+							}
 							err := e3ch.Create(key, val)
 							if err != nil {
-								fmt.Printf("Could not create key key='%s', value='%s', error: %s \n", key, val, err)
+								if c.Debug {
+									fmt.Printf("Could not create key key='%s', value='%s', error: %s \n", key, val, err)
+								}
 								exists = true
 							}
 							if exists {
-								fmt.Println("put/update key: ", key)
+								if c.Debug {
+									fmt.Println("put/update key: ", key)
+								}
 								err := e3ch.Put(key, val)
 								if err != nil {
-									fmt.Printf("Could not put key='%s', value='%s', error: %s \n", key, val, err)
+									if c.Debug {
+										fmt.Printf("Could not put key='%s', value='%s', error: %s \n", key, val, err)
+									}
 								}
 							}
 						}
@@ -258,7 +286,9 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		if providerPort != "" {
 			providerPortInt, err := strconv.Atoi(providerPort)
 			if err != nil {
-				fmt.Println("WARNING ! Missing the port number for this endpoint base url. error: ", err)
+				if c.Debug {
+					fmt.Println("WARNING ! Missing the port number for this endpoint base url. error: ", err)
+				}
 			}
 			endpoint.Port = providerPortInt
 		} else {
@@ -273,7 +303,9 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 			case "rpc":
 				endpoint.Port = 445
 			default:
-				fmt.Println("WARNING ! invalid base url scheme for the current endpoint.")
+				if c.Debug {
+					fmt.Println("WARNING ! invalid base url scheme for the current endpoint.")
+				}
 			}
 		}
 		endpoint.Description = e.Description
@@ -281,14 +313,18 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 		for _, b := range selectionBlocks {
 			if ok := db.NewRecord(b); ok {
 				if err := db.Create(&b).Error; err != nil {
-					fmt.Println("error: ", err)
+					if c.Debug {
+						fmt.Println("error: ", err)
+					}
 					return err
 				}
 			}
 		}
 		if ok := db.NewRecord(endpoint); ok {
 			if err := db.Create(&endpoint).Error; err != nil {
-				fmt.Println("error: ", err)
+				if c.Debug {
+					fmt.Println("error: ", err)
+				}
 				return err
 			}
 		}
@@ -387,7 +423,7 @@ func createGroups(db *gorm.DB) {
 		group := Group{}
 		group.Name = g.Name
 		if err := db.Create(&group).Error; err != nil {
-			log.Fatalf("create group (%v) failure, got err %v", group, err)
+			fmt.Printf("create group (%v) failure, got err %v\n", group, err)
 		}
 	}
 }
@@ -398,7 +434,7 @@ func createTopics(db *gorm.DB) {
 		topic.Name = t.Name
 		topic.Code = strings.ToLower(t.Name)
 		if err := db.Create(&topic).Error; err != nil {
-			log.Fatalf("create topic (%v) failure, got err %v", topic, err)
+			fmt.Printf("create topic (%v) failure, got err %v\n", topic, err)
 		}
 	}
 }
