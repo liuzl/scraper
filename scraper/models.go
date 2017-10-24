@@ -123,11 +123,12 @@ type Endpoint struct {
 	Headers            []*HeaderConfig                   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
 	Blocks             []*SelectorConfig                 `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
 	EndpointProperties EndpointProperties                `etcd:"properties" sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
-	Extract            ExtractConfig                     `etcd:"extract" default:"false" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
+	Extract            ExtractConfig                     `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
 	MinFields          int                               `json:"-" yaml:"-" toml:"-"`
 	Count              string                            `gorm"-" json:"-" yaml:"-" toml:"-"`
 	Debug              bool                              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	StrictMode         bool                              `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	// ExtractJSON        map[string]bool                   `etcd:"extractors" gorm"-" json:"extractors,omitempty" yaml:"extractors,omitempty" toml:"extractors,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"`
 }
 

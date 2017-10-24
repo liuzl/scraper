@@ -3,37 +3,38 @@ package scraper
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"go.uber.org/zap"
+	// "github.com/k0kubun/pp"
+	// "github.com/sirupsen/logrus"
+	// prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var (
-	logR    = logrus.New()
-	logZ, _ = zap.NewProduction()
+	// logR    = logrus.New()
+	logger        *zap.Logger
+	sugaredLogger *zap.SugaredLogger
+	errInit       error
 )
 
 func init() {
-	logR.Formatter = new(prefixed.TextFormatter)
-	logR.Level = logrus.DebugLevel
+	logger, errInit = zap.NewProduction()
+	defer logger.Sync() // flushes buffer, if any
+	sugaredLogger = logger.Sugar()
+	// logR.Formatter = new(prefixed.TextFormatter)
+	// logR.Level = logrus.DebugLevel
 }
 
 func sugaredLoggerTest(url string) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync() // flushes buffer, if any
-	sugar := logger.Sugar()
-	sugar.Infow("failed to fetch URL",
+	sugaredLogger.Infow("failed to fetch URL",
 		// Structured context as loosely typed key-value pairs.
 		"url", url,
 		"attempt", 3,
 		"backoff", time.Second,
 	)
-	sugar.Infof("Failed to fetch URL: %s", url)
+	sugaredLogger.Infof("Failed to fetch URL: %s", url)
 }
 
 func fastLoggerTest(url string) {
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
 	logger.Info("failed to fetch URL",
 		// Structured context as strongly typed Field values.
 		zap.String("url", url),
@@ -42,6 +43,7 @@ func fastLoggerTest(url string) {
 	)
 }
 
+/*
 func logrusTest() {
 	logR.WithFields(logrus.Fields{
 		"prefix": "main",
@@ -54,3 +56,4 @@ func logrusTest() {
 		"temperature": -4,
 	}).Info("Temperature changes")
 }
+*/

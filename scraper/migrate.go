@@ -143,14 +143,18 @@ func MigrateEndpoints(db *gorm.DB, c Config, e3ch *client.EtcdHRCHYClient) error
 					}
 					etcdBlocks[k][kd] = strings.Join(ext, ";")
 				}
-				// fmt.Println("new etcdBlocks value: ")
-				// pp.Println(v)
+				if c.Debug {
+					fmt.Println("new etcdBlocks value: ")
+					pp.Println(v)
+				}
 			}
+
 			var ExtractorTypes = []string{"links", "meta", "opengraph"}
 			etcdExtract := make(map[string]bool, len(ExtractorTypes))
 			for _, v := range ExtractorTypes {
 				etcdExtract[v] = false
 			}
+
 			var etcdGroups string
 			var grp []string
 			for _, v := range e.Groups {

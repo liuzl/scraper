@@ -25,6 +25,7 @@ import (
 	"github.com/roscopecoltran/scraper/scraper"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
+	// "github.com/go-zoo/bone"
 	// "github.com/birkelund/boltdbcache"
 	// "golang.org/x/oauth2"
 	// "github.com/mickep76/flatten"
@@ -119,6 +120,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	useGinWrap := false
+
 	logger, errInit = zap.NewProduction()
 
 	h := &scraper.Handler{Log: true}
@@ -153,10 +155,11 @@ func main() {
 
 	// cache
 	// https://github.com/garycarr/httpcache/blob/f039dd6ff44cf40d52e8e86ef10bff41e592fd48/README.md
-
-	fmt.Printf("Etcd.Disabled? %t \n", h.Etcd.Disabled)
-	fmt.Printf("Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
-	fmt.Printf("Etcd.Debug? %t \n", h.Etcd.Debug)
+	fmt.Printf("Scraper.NumCPU: %d\n", runtime.NumCPU())
+	fmt.Printf("Scraper.useGinWrap: %t\n", useGinWrap)
+	fmt.Printf("Scraper.Etcd.Disabled? %t \n", h.Etcd.Disabled)
+	fmt.Printf("Scraper.Etcd.InitCheck? %t \n", h.Etcd.InitCheck)
+	fmt.Printf("Scraper.Etcd.Debug? %t \n", h.Etcd.Debug)
 	e3ch, err := c.Etcd.NewE3chClient()
 	if err != nil {
 		fmt.Println("Could not connect to the ETCD cluster, error: ", err)
@@ -167,7 +170,22 @@ func main() {
 		h.Etcd.E3ch = e3ch
 	}
 
+	// if useBoneMux
+	// mux := bone.New()
 	mux := http.NewServeMux() // Register route
+
+	/*
+	   // mux.Get, Post, etc ... takes http.Handler
+	   mux.Get("/home/:id", http.HandlerFunc(HomeHandler))
+	   mux.Get("/profil/:id/:var", http.HandlerFunc(ProfilHandler))
+	   mux.Post("/data", http.HandlerFunc(DataHandler))
+
+	   // Support REGEX Route params
+	   mux.Get("/index/#id^[0-9]$", http.HandlerFunc(IndexHandler))
+
+	   // Handle take http.Handler
+	   mux.Handle("/", http.HandlerFunc(RootHandler))
+	*/
 
 	if h.Config.Debug {
 		fmt.Printf(" - IsLogger? %t \n", h.Log)
@@ -207,6 +225,10 @@ func main() {
 	mux.Handle("/", h)
 
 	mux.HandleFunc("/favicon.ico", scraper.FaviconHandler)
+	mux.HandleFunc("/test", handler)
+
+	// GetFunc, PostFunc etc ... takes http.HandlerFunc
+	// mux.GetFunc("/test", Handler)
 
 	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
@@ -238,6 +260,13 @@ func main() {
 
 	}
 
+}
+
+// "handler" is our handler function. It has to follow the function signature of a ResponseWriter and Request type
+// as the arguments.
+func handler(w http.ResponseWriter, r *http.Request) {
+	// For this case, we will always pipe "Hello World" into the response writer
+	fmt.Fprintf(w, "Hello World!")
 }
 
 /*

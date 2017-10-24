@@ -192,7 +192,7 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 			for wresp := range ectl.rch {
 				for _, ev := range wresp.Events {
 					endpointKey := string(ev.Kv.Key)
-					var isScraperBlock, isScraperBlockDetails bool
+					var isScraperBlock, isScraperBlockDetails, isScraperExtract bool
 					var endpointRoute, endpointField, endpointConfigType, scraperConfigParameter, scraperConfigGroup, scraperConfigBlock string
 					if endpointIds := endpointRegex.FindStringSubmatch(endpointKey); len(endpointIds) == 2 {
 						if ectl.Debug {
@@ -207,7 +207,7 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 							pp.Println("[PARTS] configIds: ", configIds)
 						}
 						endpointRoute = configIds[2]
-						endpointConfigType = configIds[3]
+						endpointConfigType = strcase.ToCamel(configIds[3])
 					}
 					if scraperParamIds := scraperParamRegex.FindStringSubmatch(endpointKey); len(scraperParamIds) >= 3 {
 						if ectl.Debug {
@@ -223,7 +223,8 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 							pp.Println("[PARTS] scraperExtractIds: ", scraperExtractIds)
 						}
 						endpointRoute = scraperExtractIds[2]
-						endpointField = scraperExtractIds[3]
+						endpointField = strcase.ToCamel(scraperExtractIds[3])
+						isScraperExtract = true
 					}
 
 					if configGroupParamIds := scraperGroupRegex.FindStringSubmatch(endpointKey); len(configGroupParamIds) >= 4 {
@@ -262,60 +263,72 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 								fmt.Printf("[FLAG] isScraperBlockDetails: %t\n", isScraperBlockDetails)
 							}
 							if endpoint.ready {
-								endpointFieldExists, err := reflections.HasField(endpoint, endpointField)
-								if err != nil {
-									if ectl.Debug {
-										fmt.Println("error: ", err)
-									}
-								}
-								if ectl.Debug {
-									pp.Println("[VARS] endpointFieldExists: ", endpointFieldExists)
-								}
-								if endpointFieldExists {
-									endpointFieldKind, err := reflections.GetFieldKind(endpoint, endpointField)
+								if isScraperExtract {
+									status, err := strconv.ParseBool(string(ev.Kv.Value))
 									if err != nil {
 										if ectl.Debug {
 											fmt.Println("error: ", err)
 										}
 									}
-									switch endpointFieldKind {
-									case reflect.String:
-										if err := reflections.SetField(endpoint, endpointField, string(ev.Kv.Value)); err != nil {
-											if ectl.Debug {
-												fmt.Println("SetField() error: ", err)
-											}
-										}
-									case reflect.Int:
-										i, err := strconv.Atoi(string(ev.Kv.Value))
+									if err := reflections.SetField(&endpoint.Extract, endpointField, status); err != nil {
 										if ectl.Debug {
 											fmt.Println("SetField() error: ", err)
 										}
-										if err := reflections.SetField(endpoint, endpointField, i); err != nil {
-											if ectl.Debug {
-												fmt.Println("SetField() error: ", err)
-											}
-										}
-									case reflect.Bool:
-										b, err := strconv.ParseBool(string(ev.Kv.Value))
-										if ectl.Debug {
-											fmt.Println("SetField() error: ", err)
-										}
-										if err := reflections.SetField(endpoint, endpointField, b); err != nil {
-											if ectl.Debug {
-												fmt.Println("SetField() error: ", err)
-											}
-										}
-									default:
-										fmt.Println("Unkown type, SetField() ignored...")
 									}
-								}
-								// nested struct (extractBlocks,...)
-								if scraperConfigGroup != "" && scraperConfigBlock != "" {
+								} else if isScraperBlockDetails { // nested struct (extractBlocks,...)
 									if ectl.Debug {
 										fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
 									}
 									if len(endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock]) > 0 {
 										endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock][0].val = string(ev.Kv.Value)
+									}
+								} else {
+									isEndpointField, err := reflections.HasField(endpoint, endpointField)
+									if err != nil {
+										if ectl.Debug {
+											fmt.Println("error: ", err)
+										}
+									}
+									if ectl.Debug {
+										pp.Println("[VARS] isEndpointField: ", isEndpointField)
+									}
+									if isEndpointField {
+										endpointFieldKind, err := reflections.GetFieldKind(endpoint, endpointField)
+										if err != nil {
+											if ectl.Debug {
+												fmt.Println("error: ", err)
+											}
+										}
+										switch endpointFieldKind {
+										case reflect.String:
+											if err := reflections.SetField(endpoint, endpointField, string(ev.Kv.Value)); err != nil {
+												if ectl.Debug {
+													fmt.Println("SetField() error: ", err)
+												}
+											}
+										case reflect.Int:
+											i, err := strconv.Atoi(string(ev.Kv.Value))
+											if ectl.Debug {
+												fmt.Println("SetField() error: ", err)
+											}
+											if err := reflections.SetField(endpoint, endpointField, i); err != nil {
+												if ectl.Debug {
+													fmt.Println("SetField() error: ", err)
+												}
+											}
+										case reflect.Bool:
+											b, err := strconv.ParseBool(string(ev.Kv.Value))
+											if ectl.Debug {
+												fmt.Println("SetField() error: ", err)
+											}
+											if err := reflections.SetField(endpoint, endpointField, b); err != nil {
+												if ectl.Debug {
+													fmt.Println("SetField() error: ", err)
+												}
+											}
+										default:
+											fmt.Println("Unkown type, SetField() ignored...")
+										}
 									}
 								}
 								if ectl.Debug {

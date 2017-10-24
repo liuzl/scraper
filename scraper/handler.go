@@ -49,9 +49,14 @@ var (
 type Handler struct {
 	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 
-	Env     EnvConfig         `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Etcd    EtcdConfig        `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
-	Config  Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
+	Env    EnvConfig  `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+	Etcd   EtcdConfig `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
+
+	Cache struct {
+		Control int `opts:"-" default:"120" json:"control,omitempty" yaml:"control,omitempty" toml:"control,omitempty"`
+	} `opts:"-" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+
 	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
 	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
 	Log     bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
@@ -134,8 +139,6 @@ func (h *Handler) LoadConfig(b []byte) error {
 			if h.Debug {
 				logf("Loaded endpoint: /%s", e.Route)
 			}
-			// if
-			// e.Cache = true
 			Endpoints.Routes = append(Endpoints.Routes, e.Route)
 			if len(h.Headers) > 0 && h.Debug { // Copy the Header attributes (only if they are not yet set)
 				fmt.Printf("h.Headers, len=%d:\n", len(h.Headers))
@@ -171,8 +174,6 @@ func (h *Handler) LoadConfig(b []byte) error {
 		logf("Enabled debug mode")
 	}
 
-	// c.Transport =
-	// InitCache("./shared/cache/test.boltdb")
 	InitCache("./shared/cache/external")
 
 	h.Config = c //replace config
@@ -290,7 +291,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8") // always JSON!
 	// w.Header().Set("Content-Encoding", "gzip")
 	// w.Header().Set("Cache-Control", "max-age=120")
-
 	if r.URL.Path == "" || r.URL.Path == "/" { // admin actions
 		get := false
 		if r.Method == "GET" {
