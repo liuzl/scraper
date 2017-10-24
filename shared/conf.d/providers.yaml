@@ -13,6 +13,21 @@ env:
   debug: true
   files:
   - ".env"
+cache:
+  disabled: false
+  engine: diskv
+  valid:
+  - diskv
+  - redis
+  - memcache
+  - couchdb
+  - leveldbcache
+  - disks3cache
+  - staticfilecache
+  - boltdbcache
+  listen_addr: localhost
+  expiration_time: 3600
+  prefix_path: "./shared/cache"
 routes:
 - route: "/github/stars"
   debug: false
@@ -37,11 +52,12 @@ routes:
   collection: true
   pager:
     disabled: 'false'
-    max: '3'
+    max: '500'
     offset: '1'
     limit: '100'
     offset_var: page
     limit_var: per_page
+    limit_checker: per_page
   selector: json
   method: GET
   headers:
@@ -203,9 +219,40 @@ routes:
         url:
         - h3 a
         - "@href"
+- route: "/9docu"
+  debug: false
+  cache: false
+  strict_mode: false
+  name: golanglibs
+  provider: 9docu.com
+  base_url: http://9docu.com
+  method: GET
+  concurrency: 10
+  url: "/page/{{page}}/?s={{query}}"
+  pager:
+    max: '10'
+    offset: '1'
+    offset_var: page
+  timeout: 3
+  selector: css
+  blocks:
+    result:
+      strict_mode: false
+      items: ".item-post"
+      count: i[class='count']
+      details:
+        title: ".entry-title a"
+        desc: p:nth-child(3)
+        img:
+        - img
+        - "@src"
+        url:
+        - ".entry-title a"
+        - "@href"
 - route: "/golanglibs"
-  debug: true
-  strict_mode: true
+  debug: false
+  strict_mode: false
+  cache: false
   name: golanglibs
   provider: golanglibs.com
   base_url: https://golanglibs.com
@@ -215,7 +262,7 @@ routes:
   selector: xpath
   blocks:
     result:
-      strict_mode: true
+      strict_mode: false
       items: "/html/body/div[1]/div[3]/div[1]/div"
       details:
         title: div[2]/div/a
@@ -223,9 +270,31 @@ routes:
         url:
         - div[2]/div/a
         - "@href"
+- route: "/crunchbase/news"
+  debug: true
+  strict_mode: false
+  cache: false
+  name: news crunchbase
+  provider: crunchbase.com
+  base_url: https://news.crunchbase.com
+  method: GET
+  url: "/news/feed/"
+  timeout: 10
+  selector: rss
+  blocks:
+    result:
+      strict_mode: false
+      cache: false
+      items: item
+      details:
+        title: title
+        desc: description
+        url: link
+        img: image
 - route: "/bitbucket"
   debug: true
   disabled: true
+  cache: false
   name: bitbucket
   provider: bitbucket.org
   base_url: https://bitbucket.org
@@ -248,6 +317,7 @@ routes:
 - route: "/archive.is"
   debug: true
   disabled: true
+  cache: false
   name: arch linux wiki
   provider: archive.is
   base_url: https://archive.is
@@ -268,6 +338,7 @@ routes:
 - route: "/archlinux/all"
   debug: true
   disabled: true
+  cache: false
   name: arch linux wiki
   provider: archlinux.org
   method: GET
@@ -288,6 +359,7 @@ routes:
 - route: "/voat"
   debug: true
   disabled: true
+  cache: false
   provider: searchvoat.co
   base_url: https://searchvoat.co
   url: "/?t={{query}}"
@@ -306,6 +378,7 @@ routes:
         - "@href"
 - route: "/bing/news"
   debug: false
+  cache: false
   base_url: https://www.bing.com
   provider: bing.com
   method: GET
@@ -327,6 +400,7 @@ routes:
 - route: "/bing"
   debug: false
   strict_mode: true
+  cache: false
   base_url: https://www.bing.com
   provider: bing.com
   url: "/search?q={{query}}"
@@ -351,6 +425,7 @@ routes:
         - "@href"
 - route: "/google/play/apps"
   debug: false
+  cache: false
   selector: css
   name: google play apps
   provider: google.com
@@ -369,6 +444,7 @@ routes:
         - "@href"
 - route: "/habrahabr"
   debug: true
+  cache: false
   name: habrahabr
   base_url: https://habrahabr.ru
   provider: habrahabr.ru
@@ -386,6 +462,7 @@ routes:
         - "//a[@class='post__title_link']/@href"
 - route: "/google/play/movies"
   debug: false
+  cache: false
   name: google play movies
   provider: google.com
   method: GET
@@ -419,6 +496,7 @@ routes:
         - "//a[@class='title']/@href"
 - route: "/google/play/music"
   debug: false
+  cache: false
   name: google play music
   base_url: https://play.google.com
   provider: google.com
@@ -452,6 +530,7 @@ routes:
         - "//a[@class='title']/@href"
 - route: "/google/scholar"
   debug: false
+  cache: false
   selector: css
   provider: google.com
   name: Google Scholar

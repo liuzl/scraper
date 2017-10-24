@@ -16,6 +16,14 @@
       ".env"
     ]
   },
+  "cache": {
+    "disabled": false,
+    "engine": "diskv",
+    "valid": ["diskv", "redis", "memcache", "couchdb", "leveldbcache", "disks3cache", "staticfilecache", "boltdbcache"],
+    "listen_addr": "localhost",
+    "expiration_time": 3600,
+    "prefix_path": "./shared/cache"
+  },
   "routes": [
     {
       "route": "/github/stars",
@@ -303,8 +311,9 @@
     },
     {
       "route": "/golanglibs",
-      "debug": true,
-      "strict_mode": true,
+      "debug": false,
+      "strict_mode": false,
+      "cache": false,
       "name": "golanglibs",
       "provider": "golanglibs.com",
       "base_url": "https://golanglibs.com",
@@ -314,7 +323,7 @@
       "selector": "xpath",
       "blocks": {
         "result": {
-          "strict_mode": true,
+          "strict_mode": false,
           "items": "/html/body/div[1]/div[3]/div[1]/div",
           "details": {
             "title": "div[2]/div/a",
@@ -328,9 +337,34 @@
       }
     },
     {
+      "route": "/crunchbase/news",
+      "debug": false,
+      "strict_mode": false,
+      "cache": true,
+      "name": "news crunchbase",
+      "provider": "crunchbase.com",
+      "base_url": "https://news.crunchbase.com",
+      "method": "GET",
+      "url": "/news/feed/",
+      "timeout": 10,
+      "selector": "rss",
+      "blocks": {
+        "result": {
+          "strict_mode": false,
+          "details": {
+            "title": "title",
+            "desc": "description",
+            "url": "link",
+            "img": "image"
+          }
+        }
+      }
+    },
+    {
       "route": "/bitbucket",
       "debug": true,
       "disabled": true,
+      "cache": false,
       "name": "bitbucket",
       "provider": "bitbucket.org",
       "base_url": "https://bitbucket.org",
@@ -360,6 +394,7 @@
       "route": "/archive.is",
       "debug": true,
       "disabled": true,
+      "cache": false,
       "name": "arch linux wiki",
       "provider": "archive.is",
       "base_url": "https://archive.is",
@@ -386,6 +421,7 @@
       "route": "/archlinux/all",
       "debug": true,
       "disabled": true,
+      "cache": false,
       "name": "arch linux wiki",
       "provider": "archlinux.org",
       "method": "GET",
@@ -412,6 +448,7 @@
       "route": "/voat",
       "debug": true,
       "disabled": true,
+      "cache": false,
       "provider": "searchvoat.co",
       "base_url": "https://searchvoat.co",
       "url": "/?t={{query}}",
@@ -436,6 +473,7 @@
     {
       "route": "/bing/news",
       "debug": false,
+      "cache": false,
       "base_url": "https://www.bing.com",
       "provider": "bing.com",
       "method": "GET",
@@ -464,6 +502,7 @@
       "route": "/bing",
       "debug": false,
       "strict_mode": true,
+      "cache": false,
       "base_url": "https://www.bing.com",
       "provider": "bing.com",
       "url": "/search?q={{query}}",
@@ -497,6 +536,7 @@
     {
       "route": "/google/play/apps",
       "debug": false,
+      "cache": false,
       "selector": "css",
       "name": "google play apps",
       "provider": "google.com",
@@ -521,6 +561,7 @@
     {
       "route": "/habrahabr",
       "debug": true,
+      "cache": false,
       "name": "habrahabr",
       "base_url": "https://habrahabr.ru",
       "provider": "habrahabr.ru",
@@ -544,6 +585,7 @@
     {
       "route": "/google/play/movies",
       "debug": false,
+      "cache": false,
       "name": "google play movies",
       "provider": "google.com",
       "method": "GET",
@@ -589,6 +631,7 @@
     {
       "route": "/google/play/music",
       "debug": false,
+      "cache": false,
       "name": "google play music",
       "base_url": "https://play.google.com",
       "provider": "google.com",
@@ -634,6 +677,7 @@
     {
       "route": "/google/scholar",
       "debug": false,
+      "cache": false,
       "selector": "css",
       "provider": "google.com",
       "name": "Google Scholar",

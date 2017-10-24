@@ -3,7 +3,7 @@ package scraper
 import (
 	"context"
 	"crypto/md5"
-	"crypto/sha1"
+	// "crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,12 +22,14 @@ import (
 	"github.com/cnf/structhash"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
+	"github.com/iancoleman/strcase"
 	"github.com/jeevatkm/go-model"
 	"github.com/k0kubun/pp"
 	"github.com/karlseguin/cmap"
 	"github.com/leebenson/conform"
 	"github.com/mgbaozi/gomerge"
 	"github.com/mmcdole/gofeed"
+	"github.com/oleiade/reflections"
 	"github.com/roscopecoltran/mxj"
 	"github.com/tsak/concurrent-csv-writer"
 	"golang.org/x/net/html"
@@ -279,31 +281,33 @@ func (e *Endpoint) getCacheKey(req *http.Request, debug bool) (string, string, s
 }
 
 func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will execute an Endpoint with the given params
-
-	hash, err := structhash.Hash(e, 1)
-	if err != nil {
-		return "", err
-	}
-	fmt.Println("hash: ", hash)
-	fmt.Println(structhash.Version(hash))
-	if crypto == "md5" {
-		fmt.Printf("structhash.Md5: %x\n", structhash.Md5(e, 1))
-		fmt.Printf(" md5.Sum: %x\n", md5.Sum(structhash.Dump(e, 1)))
-	}
-
-	if crypto == "sha1" {
-		fmt.Printf("structhash.Sha1: %x\n", structhash.Sha1(e, 1))
-		fmt.Printf("sha1.Sum: %x\n", sha1.Sum(structhash.Dump(e, 1)))
-	}
+	/*
+		hash, err := structhash.Hash(e, 1)
+		if err != nil {
+			return "", err
+		}
+		fmt.Println("hash: ", hash)
+		fmt.Println(structhash.Version(hash))
+		if crypto == "md5" {
+			fmt.Printf("structhash.Md5: %x\n", structhash.Md5(e, 1))
+			fmt.Printf(" md5.Sum: %x\n", md5.Sum(structhash.Dump(e, 1)))
+		}
+		if crypto == "sha1" {
+			fmt.Printf("structhash.Sha1: %x\n", structhash.Sha1(e, 1))
+			fmt.Printf("sha1.Sum: %x\n", sha1.Sum(structhash.Dump(e, 1)))
+		}
+	*/
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 
-	if e.Debug {
-		fmt.Println("endpoint handler config: ")
-		pp.Println(e)
-	}
+	/*
+		if e.Debug {
+			fmt.Println("endpoint handler config: ")
+			pp.Println(e)
+		}
+	*/
 
 	url, err := template(true, fmt.Sprintf("%s%s", e.BaseURL, e.PatternURL), params) //render url using params
 	if err != nil {
@@ -345,23 +349,29 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if isResty {
 		// https://github.com/go-resty/resty#various-post-method-combinations
 		restyResp, err := resty.R().Get(url)
-		// explore response object
-		fmt.Printf("\nError: %v", err)
-		fmt.Printf("\nResponse Status Code: %v", restyResp.StatusCode())
-		fmt.Printf("\nResponse Status: %v", restyResp.Status())
-		fmt.Printf("\nResponse Time: %v", restyResp.Time())
-		fmt.Printf("\nResponse Received At: %v", restyResp.ReceivedAt())
-		fmt.Printf("\nResponse Body: %v", restyResp) // or resp.String() or string(resp.Body())
+		if e.Debug {
+			// explore response object
+			fmt.Printf("\nError: %v", err)
+			fmt.Printf("\nResponse Status Code: %v", restyResp.StatusCode())
+			fmt.Printf("\nResponse Status: %v", restyResp.Status())
+			fmt.Printf("\nResponse Time: %v", restyResp.Time())
+			fmt.Printf("\nResponse Received At: %v", restyResp.ReceivedAt())
+			fmt.Printf("\nResponse Body: %v", restyResp) // or resp.String() or string(resp.Body())
+		}
 	}
 
+	// if e.Cache {
 	_, _, cacheFile, err := e.getCacheKey(req, e.Debug)
 	if err != nil {
 		return nil, err
 	}
+	//}
 
 	isCacheExpired := cacheExpired(cacheFile, cacheDuration)
-	fmt.Printf("[ENDPOINT] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
-	if !isCacheExpired {
+	if e.Debug && e.Cache {
+		fmt.Printf("[ENDPOINT] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
+	}
+	if !isCacheExpired && e.Cache {
 		return cacheContent(cacheFile)
 	}
 
@@ -382,13 +392,15 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	for k, v := range resp.Header {
 		if contains(e.HeadersIntercept, k) {
 			if e.Debug {
-				logf(" [INTERCEP] header key=%s, value=%s", k, v)
+				logf(" [INTERCEPT] header key=%s, value=%s", k, v)
 			}
 		}
 	}
 
-	if e.Debug || resp.StatusCode != 200 { //show results
-		logf("%s %s => %s", method, url, resp.Status)
+	if resp.StatusCode != 200 {
+		if e.Debug {
+			logf("%s %s => %s", method, url, resp.Status)
+		}
 		if resp.StatusCode == 403 {
 			return nil, errors.New("Unauthorized request")
 		}
@@ -494,43 +506,42 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			}
 		}
 	case "rss":
-		// "https://github.com/kkdai/githubrss"
 		fp := gofeed.NewParser()
 		xml := resp.Body
 		feed, err := fp.Parse(xml)
 		if err != nil {
 			return nil, err
 		}
-		if e.Debug {
-			fmt.Println("Endpoint config: ")
-			pp.Println(e)
-		}
-		if e.Debug {
-			pp.Println(feed)
-		}
 		for b, s := range e.BlocksJSON {
 			var results []Result
-			if results != nil {
+			if e.Debug {
+				fmt.Println("[RSS] items count: ", len(feed.Items))
+			}
+			for _, item := range feed.Items {
+				if item != nil {
+					res := e.extractRss(item, s.Details)
+					if len(res) > 0 {
+						results = append(results, res)
+					}
+				}
+			}
+			/*
+				// Additional info
+				r["author"] = feed.Author
+				r["categories"] = feed. Categories
+				r["custom"] = feed.Custom
+				r["copyright"] = feed.Copyright
+				r["description"] = feed.Description
+				r["type"] = feed.FeedType
+				r["language"] = feed.Language
+				r["title"] = feed.Title
+				r["published"] = feed.Published
+				r["updated"] = feed.Updated
+			*/
+			if len(results) > 0 {
 				aggregate[b] = results
 			}
-			if e.Debug {
-				fmt.Println("block_key: ", b)
-				pp.Println(s)
-			}
 		}
-		/*
-			"items":       feed.Items,
-			"author":      feed.Author,
-			"categories":  feed.Categories,
-			"custom":      feed.Custom,
-			"copyright":   feed.Copyright,
-			"description": feed.Description,
-			"type":        feed.FeedType,
-			"language":    feed.Language,
-			"title":       feed.Title,
-			"published":   feed.Published,
-			"updated":     feed.Updated,
-		*/
 	case "xpath":
 		doc, err := htmlquery.Parse(resp.Body)
 		if err != nil {
@@ -619,7 +630,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("unkown selector type")
 	}
 
-	if len(aggregate) > 0 {
+	if len(aggregate) > 0 && e.Cache {
 		err = cacheResponse(cacheFile, aggregate) // dump response
 		if err != nil {
 			return nil, err
@@ -706,6 +717,49 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 	return r
 }
 
+func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
+	var fieldsList []string
+	if e.Debug {
+		pp.Println(fields)
+	}
+	for k, v := range fields {
+		if e.Debug {
+			pp.Println("fieldsList: k=", k, ", v=", v[0].val)
+		}
+		fieldsList = append(fieldsList, strcase.ToCamel(v[0].val))
+	}
+	r := Result{}
+	for _, field := range fieldsList {
+		has, _ := reflections.HasField(item, field)
+		if has {
+			value, err := reflections.GetField(item, field)
+			if err != nil {
+				if e.Debug {
+					fmt.Println("error: ", err)
+				}
+				continue
+			}
+			key := strings.ToLower(field)
+			if e.Debug {
+				pp.Println("reflected value: ", value)
+			}
+			if value != nil {
+				r[key] = value
+			}
+		}
+	}
+	if e.Debug {
+		fmt.Println("item attr length:", len(r))
+	}
+
+	if e.Debug {
+		fmt.Println("Results for RSS feed:")
+		pp.Println(r)
+	}
+
+	return r
+}
+
 // import "github.com/jzaikovs/t"
 func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extractors) []Result { //extract 1 result using this endpoints extractor map
 	var r []Result
@@ -715,6 +769,7 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 	list, err := mv.ValuesForPath(items)
 	if err != nil {
 		fmt.Println("Error: ", err)
+		// return nil
 	}
 	if e.Debug {
 		pp.Println(list)

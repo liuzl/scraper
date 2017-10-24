@@ -130,6 +130,7 @@ func (h *Handler) LoadConfig(b []byte) error {
 			if h.Debug {
 				logf("Loaded endpoint: /%s", e.Route)
 			}
+			e.Cache = false
 			Endpoints.Routes = append(Endpoints.Routes, e.Route)
 			if len(h.Headers) > 0 && h.Debug { // Copy the Header attributes (only if they are not yet set)
 				fmt.Printf("h.Headers, len=%d:\n", len(h.Headers))
@@ -326,7 +327,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var err error
 	res := make(map[string][]Result, 0)
-	if h.Debug {
+	if endpoint.Debug {
 		pp.Printf("endpoint.Concurrency: %s \n", endpoint.Concurrency)
 	}
 
@@ -337,16 +338,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isCacheExpired := cacheExpired(cacheFile, 3600*time.Second)
-	//if h.Debug {
-	fmt.Printf("[HANDLER] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
-	//}
-	if !isCacheExpired {
-		//if h.Debug {
-		fmt.Printf("reading cache content: %s \n", cacheFile)
+	isCacheExpired := cacheExpired(cacheFile, 5*time.Second)
+	if endpoint.Debug && endpoint.Cache {
+		fmt.Printf("[HANDLER] endpoint.Cache: %t\nisCacheExpired: %t\ncacheFile: %s \n", endpoint.Cache, isCacheExpired, cacheFile)
+	}
+	if !isCacheExpired && endpoint.Cache {
+		if endpoint.Debug {
+			fmt.Printf("reading cache content: %s \n", cacheFile)
+		}
 		file, err := os.Open(cacheFile)
 		if err != nil {
-			fmt.Println("os.Open, error: ", err)
+			if endpoint.Debug {
+				fmt.Println("os.Open, error: ", err)
+			}
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(jsonerr(err))
 			return
@@ -355,7 +359,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		b, err := ioutil.ReadAll(file)
 		if err != nil {
-			fmt.Println("ioutil.ReadAll, error: ", err)
+			if endpoint.Debug {
+				fmt.Println("ioutil.ReadAll, error: ", err)
+			}
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write(jsonerr(err))
 			return
@@ -364,9 +370,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write(gzipFast(&b))
 		return
 	} else {
-		//if h.Debug {
-		fmt.Printf("new content to fetch/cache: %s \n", cacheFile)
-		//}
+		if endpoint.Debug {
+			fmt.Printf("new content to fetch/cache: %s \n", cacheFile)
+		}
 		if endpoint.Concurrency >= 1 && len(endpoint.Pager["max"]) > 0 {
 			ctx := context.Background()
 			resChan := make(chan *ScraperResult, endpoint.Concurrency)
@@ -383,16 +389,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						}
 						totalResults = totalResults + len(v)
 					}
-					//if h.Debug {
-					fmt.Printf("res length: %d \n", len(res))
-					//}
+					if endpoint.Debug {
+						fmt.Printf("res length: %d \n", len(res))
+					}
 				} else {
 					totalErrors++
 				}
 			}
-			//if h.Debug {
-			fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
-			//}
+			if endpoint.Debug {
+				fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
+			}
 		} else {
 			res, err = endpoint.Execute(values)
 			if err != nil {
@@ -400,19 +406,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.Write(jsonerr(err))
 				return
 			}
-			fmt.Printf("totalResults: %d \n", len(res["result"]))
+			if endpoint.Debug {
+				fmt.Printf("totalResults: %d \n", len(res["result"]))
+			}
 		}
-		//if h.Debug {
-		fmt.Println("[OUTPUT] isCacheExpired: ", isCacheExpired, ", cacheFile: ", cacheFile)
-		//if h.Debug {}
-		if len(res) > 0 {
+		if endpoint.Debug && endpoint.Cache {
+			fmt.Println("[OUTPUT] isCacheExpired: ", isCacheExpired, ", cacheFile: ", cacheFile)
+		}
+
+		if len(res) > 0 && endpoint.Cache {
 			err = cacheResponse(cacheFile, res) // dump response
 			if err != nil {
 				return
 			}
-			// if h.Debug {
-			fmt.Printf("new content cached to file: %s\n", cacheFile)
-			// }
+			if endpoint.Debug {
+				fmt.Printf("new content cached to file: %s\n", cacheFile)
+			}
 		}
 
 		enc := json.NewEncoder(w) // encode as JSON

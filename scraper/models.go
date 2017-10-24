@@ -76,7 +76,7 @@ type Endpoint struct {
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                         `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
-	Cache              bool                              `etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+	Cache              bool                              `default:"true" etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 	ready              bool                              `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	hash               string                            `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	EtcdKey            string                            `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
@@ -229,6 +229,7 @@ type SelectorConfig struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
 	EndpointID      uint                  `json:"-" yaml:"-" toml:"-"`
+	Cache           bool                  `default:"true" etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 	EtcdKey         string                `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Collection      string                `json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
 	Description     string                `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
