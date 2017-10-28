@@ -279,9 +279,41 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 									if ectl.Debug {
 										fmt.Printf("UpdateConfig for route group: endpoint=%s > block=%s > key=%s, value=%s \n", endpointRoute, scraperConfigGroup, scraperConfigBlock, ev.Kv.Value)
 									}
+									/*
+										if scraperConfigBlock == "items" {
+											fmt.Println("---> scraperConfigGroup: ", scraperConfigGroup)
+											fmt.Println("---> scraperConfigBlock: ", strcase.ToCamel(scraperConfigBlock))
+											fmt.Println("---> endpoint.BlocksJSON[scraperConfigGroup].Items: ", endpoint.BlocksJSON[scraperConfigGroup].Items)
+											isEndpointField, err := reflections.HasField(endpoint.BlocksJSON[scraperConfigGroup], "Items")
+											if err != nil {
+												if ectl.Debug {
+													fmt.Println("error: ", err)
+												}
+											}
+											if ectl.Debug {
+												pp.Printf("[VARS] isEndpointField: %s\n", isEndpointField)
+											}
+											endpointFieldKind, err := reflections.GetFieldKind(endpoint.BlocksJSON[scraperConfigGroup], "Items")
+											if err != nil {
+												if ectl.Debug {
+													fmt.Println("error: ", err)
+												}
+											}
+											if ectl.Debug {
+												pp.Printf("[VARS] endpointFieldKind: %T\n", endpointFieldKind)
+											}
+											// group := endpoint.BlocksJSON[scraperConfigGroup]
+											if err := reflections.SetField(group, "Items", string(ev.Kv.Value)); err != nil {
+												if ectl.Debug {
+													fmt.Println("SetField() error: ", err)
+												}
+											}
+										} else {
+									*/
 									if len(endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock]) > 0 {
 										endpoint.BlocksJSON[scraperConfigGroup].Details[scraperConfigBlock][0].val = string(ev.Kv.Value)
 									}
+									//}
 								} else {
 									isEndpointField, err := reflections.HasField(endpoint, endpointField)
 									if err != nil {
@@ -367,6 +399,18 @@ func (ectl *EtcdConfig) NewE3chClient() (*client.EtcdHRCHYClient, error) {
 	}
 
 	return client, client.FormatRootKey()
+}
+
+func (ectl *EtcdConfig) Search(input interface{}, key string) string {
+	val := reflect.ValueOf(input).Elem()
+	for i := 0; i < val.NumField(); i++ {
+		valueField := val.Field(i)
+		typeField := val.Type().Field(i)
+		if key == strings.ToLower(typeField.Name) {
+			return valueField.Interface().(string)
+		}
+	}
+	return ""
 }
 
 // Get ...

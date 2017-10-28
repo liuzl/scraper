@@ -264,6 +264,37 @@
       }
     },
     {
+      "route": "/duckduckgo/web",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "duckduckgo-web",
+      "provider": "duckduckgo.com",
+      "base_url": "https://www.duckduckgo.com",
+      "url": "/html?q={{query}}&t=hf&df=m&ia=web",
+      "timeout": 10,
+      "selector": "css",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "div[class='result results_links results_links_deep web-result ']",
+          "details": {
+            "title": "div h2[class='result__title'] a[class='result__a']",
+            "desc": "div a[class='result__snippet']",
+            "icon": ["img[class='result__icon__img']", "@src"],
+            "url": [
+              "div a[class='result__snippet']",
+              "@href",
+              "query-param(uddg)"
+            ]
+          }
+        }
+      }
+    },
+    {
       "route": "/google/search",
       "debug": false,
       "disabled": true,
