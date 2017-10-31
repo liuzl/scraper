@@ -295,6 +295,37 @@
       }
     },
     {
+      "route": "/duckduckgo/images",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "duckduckgo-images",
+      "provider": "duckduckgo.com",
+      "base_url": "https://www.duckduckgo.com/", 
+      "url": "?q={{query}}&t=hg&iax=images&ia=images",
+      "timeout": 10,
+      "selector": "xpath",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "//*[@id='zci-images']/div/div[2]/div/div",
+          "details": {
+            "title": ["div[class='tile--img__media'] span[class='tile--img__media__i'] img[class='tile--img__img  js-lazyload']", "@alt"],
+            "desc": "div[class='tile--img__details'] div[class='tile--img__dimensions']",
+            "img": ["div span img[class='tile--img__img  js-lazyload']", "@src"],
+            "url": [
+              "div a[class='result__snippet']",
+              "@href",
+              "query-param(uddg)"
+            ]
+          }
+        }
+      }
+    },
+    {
       "route": "/google/search",
       "debug": false,
       "disabled": true,
@@ -597,6 +628,38 @@
         }
       }
     },
+    {
+      "route": "/bing/images",
+      "debug": true,
+      "cache": false,
+      "strict_mode": false,
+      "base_url": "https://www.bing.com",
+      "provider": "bing.com",
+      "method": "GET",
+      "url": "/images/search?q={{query}}&qs=n&form=QBLH&scope=images&sp=-1&count=100&first=1",
+      "selector": "css",
+      "blocks": {
+        "result": {
+          "debug": true,
+          "cache": false,
+          "strict_mode": false,
+          "items": "div.imgpt",
+          "details": {
+            "title": ["img","@alt"],
+            "image": [
+              "img",
+              "@src"
+            ],
+            "desc": "div[class=snippet]",
+            "url": [
+              "a",
+              "@href"
+            ]
+          }
+        }
+      }
+    },
+
     {
       "route": "/bing",
       "debug": false,

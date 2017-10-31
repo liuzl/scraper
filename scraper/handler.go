@@ -1,8 +1,6 @@
 package scraper
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -14,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	// "flag"
 
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
@@ -27,6 +26,7 @@ import (
 	"github.com/klaidliadon/go-memcached"
 	"github.com/klaidliadon/go-redis-cache"
 	"github.com/peterbourgon/diskv"
+	"github.com/roscopecoltran/configor"
 	"github.com/roscopecoltran/mxj"
 	"github.com/victortrac/disks3cache"
 	ctx "golang.org/x/net/context"
@@ -35,7 +35,6 @@ import (
 	// "golang.org/x/net/context/ctxhttp"
 	// "github.com/gregjones/httpcache/memcache"
 	// "github.com/mikegleasonjr/forwardcache"
-	// "github.com/roscopecoltran/configor"
 )
 
 var (
@@ -61,6 +60,34 @@ type Handler struct {
 	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
 	Log     bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
 	Debug   bool              `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Verbose bool              `default:"false" help:"Enable verbose output" json:"verbose,omitempty" yaml:"verbose,omitempty" toml:"verbose,omitempty"`
+}
+
+func (h *Handler) LoadConfigorFile(path string) error {
+
+	/*
+		config := flag.String("file", "config.yml", "configuration file")
+		flag.StringVar(&Config.APPName, "name", "", "app name")
+		flag.StringVar(&Config.DB.Name, "db-name", "", "database name")
+		flag.StringVar(&Config.DB.User, "db-user", "root", "database user")
+		flag.Parse()
+		os.Setenv("CONFIGOR_ENV_PREFIX", "-")
+	*/
+	if path == "" {
+		return errors.New("no config file provided")
+	}
+	c := Config{}
+	configor.New(&configor.Config{
+		Debug:   h.Debug,
+		Verbose: h.Verbose,
+	}).Load(&c, path)
+	if h.Debug {
+		fmt.Println("configor loading: ")
+		pp.Println(c)
+		fmt.Printf("config filepath: %s\n", path)
+	}
+	h.Config = c
+	return nil
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
@@ -460,17 +487,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		*/
 	}
 	// fmt.Fprintf(w, "luc")
-}
-
-func gzipFast(a *[]byte) []byte {
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
-	if _, err := gz.Write(*a); err != nil {
-		gz.Close()
-		panic(err)
-	}
-	gz.Close()
-	return b.Bytes()
 }
 
 // Endpoint will return the Handler's Endpoint from its Config

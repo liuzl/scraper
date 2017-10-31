@@ -1,13 +1,14 @@
 SWAGGER_UI_VERSION=3.3.2
 
 run:
-	@go run main.go $(CURDIR)/shared/conf.d/providers.json
+	# @go run main.go $(CURDIR)/shared/conf.d/providers.json
+	@go run main.go $(CURDIR)/shared/conf.d/providers.yaml
 
 build:
 	@go build -o $(CURDIR)/dist/scraper-local main.go
-	@echo "$ ./dist/scraper-local ./shared/conf.d/providers.json"
+	@echo "$ ./dist/scraper-local ./shared/conf.d/providers.yaml"
 	@echo ""
-	@./dist/scraper-local ./shared/conf.d/providers.list.json
+	@./dist/scraper-local ./shared/conf.d/providers.yaml
 
 dist:
 	gox -verbose -os="darwin linux" -arch="amd64" -output="./dist/scraper-{{.OS}}" $(glide novendor)

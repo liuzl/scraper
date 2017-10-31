@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/json"
 	"errors"
@@ -15,8 +16,10 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/jinzhu/now"
 	"github.com/k0kubun/pp"
 	// "github.com/linkosmos/mapdecor"
 	// "github.com/toukii/jsnm"
@@ -173,6 +176,72 @@ func generateCacheKey(req *http.Request, debug bool) (string, error) {
 		pp.Println(string(reqBytes))
 	}
 	return fmt.Sprintf("%s-%s-%x", req.Method, req.URL.String(), md5.Sum(reqBytes)), nil
+}
+
+func testtime() {
+	time.Now() // 2013-11-18 17:51:49.123456789 Mon
+
+	now.BeginningOfMinute()   // 2013-11-18 17:51:00 Mon
+	now.BeginningOfHour()     // 2013-11-18 17:00:00 Mon
+	now.BeginningOfDay()      // 2013-11-18 00:00:00 Mon
+	now.BeginningOfWeek()     // 2013-11-17 00:00:00 Sun
+	now.FirstDayMonday = true // Set Monday as first day, default is Sunday
+	now.BeginningOfWeek()     // 2013-11-18 00:00:00 Mon
+	now.BeginningOfMonth()    // 2013-11-01 00:00:00 Fri
+	now.BeginningOfQuarter()  // 2013-10-01 00:00:00 Tue
+	now.BeginningOfYear()     // 2013-01-01 00:00:00 Tue
+
+	now.EndOfMinute()         // 2013-11-18 17:51:59.999999999 Mon
+	now.EndOfHour()           // 2013-11-18 17:59:59.999999999 Mon
+	now.EndOfDay()            // 2013-11-18 23:59:59.999999999 Mon
+	now.EndOfWeek()           // 2013-11-23 23:59:59.999999999 Sat
+	now.FirstDayMonday = true // Set Monday as first day, default is Sunday
+	now.EndOfWeek()           // 2013-11-24 23:59:59.999999999 Sun
+	now.EndOfMonth()          // 2013-11-30 23:59:59.999999999 Sat
+	now.EndOfQuarter()        // 2013-12-31 23:59:59.999999999 Tue
+	now.EndOfYear()           // 2013-12-31 23:59:59.999999999 Tue
+
+	// Use another time
+	t1 := time.Date(2013, 02, 18, 17, 51, 49, 123456789, time.Now().Location())
+	now.New(t1).EndOfMonth() // 2013-02-28 23:59:59.999999999 Thu
+
+	// Don't want be bothered with the First Day setting, Use Monday, Sunday
+	now.Monday()      // 2013-11-18 00:00:00 Mon
+	now.Sunday()      // 2013-11-24 00:00:00 Sun (Next Sunday)
+	now.EndOfSunday() // 2013-11-24 23:59:59.999999999 Sun (End of next Sunday)
+
+	t2 := time.Date(2013, 11, 24, 17, 51, 49, 123456789, time.Now().Location()) // 2013-11-24 17:51:49.123456789 Sun
+	now.New(t2).Monday()                                                        // 2013-11-18 00:00:00 Sun (Last Monday if today is Sunday)
+	now.New(t2).Sunday()                                                        // 2013-11-24 00:00:00 Sun (Beginning Of Today if today is Sunday)
+	now.New(t2).EndOfSunday()                                                   // 2013-11-24 23:59:59.999999999 Sun (End of Today if today is Sunday)
+
+	/*
+	   time.Now() // 2013-11-18 17:51:49.123456789 Mon
+
+	   // Parse(string) (time.Time, error)
+	   t, err := now.Parse("12:20")            // 2013-11-18 12:20:00, nil
+	   t, err := now.Parse("1999-12-12 12:20") // 1999-12-12 12:20:00, nil
+	   t, err := now.Parse("99:99")            // 2013-11-18 12:20:00, Can't parse string as time: 99:99
+
+	   // MustParse(string) time.Time
+	   now.MustParse("2013-01-13")             // 2013-01-13 00:00:00
+	   now.MustParse("02-17")                  // 2013-02-17 00:00:00
+	   now.MustParse("2-17")                   // 2013-02-17 00:00:00
+	   now.MustParse("8")                      // 2013-11-18 08:00:00
+	   now.MustParse("2002-10-12 22:14")       // 2002-10-12 22:14:00
+	   now.MustParse("99:99")                  // panic: Can't parse string as time: 99:99
+	*/
+}
+
+func gzipFast(a *[]byte) []byte {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	if _, err := gz.Write(*a); err != nil {
+		gz.Close()
+		panic(err)
+	}
+	gz.Close()
+	return b.Bytes()
 }
 
 // https://github.com/thbourlove/restc/blob/master/transport.go
