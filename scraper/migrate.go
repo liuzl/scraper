@@ -371,7 +371,7 @@ func convertProviderConfig(name string, debug bool) *Provider {
 	return provider
 }
 
-func convertSelectorsConfig(selectors map[string]SelectorConfig, debug bool) ([]*SelectorConfig, error) {
+func convertSelectorsConfig(selectors map[string]*SelectorConfig, debug bool) ([]*SelectorConfig, error) {
 	var blocks []*SelectorConfig
 	for k, v := range selectors {
 		targets, err := convertDetailsConfig(v.Details, debug)

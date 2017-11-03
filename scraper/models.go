@@ -64,6 +64,26 @@ type Config struct {
 	Migrate         bool        `default:"true" help:"Migrate to admin dashboard" json:"migrate,omitempty" yaml:"migrate,omitempty" toml:"migrate,omitempty"`
 	Debug           bool        `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	Routes          []*Endpoint `gorm:"-" json:"routes,omitempty" yaml:"routes,omitempty" toml:"routes,omitempty"`
+	Templates       Templates   `gorm:"-" json:"templates" yaml:"templates" toml:"templates"`
+}
+
+//the configuration file
+type Templates map[string]map[string]*SelectorConfig
+
+// type TemplateConfig SelectorConfig
+
+type TemplateConfig2 struct {
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	EndpointID      uint                  `json:"-" yaml:"-" toml:"-"`
+	Cache           bool                  `default:"true" etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+	Collection      string                `json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
+	Description     string                `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
+	Required        bool                  `etcd:"required" default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
+	Items           string                `etcd:"items" json:"items,omitempty" yaml:"items,omitempty" toml:"items,omitempty"`
+	Details         map[string]Extractors `gorm:"-" etcd:"details" json:"details,omitempty" yaml:"details,omitempty" toml:"details,omitempty"`
+	StrictMode      bool                  `etcd:"strict_mode" default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+	Debug           bool                  `etcd:"debug" default:"true" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 type CacheConfig struct {
@@ -87,11 +107,13 @@ type EnvConfig struct {
 type Endpoint struct {
 	gorm.Model         `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	minFields          int                               `json:"-" yaml:"-" toml:"-"`
+	count              string                            `gorm"-" json:"-" yaml:"-" toml:"-"`
+	ready              bool                              `etcd:"-" json:"-" yaml:"-" toml:"-"`
+	hash               string                            `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	Update             time.Time                         `json:"-" yaml:"-" toml:"-"`
 	Disabled           bool                              `etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 	Cache              bool                              `default:"true" etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
-	ready              bool                              `etcd:"-" json:"-" yaml:"-" toml:"-"`
-	hash               string                            `etcd:"-" json:"-" yaml:"-" toml:"-"`
 	EtcdKey            string                            `etcd:"etcd_key" json:"etcd_key,omitempty" yaml:"etcd_key,omitempty" toml:"etcd_key,omitempty"`
 	Connections        []Connection                      `json:"-" yaml:"-" toml:"-"`
 	Source             string                            `etcd:"source" gorm:"-" json:"provider,omitempty" yaml:"provider,omitempty" toml:"provider,omitempty"`
@@ -102,6 +124,7 @@ type Endpoint struct {
 	Groups             []*Group                          `etcd:"groups" json:"groups,omitempty" yaml:"groups,omitempty" toml:"groups,omitempty"`
 	Route              string                            `etcd:"router" json:"route,omitempty" yaml:"route,omitempty" toml:"route,omitempty"`
 	Method             string                            `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
+	Template           string                            `gorm:"template" json:"template,omitempty" yaml:"template,omitempty" toml:"template,omitempty"`
 	Domain             string                            `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	Host               string                            `gorm:"-" json:"-" yaml:"-" toml:"-"`
 	Port               int                               `gorm:"-" json:"-" yaml:"-" toml:"-"`
@@ -119,17 +142,65 @@ type Endpoint struct {
 	HeadersIntercept   []string                          `etcd:"resp_headers_intercept" gorm:"-" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
 	Parameters         map[string]map[string]interface{} `etcd:"parameters" gorm:"-" json:"parameters,omitempty" yaml:"parameters,omitempty" toml:"parameters,omitempty"`
 	HeadersJSON        map[string]string                 `etcd:"headers" gorm:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	BlocksJSON         map[string]SelectorConfig         `etcd:"blocks" gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	BlocksJSON         map[string]*SelectorConfig        `etcd:"blocks" gorm:"-" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
 	Headers            []*HeaderConfig                   `json:"headers_orm,omitempty" yaml:"headers_orm,omitempty" toml:"headers_orm,omitempty"`
 	Blocks             []*SelectorConfig                 `json:"blocks_orm,omitempty" yaml:"blocks_orm,omitempty" toml:"blocks_orm,omitempty"`
 	EndpointProperties EndpointProperties                `etcd:"properties" sql:"type:text" json:"properties,omitempty" yaml:"properties,omitempty" toml:"properties,omitempty"`
 	Extract            ExtractConfig                     `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
-	MinFields          int                               `json:"-" yaml:"-" toml:"-"`
-	Count              string                            `gorm"-" json:"-" yaml:"-" toml:"-"`
 	Debug              bool                              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	StrictMode         bool                              `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 	// ExtractJSON        map[string]bool                   `etcd:"extractors" gorm"-" json:"extractors,omitempty" yaml:"extractors,omitempty" toml:"extractors,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"`
+}
+
+// Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
+type Template struct {
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	UUID            string                       `gorm:"uuid" etcd:"uuid" json:"uuid,omitempty" yaml:"uuid,omitempty" toml:"uuid,omitempty"`
+	Disabled        bool                         `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Cache           bool                         `gorm:"cache" default:"true" etcd:"cache" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+	Method          string                       `gorm:"index" json:"method,omitempty" yaml:"method,omitempty" toml:"method,omitempty"`
+	Pager           map[string]string            `gorm:"-" json:"pager" yaml:"pager" toml:"pager"`
+	Collection      bool                         `etcd:"collection" json:"collection,omitempty" yaml:"collection,omitempty" toml:"collection,omitempty"`
+	Concurrency     int                          `gorm:"concurrency" default:"1" json:"concurrency,omitempty" yaml:"concurrency,omitempty" toml:"concurrency,omitempty"`
+	Selector        string                       `gorm:"index" etcd:"selector" default:"css" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	Catch           Intercept                    `gorm:"-" etcd:"resp_headers_intercept" json:"resp_headers_intercept,omitempty" yaml:"resp_headers_intercept,omitempty" toml:"resp_headers_intercept,omitempty"`
+	Blocks          map[string]map[string]string `gorm:"-" etcd:"blocks" json:"blocks,omitempty" yaml:"blocks,omitempty" toml:"blocks,omitempty"`
+	Debug           bool                         `gorm:"debug" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode      bool                         `gorm:"strict_mode" etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+}
+
+type Intercept struct {
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	hash            string     `gorm:"hash" etcd:"hash" json:"hash,omitempty" yaml:"hash,omitempty" toml:"hash,omitempty"`
+	Disabled        bool       `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Headers         []*Header  `json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	Body            []*Pattern `json:"patterns,omitempty" yaml:"patterns,omitempty" toml:"patterns,omitempty"`
+	Debug           bool       `gorm:"debug" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode      bool       `gorm:"strict_mode" etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+}
+
+type Pattern struct {
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	hash            string `gorm:"hash" etcd:"hash" json:"hash,omitempty" yaml:"hash,omitempty" toml:"hash,omitempty"`
+	Disabled        bool   `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Pattern         string `gorm:"pattern" etcd:"pattern" json:"pattern,omitempty" yaml:"pattern,omitempty" toml:"pattern,omitempty"`
+	Debug           bool   `gorm:"debug" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode      bool   `gorm:"strict_mode" etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
+}
+
+type Header struct {
+	gorm.Model      `json:"-" yaml:"-" toml:"-"`
+	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
+	hash            string `gorm:"hash" etcd:"hash" json:"hash,omitempty" yaml:"hash,omitempty" toml:"hash,omitempty"`
+	Disabled        bool   `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Key             string `gorm:"key" etcd:"key" json:"key,omitempty" yaml:"key,omitempty" toml:"key,omitempty"`
+	Value           string `gorm:"value" etcd:"value" json:"value,omitempty" yaml:"value,omitempty" toml:"value,omitempty"`
+	Debug           bool   `gorm:"debug" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	StrictMode      bool   `gorm:"strict_mode" etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 }
 
 type Screenshot struct {
@@ -249,8 +320,8 @@ type SelectorConfig struct {
 	Description     string                `json:"description,omitempty" yaml:"description,omitempty" toml:"description,omitempty"`
 	Required        bool                  `etcd:"required" default:"true" json:"required,omitempty" yaml:"required,omitempty" toml:"required,omitempty"`
 	Items           string                `etcd:"items" json:"items,omitempty" yaml:"items,omitempty" toml:"items,omitempty"`
-	Details         map[string]Extractors `etcd:"details" gorm:"-" json:"details,omitempty" yaml:"details,omitempty" toml:"details,omitempty"`
-	Paths           map[string]string     `etcd:"paths" gorm:"-" json:"paths,omitempty" yaml:"paths,omitempty" toml:"paths,omitempty"`
+	Details         map[string]Extractors `gorm:"-" etcd:"details" json:"details,omitempty" yaml:"details,omitempty" toml:"details,omitempty"`
+	Paths           map[string]string     `gorm:"-" etcd:"paths" json:"paths,omitempty" yaml:"paths,omitempty" toml:"paths,omitempty"`
 	Matchers        []*MatcherConfig      `json:"matchers,omitempty" yaml:"matchers,omitempty" toml:"matchers,omitempty"`
 	StrictMode      bool                  `etcd:"strict_mode" default:"false" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
 	Debug           bool                  `etcd:"debug" default:"true" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`

@@ -8,6 +8,18 @@ env:
   debug: true
   files:
   - ".env"
+templates:
+  rss-default:
+    blocks:
+      result:
+        cache: false
+        strict_mode: false
+        debug: true
+        details:
+          title: title
+          desc: description
+          url: link
+          # pub_date: pubDate
 routes:
 
 # - route: "/vimeo"

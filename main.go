@@ -143,8 +143,8 @@ func main() {
 			sig := make(chan os.Signal, 1)
 			signal.Notify(sig, syscall.SIGHUP)
 			<-sig
-			if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
-				// if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+			//if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
+			if err := h.LoadConfigFile(c.ConfigFile); err != nil {
 				log.Printf("[scraper] Failed to load configuration: %s", err)
 			} else {
 				log.Printf("[scraper] Successfully loaded new configuration")
@@ -152,8 +152,8 @@ func main() {
 		}
 	}()
 
-	if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
-		//if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+	//if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
+	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
 		log.Fatal(err)
 	}
 

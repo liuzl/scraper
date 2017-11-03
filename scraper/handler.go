@@ -46,21 +46,19 @@ var (
 )
 
 type Handler struct {
-	Disabled bool `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Disabled bool              `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Env      EnvConfig         `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
+	Etcd     EtcdConfig        `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
+	Config   Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
+	Headers  map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
 
-	Env    EnvConfig  `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
-	Etcd   EtcdConfig `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
-	Config Config     `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
-
-	Cache struct {
+	Auth    string `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
+	Log     bool   `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
+	Debug   bool   `opts:"debug" default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Verbose bool   `opts:"verbose" default:"false" help:"Enable verbose output" json:"verbose,omitempty" yaml:"verbose,omitempty" toml:"verbose,omitempty"`
+	Cache   struct {
 		Control int `opts:"-" default:"120" json:"control,omitempty" yaml:"control,omitempty" toml:"control,omitempty"`
 	} `opts:"-" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
-
-	Headers map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-	Auth    string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
-	Log     bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
-	Debug   bool              `default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	Verbose bool              `default:"false" help:"Enable verbose output" json:"verbose,omitempty" yaml:"verbose,omitempty" toml:"verbose,omitempty"`
 }
 
 func (h *Handler) LoadConfigorFile(path string) error {
@@ -73,25 +71,49 @@ func (h *Handler) LoadConfigorFile(path string) error {
 		flag.Parse()
 		os.Setenv("CONFIGOR_ENV_PREFIX", "-")
 	*/
+
 	if path == "" {
 		return errors.New("no config file provided")
 	}
 	c := Config{}
+
+	fmt.Println("h.Debug", h.Debug)
+	fmt.Println("h.Verbose", h.Verbose)
+
 	configor.New(&configor.Config{
-		Debug:   h.Debug,
-		Verbose: h.Verbose,
+		// Environment: "production",
+		ENVPrefix: "SNIPERKIT",
+		Debug:     h.Debug,
+		Verbose:   h.Verbose,
 	}).Load(&c, path)
+
+	if h.Debug {
+		pp.Println(c.Templates)
+		fmt.Printf("config filepath: %s\n", path)
+	}
+	// os.Exit(1)
+
 	if h.Debug {
 		fmt.Println("configor loading: ")
 		pp.Println(c)
 		fmt.Printf("config filepath: %s\n", path)
+		pp.Println(c.Templates)
+		for k, v := range c.Templates {
+			pp.Println("k=", k)
+			pp.Println("v=", v)
+		}
 	}
+
+	// bug with yaml format with details block; due to mapping of keys and values
+	// os.Exit(1)
+
 	h.Config = c
 	InitCache("./shared/cache/external")
 	return nil
 }
 
 func (h *Handler) LoadConfigFile(path string) error {
+	fmt.Printf("config filepath: %s\n", path)
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -128,13 +150,9 @@ var Endpoints struct {
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
 
-	InitCache("./shared/cache/external")
-
-	/*
-		if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
-			return err
-		}
-	*/
+	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
+		return err
+	}
 
 	h.Etcd = c.Etcd
 	if len(c.Env.Files) > 0 {
@@ -167,7 +185,13 @@ func (h *Handler) LoadConfig(b []byte) error {
 				e.Route = strings.TrimPrefix(e.Route, "/")
 				c.Routes[k] = e
 			}
-
+			/*
+				if strings.HasPrefix(k, "/") {
+					delete(c, k)
+					k = strings.TrimPrefix(k, "/")
+					c[k] = e
+				}
+			*/
 			if h.Debug {
 				logf("Loaded endpoint: /%s", e.Route)
 			}
@@ -201,6 +225,12 @@ func (h *Handler) LoadConfig(b []byte) error {
 				pp.Println(e.HeadersJSON)
 			}
 		}
+		for k, t := range c.Templates {
+			pp.Println("k=", k, "t=", t)
+			c.Templates[k] = t
+		}
+		pp.Println(c.Templates)
+		// os.Exit(1)
 	}
 	if h.Debug {
 		logf("Enabled debug mode")
@@ -510,20 +540,27 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Endpoint will return the Handler's Endpoint from its Config
 func (h *Handler) Endpoint(path string) *Endpoint {
 	var keyCfg int
-	if !strings.HasPrefix(path, "/") {
-		path = fmt.Sprintf("/%s", path)
-	}
+	//if !strings.HasPrefix(path, "/") {
+	//	path = fmt.Sprintf("/%s", path)
+	//}
 	fmt.Printf("path to match: %s\n", path)
-	pp.Println("h.Config.Routes: ", h.Config.Routes)
+	// pp.Println("h.Config.Routes: ", h.Config.Routes)
 	for k, v := range h.Config.Routes {
 		fmt.Printf("v.Route: %s, path: %s\n", v.Route, path)
 		if v.Route == path {
-			fmt.Println("v.Route == path")
+			fmt.Println("v.Route == path, k=", k)
 			keyCfg = k
 			break
 		}
 	}
 	if h.Config.Routes[keyCfg] != nil {
+		if h.Config.Routes[keyCfg].Template != "" {
+			for k, v := range h.Config.Templates {
+				if k == h.Config.Routes[keyCfg].Template {
+					h.Config.Routes[keyCfg].BlocksJSON = v
+				}
+			}
+		}
 		return h.Config.Routes[keyCfg]
 	}
 	fmt.Println("v.Route is nil ")

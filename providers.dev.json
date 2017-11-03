@@ -10,31 +10,244 @@
       ".env"
     ]
   },
-  "routes": [
-    {
-      "route": "/thecodelesscode",
-      "name": "thecodelesscode",
-      "provider": "thecodelesscode.com",
-      "base_url": "http://thecodelesscode.com",
-      "url": "/rss",
-      "timeout": 10,
-      "selector": "rss",
-      "method": "GET",
-      "cache": false,
-      "debug": true,
-      "strict_mode": false,
-      "blocks": {
+  "templates": {
+    "rss/default": {
         "result": {
           "cache": false,
           "strict_mode": false,
-          "debug": true,
+          "debug": false,
           "details": {
             "title": "title",
             "desc": "description",
             "url": "link"
           }
         }
-      }
+    }
+  },
+  "routes": [
+    {
+      "route": "/xkcd",
+      "name": "xkcd",
+      "provider": "xkcd.com",
+      "base_url": "hhttp://what-if.xkcd.com",
+      "url": "/feed.atom",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/whatif",
+      "name": "whatif",
+      "provider": "xkcd.com",
+      "base_url": "hhttp://what-if.xkcd.com",
+      "url": "/feed.atom",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/webcomicname",
+      "name": "webcomicname",
+      "provider": "webcomicname.com",
+      "base_url": "http://webcomicname.com",
+      "url": "/rss",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/smbc",
+      "name": "smbc",
+      "provider": "smbc-comics.com",
+      "base_url": "http://www.smbc-comics.com",
+      "url": "/rss.php",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/sarahs_doodles",
+      "name": "sarahs_doodles",
+      "provider": "tapastic.com",
+      "base_url": "https://tapastic.com",
+      "url": "/rss/series/2007",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/questionablecontent",
+      "name": "questionablecontent",
+      "provider": "questionablecontent.net",
+      "base_url": "http://www.questionablecontent.net",
+      "url": "/QCRSS.xml",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/pennyarcade",
+      "name": "pennyarcade",
+      "provider": "penny-arcade.com",
+      "base_url": "https://penny-arcade.com",
+      "url": "/feed",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/pbfcomics",
+      "name": "pbfcomics",
+      "provider": "pbfcomics.com",
+      "base_url": "http://www.pbfcomics.com",
+      "url": "/feed/feed.xml",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/orderofthestick",
+      "name": "orderofthestick",
+      "provider": "giantitp.com",
+      "base_url": "http://www.giantitp.com",
+      "url": "/comics/oots.rss",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/fowllanguage",
+      "name": "fowllanguage",
+      "provider": "tumblr.com",
+      "base_url": "http://www.fowllanguagecomics.com",
+      "url": "/feed/",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/flashboardwars",
+      "name": "flashboardwars",
+      "provider": "tumblr.com",
+      "base_url": "http://theagevsheraldsun.tumblr.com",
+      "url": "/rss",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/dilbert",
+      "name": "dilbert",
+      "provider": "dilbert.com",
+      "base_url": "http://feed.dilbert.com",
+      "url": "/dilbert/daily_strip",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/dailywtf",
+      "name": "dailywtf",
+      "provider": "dailywtf.com",
+      "base_url": "http://syndication.thedailywtf.com",
+      "url": "/TheDailyWtf",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/amazingsuperpowers",
+      "name": "amazingsuperpowers",
+      "provider": "amazingsuperpowers.com",
+      "base_url": "http://feeds.feedburner.com",
+      "url": "/amazingsuperpowers?format=xml",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/alicegrove",
+      "name": "alicegrove",
+      "provider": "alicegrove.com",
+      "base_url": "http://www.alicegrove.com",
+      "url": "/rss",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
+    },
+    {
+      "route": "/thecodelesscode",
+      "name": "thecodelesscode",
+      "provider": "thecodelesscode.com",
+      "base_url": "http://thecodelesscode.com",
+      "url": "/rss",
+      "timeout": 3,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": false,
+      "strict_mode": false,
+      "template": "rss/default"
     },
     {
       "route": "/youtube/api",
@@ -46,7 +259,7 @@
       "provider": "youtube.com",
       "base_url": "https://www.googleapis.com",
       "url": "/youtube/v3/search?part=snippet&query={{query}}&maxResults=20&key={{YOUTUBE_API_KEY}}",
-      "timeout": 10,
+      "timeout": 3,
       "selector": "json",
       "method": "GET",
       "blocks": {
@@ -585,7 +798,7 @@
       "route": "/crunchbase/news",
       "debug": false,
       "strict_mode": false,
-      "cache": true,
+      "cache": false,
       "name": "news crunchbase",
       "provider": "crunchbase.com",
       "base_url": "https://news.crunchbase.com",
@@ -593,18 +806,7 @@
       "url": "/news/feed/",
       "timeout": 10,
       "selector": "rss",
-      "blocks": {
-        "result": {
-          "strict_mode": false,
-          "cache": true,
-          "details": {
-            "title": "title",
-            "desc": "description",
-            "url": "link",
-            "img": "image"
-          }
-        }
-      }
+      "template": "rss/default"
     },
     {
       "route": "/bitbucket",
