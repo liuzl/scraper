@@ -1,8 +1,8 @@
 SWAGGER_UI_VERSION=3.3.2
 
 run:
-	# @go run main.go $(CURDIR)/shared/conf.d/providers.json
-	@go run main.go $(CURDIR)/shared/conf.d/providers.yaml
+	# @go run *.go $(CURDIR)/shared/conf.d/providers.json
+	@go run *.go $(CURDIR)/shared/conf.d/providers.yaml
 
 build:
 	@go build -o $(CURDIR)/dist/scraper-local main.go

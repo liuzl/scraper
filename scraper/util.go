@@ -21,6 +21,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/jinzhu/now"
 	"github.com/k0kubun/pp"
+	// "github.com/jinzhu/inflection"
+	// "github.com/jinzhu/copier"
 	// "github.com/linkosmos/mapdecor"
 	// "github.com/toukii/jsnm"
 	// "github.com/byrnedo/mapcast"

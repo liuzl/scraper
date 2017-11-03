@@ -393,20 +393,24 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 	}
 
-	// if e.Cache {
-	_, _, cacheFile, err := e.getCacheKey(req, e.Debug)
-	if err != nil {
-		return nil, err
+	var cacheFile string
+	if e.Cache {
+		if _, _, cacheFile, err = e.getCacheKey(req, e.Debug); err != nil {
+			return nil, err
+		}
 	}
-	//}
 
-	isCacheExpired := cacheExpired(cacheFile, cacheDuration)
-	if e.Debug && e.Cache {
-		fmt.Printf("[ENDPOINT] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
+	if e.Cache && cacheFile != "" {
+		isCacheExpired := cacheExpired(cacheFile, cacheDuration)
+		if e.Debug && e.Cache {
+			fmt.Printf("[ENDPOINT] isCacheExpired: %t\ncacheFile: %s \n", isCacheExpired, cacheFile)
+		}
+		if !isCacheExpired && e.Cache {
+			return cacheContent(cacheFile)
+		}
 	}
-	if !isCacheExpired && e.Cache {
-		return cacheContent(cacheFile)
-	}
+
+	pp.Println("request: ", req)
 
 	resp, err := getClient().Do(req)
 	if err != nil {
@@ -429,6 +433,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			}
 		}
 	}
+
+	fmt.Println("resp.StatusCode: ", resp.StatusCode)
 
 	if resp.StatusCode != 200 {
 		if e.Debug {
@@ -545,12 +551,15 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		if err != nil {
 			return nil, err
 		}
+		// pp.Println("feed.Items: ", feed.Items)
 		for b, s := range e.BlocksJSON {
 			var results []Result
 			if e.Debug {
 				fmt.Println("[RSS] items count: ", len(feed.Items))
 			}
 			for _, item := range feed.Items {
+				pp.Println("feed.Item: ", item)
+				pp.Println("s.Details: ", s.Details)
 				if item != nil {
 					res := e.extractRss(item, s.Details)
 					if len(res) > 0 {
@@ -662,7 +671,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("unkown selector type")
 	}
 
-	if len(aggregate) > 0 && e.Cache {
+	if len(aggregate) > 0 && e.Cache && cacheFile != "" {
 		err = cacheResponse(cacheFile, aggregate) // dump response
 		if err != nil {
 			return nil, err
@@ -781,6 +790,8 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 		}
 	}
 	if e.Debug {
+		pp.Println("fields:", fields)
+		pp.Println("fieldsList:", fieldsList)
 		fmt.Println("item attr length:", len(r))
 	}
 

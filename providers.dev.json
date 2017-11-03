@@ -4,9 +4,76 @@
   "migrate": true,
   "truncate": true,
   "dashboard": true,
+  "env": {
+    "debug": true,
+    "files": [
+      ".env"
+    ]
+  },
   "routes": [
     {
-      "route": "youtube/noapi",
+      "route": "/thecodelesscode",
+      "name": "thecodelesscode",
+      "provider": "thecodelesscode.com",
+      "base_url": "http://thecodelesscode.com",
+      "url": "/rss",
+      "timeout": 10,
+      "selector": "rss",
+      "method": "GET",
+      "cache": false,
+      "debug": true,
+      "strict_mode": false,
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "debug": true,
+          "details": {
+            "title": "title",
+            "desc": "description",
+            "url": "link"
+          }
+        }
+      }
+    },
+    {
+      "route": "/youtube/api",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "youtube-api",
+      "provider": "youtube.com",
+      "base_url": "https://www.googleapis.com",
+      "url": "/youtube/v3/search?part=snippet&query={{query}}&maxResults=20&key={{YOUTUBE_API_KEY}}",
+      "timeout": 10,
+      "selector": "json",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "items",
+          "details": {
+            "title": "title",
+            "desc": "content",
+            "img": "snippet.thumbnails.high.url",
+            "pubdate": "snippet.publishedAt",
+            "uuid": "id.videoid"
+          }
+        }
+      },
+      "examples": {
+        "remote": {
+          "link": "https://www.googleapis.com/youtube/v3/search?part=snippet&query={{query}}&maxResults=20&key={{YOUTUBE_API_KEY}}"
+        },
+        "local": {
+          "link": "http://localhost:3000/youtube/api?query=dlib"
+        }
+      }
+    },
+    {
+      "route": "/youtube/noapi",
       "debug": true,
       "disabled": false,
       "cache": false,
@@ -14,19 +81,19 @@
       "name": "youtube-noapi",
       "provider": "youtube.com",
       "base_url": "https://www.youtube.com",
-      "url": "/results?search_query={{query}}",
-      "timeout": 3,
+      "url": "/results?search_query={{query}}&page={{page}}",
+      "timeout": 10,
+      "concurrency": 2,
       "selector": "xpath",
       "method": "GET",
       "blocks": {
         "result": {
           "cache": false,
           "strict_mode": false,
-          "debug": true,
-          "items": "#contents/div[contains(@class, \"style-scope ytd-item-section-renderer\")]",
+          "items": "//ol/li/div[contains(@class, 'yt-lockup yt-lockup-tile yt-lockup-video vve-check')]",
           "details": {
-            "title": ".//div[@class='yt-lockup-content']/h3/a",
-            "desc": ".//div[@class='yt-lockup-content']/div[@class='yt-lockup-description yt-ui-ellipsis yt-ui-ellipsis-2']",
+            "title": "div[@class=\"yt-lockup-content\"]/h3/a",
+            "desc": "div[@class=\"yt-lockup-content\"]/div[@class=\"yt-lockup-description yt-ui-ellipsis yt-ui-ellipsis-2\"]",
             "url": ".//h3/a/@href"
           }
         }
@@ -945,12 +1012,6 @@
     "debug": true,
     "init_check": true,
     "root_key": "sniperkit"
-  },
-  "env": {
-    "debug": true,
-    "files": [
-      ".env"
-    ]
   },
   "cache": {
     "disabled": false,

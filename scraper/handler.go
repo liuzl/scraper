@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	// "flag"
 
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
+	// bolt "github.com/coreos/bbolt"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/gregjones/httpcache/leveldbcache"
@@ -87,6 +87,7 @@ func (h *Handler) LoadConfigorFile(path string) error {
 		fmt.Printf("config filepath: %s\n", path)
 	}
 	h.Config = c
+	InitCache("./shared/cache/external")
 	return nil
 }
 
@@ -127,9 +128,13 @@ var Endpoints struct {
 func (h *Handler) LoadConfig(b []byte) error {
 	c := Config{}
 
-	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
-		return err
-	}
+	InitCache("./shared/cache/external")
+
+	/*
+		if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
+			return err
+		}
+	*/
 
 	h.Etcd = c.Etcd
 	if len(c.Env.Files) > 0 {
@@ -201,9 +206,8 @@ func (h *Handler) LoadConfig(b []byte) error {
 		logf("Enabled debug mode")
 	}
 
-	InitCache("./shared/cache/external")
-
 	h.Config = c //replace config
+	InitCache("./shared/cache/external")
 	return nil
 }
 
@@ -222,32 +226,37 @@ func newTransportContext(cachePath string, cacheEngine string) ctx.Context {
 }
 
 func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transport {
+	fmt.Println("[newTransportWithDiskCache] basePath: ", basePath)
 	switch engine {
 	case "boltdbcache":
-		cache, err := boltdbcache.New(filepath.Join(basePath, "cache"))
+		cachePath, err := boltdbcache.New(filepath.Join(basePath, "cache"))
+		fmt.Println("[boltdbcache] cachePath: ", cachePath)
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
-		return httpcache.NewTransport(cache)
+		return httpcache.NewTransport(cachePath)
 	case "staticfilecache":
-		cache := staticfilecache.New(basePath)
-		return httpcache.NewTransport(cache)
+		cachePath := staticfilecache.New(basePath)
+		fmt.Println("[staticfilecache] cachePath: ", cachePath)
+		return httpcache.NewTransport(cachePath)
 	case "disks3cache":
-		cacheDir, err := ioutil.TempDir("", "myTempDir")
+		cachePath, err := ioutil.TempDir("", "myTempDir")
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
+		fmt.Println("[disks3cache] cachePath: ", cachePath)
 		var cacheSize uint64
 		cacheSize = 512 // in megabytes
 		s3CacheURL := "s3://s3-us-west-2.amazonaws.com/my-bucket"
-		cache := disks3cache.New(cacheDir, cacheSize, s3CacheURL)
+		cache := disks3cache.New(cachePath, cacheSize, s3CacheURL)
 		return httpcache.NewTransport(cache)
 	case "leveldbcache":
-		cache, err := leveldbcache.New(filepath.Join(basePath, "cache"))
+		cachePath, err := leveldbcache.New(filepath.Join(basePath, "cache"))
 		if err != nil {
 			fmt.Println("error: ", err)
 		}
-		return httpcache.NewTransport(cache)
+		fmt.Println("[leveldbcache] cachePath: ", cachePath)
+		return httpcache.NewTransport(cachePath)
 	case "couchdb":
 		trans := &http.Transport{
 			MaxIdleConnsPerHost: 10,
@@ -282,6 +291,7 @@ func newTransportWithDiskCache(basePath string, engine string) *httpcache.Transp
 		cache.Indexes()
 		return httpcache.NewTransport(cache)
 	case "diskv":
+		fmt.Println("[diskv] basePath: ", basePath)
 		d := diskv.New(diskv.Options{
 			BasePath:     basePath,
 			CacheSizeMax: 500 * 1024 * 250, // 10MB
@@ -345,7 +355,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		return
 	}
-	id := r.URL.Path[1:]       // endpoint id (excludes root slash)
+
+	id := r.URL.Path[1:] // endpoint id (excludes root slash)
+
+	pp.Println("r.URL.Path: ", r.URL.Path)
+	pp.Println("r.URL.Path[1:]: ", r.URL.Path[1:])
+	pp.Println("id: ", id)
+
 	endpoint := h.Endpoint(id) // load endpoint
 
 	if endpoint == nil {
@@ -432,8 +448,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("totalResults: %d/%d, totalErrors: %d \n", totalResults, len(res["result"]), totalErrors)
 			}
 		} else {
+			pp.Println("values: ", values)
 			res, err = endpoint.Execute(values)
 			if err != nil {
+				fmt.Println("error endpoint.Execute(...): ", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write(jsonerr(err))
 				return
@@ -492,8 +510,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Endpoint will return the Handler's Endpoint from its Config
 func (h *Handler) Endpoint(path string) *Endpoint {
 	var keyCfg int
+	if !strings.HasPrefix(path, "/") {
+		path = fmt.Sprintf("/%s", path)
+	}
+	fmt.Printf("path to match: %s\n", path)
+	pp.Println("h.Config.Routes: ", h.Config.Routes)
 	for k, v := range h.Config.Routes {
+		fmt.Printf("v.Route: %s, path: %s\n", v.Route, path)
 		if v.Route == path {
+			fmt.Println("v.Route == path")
 			keyCfg = k
 			break
 		}
@@ -501,5 +526,6 @@ func (h *Handler) Endpoint(path string) *Endpoint {
 	if h.Config.Routes[keyCfg] != nil {
 		return h.Config.Routes[keyCfg]
 	}
+	fmt.Println("v.Route is nil ")
 	return nil
 }

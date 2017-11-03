@@ -4,31 +4,241 @@ debug: false
 migrate: true
 truncate: true
 dashboard: true
-etcd:
-  disabled: false
-  debug: true
-  init_check: true
-  root_key: sniperkit
 env:
   debug: true
   files:
   - ".env"
-cache:
-  disabled: false
-  engine: diskv
-  valid:
-  - diskv
-  - redis
-  - memcache
-  - couchdb
-  - leveldbcache
-  - disks3cache
-  - staticfilecache
-  - boltdbcache
-  listen_addr: localhost
-  expiration_time: 3600
-  prefix_path: "./shared/cache"
 routes:
+
+# - route: "/vimeo"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/vimeo.py
+
+# - route: "/wikidata"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/wikidata.py
+
+# - route: "/wikipedia"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/wikipedia.py
+
+# - route: "/twitter"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/twitter.py
+
+# - route: "/stackoverflow"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/stackoverflow.py
+
+# - route: "/spotify"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/spotify.py
+
+# - route: "/soundcloud"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/soundcloud.py
+
+# - route: "/reddit"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/reddit.py
+
+# - route: "/ina"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/ina.py
+
+# - route: "/google/videos"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/google_videos.py
+
+# - route: "/google/news"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/google_news.py
+
+# - route: "/flickr/noapi"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/flickr_noapi.py
+
+# - route: "/flickr/api"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/flickr.py
+
+# - route: "/duckduckgo/definitions"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/duckduckgo_definitions.py
+
+# - route: "/duckduckgo/images"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/duckduckgo_images.py
+
+# - route: "/duckduckgo/web"
+#   examples:
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/duckduckgo.py
+
+- route: "/thecodelesscode"
+  name: thecodelesscode
+  provider: thecodelesscode.com
+  base_url:  http://thecodelesscode.com
+  url: "/rss"
+  timeout: 10
+  selector: rss
+  method: GET
+  cache: false
+  debug: true
+  strict_mode: false
+  blocks:
+    result:
+      cache: false
+      strict_mode: false
+      debug: true
+      details:
+        title: title
+        desc: description
+        url: link
+        # pub_date: pubDate
+- route: "/youtube/api"
+  debug: true
+  disabled: false
+  cache: false
+  strict_mode: false
+  name: youtube-api
+  provider: youtube.com
+  base_url: https://www.googleapis.com
+  url: "/youtube/v3/search?part=snippet&query={{query}}&maxResults=20&key={{YOUTUBE_API_KEY}}"
+  timeout: 10
+  selector: json
+  method: GET
+  blocks:
+    result:
+      cache: false
+      strict_mode: false
+      items: 'items'
+      details:
+        title: title
+        desc: content
+        img: snippet.thumbnails.high.url
+        pubdate: snippet.publishedAt
+        uuid: id.videoid 
+        # published_date: PARSE_DATE('TEST', snippet.publishedAt)
+        # url: CONCAT('https://www.youtube.com/watch?v=', id.videoid)
+  examples:
+    remote:
+      link: https://www.googleapis.com/youtube/v3/search?part=snippet&query={{query}}&maxResults=20&key={{YOUTUBE_API_KEY}}
+    local:
+      link: http://localhost:3000/youtube/api?query=dlib
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/youtube_api.py    
+- route: "/youtube/noapi"
+  debug: true
+  disabled: false
+  cache: false
+  strict_mode: false
+  name: youtube-noapi
+  provider: youtube.com
+  base_url: https://www.youtube.com
+  url: "/results?search_query={{query}}&page={{page}}"
+  timeout: 10
+  concurrency: 2
+  selector: xpath
+  method: GET
+  blocks:
+    result:
+      cache: false
+      strict_mode: false
+      items: //ol/li/div[contains(@class, 'yt-lockup yt-lockup-tile yt-lockup-video vve-check')]
+      details:
+        title: div[@class="yt-lockup-content"]/h3/a
+        desc: div[@class="yt-lockup-content"]/div[@class="yt-lockup-description yt-ui-ellipsis yt-ui-ellipsis-2"]
+        url: ".//h3/a/@href"
+  examples:
+    remote:
+      link: https://www.youtube.com/results?search_query=dlib&page=1
+    local:
+      link: http://localhost:3000/youtube/noapi?query=dlib&page=1
+    # https://github.com/asciimoo/searx/blob/master/searx/engines/youtube_noapi.py
+  staging: # not parsed
+    disabled: 'false'
+    max: '25'
+    offset: '1'
+    limit: '100'
+    offset_var: page
+    limit_var: per_page
+    limit_checker: per_page
+    time_range_dict:
+    - day=Ag
+    - week=Aw
+    - month=BA
+    - year=BQ
+    urls:
+      results: "/results?search_query={{query}}&page={{page}}&sp=EgII{time_range}%253D%253D"
+    xpath:
+      # specific xpath variables
+      # item[css]: style-scope ytd-item-section-renderer
+      # results[css]: style-scope ytd-section-list-renderer
+      results: "//ol/li/div[contains(@class, 'yt-lockup yt-lockup-tile yt-lockup-video vve-check')]"
+      url: ".//h3/a/@href"
+      title: ".//div[@class='yt-lockup-content']/h3/a"
+      content: ".//div[@class='yt-lockup-content']/div[@class='yt-lockup-description yt-ui-ellipsis yt-ui-ellipsis-2']"
+    vars:
+      embedded_url: '<iframe width="540" height="304" data-src="//www.youtube-nocookie.com/embed/{videoid}" frameborder="0" allowfullscreen></iframe>'
+      base_youtube_url: "https://www.youtube.com/watch?v={{videoid}}"
+      video:
+        url: "{{base_youtube_url}}{{videoid}}"
+        thumbnail: "https://i.ytimg.com/vi/{{videoid}}/hqdefault.jpg"
+- route: "/duckduckgo/web"
+  debug: true
+  disabled: false
+  cache: false
+  strict_mode: false
+  name: duckduckgo-web
+  provider: duckduckgo.com
+  base_url: https://www.duckduckgo.com
+  url: "/html?q={{query}}&t=hf&df=m&ia=web"
+  timeout: 10
+  selector: css
+  method: GET
+  blocks:
+    result:
+      cache: false
+      strict_mode: false
+      items: div[class='result results_links results_links_deep web-result ']
+      details:
+        title: div h2[class='result__title'] a[class='result__a']
+        desc: div a[class='result__snippet']
+        icon:
+        - img[class='result__icon__img']
+        - "@src"
+        url:
+        - div a[class='result__snippet']
+        - "@href"
+        - query-param(uddg)
+- route: "/duckduckgo/images"
+  debug: true
+  disabled: false
+  cache: false
+  strict_mode: false
+  name: duckduckgo-images
+  provider: duckduckgo.com
+  base_url: https://www.duckduckgo.com/
+  url: "?q={{query}}&t=hg&iax=images&ia=images"
+  timeout: 10
+  selector: xpath
+  method: GET
+  blocks:
+    result:
+      cache: false
+      strict_mode: false
+      items: "//*[@id='zci-images']/div/div[2]/div/div"
+      details:
+        title:
+        - div[class='tile--img__media'] span[class='tile--img__media__i'] img[class='tile--img__img  js-lazyload']
+        - "@alt"
+        desc: div[class='tile--img__details'] div[class='tile--img__dimensions']
+        img:
+        - div span img[class='tile--img__img  js-lazyload']
+        - "@src"
+        url:
+        - div a[class='result__snippet']
+        - "@href"
+        - query-param(uddg)
 - route: "/github/stars"
   debug: false
   disabled: false
@@ -215,62 +425,6 @@ routes:
         - artist.name
         - album.title
         url: link
-- route: "/duckduckgo/web"
-  debug: true
-  disabled: false
-  cache: false
-  strict_mode: false
-  name: duckduckgo-web
-  provider: duckduckgo.com
-  base_url: https://www.duckduckgo.com
-  url: "/html?q={{query}}&t=hf&df=m&ia=web"
-  timeout: 10
-  selector: css
-  method: GET
-  blocks:
-    result:
-      cache: false
-      strict_mode: false
-      items: div[class='result results_links results_links_deep web-result ']
-      details:
-        title: div h2[class='result__title'] a[class='result__a']
-        desc: div a[class='result__snippet']
-        icon:
-        - img[class='result__icon__img']
-        - "@src"
-        url:
-        - div a[class='result__snippet']
-        - "@href"
-        - query-param(uddg)
-- route: "/duckduckgo/images"
-  debug: true
-  disabled: false
-  cache: false
-  strict_mode: false
-  name: duckduckgo-images
-  provider: duckduckgo.com
-  base_url: https://www.duckduckgo.com/
-  url: "?q={{query}}&t=hg&iax=images&ia=images"
-  timeout: 10
-  selector: xpath
-  method: GET
-  blocks:
-    result:
-      cache: false
-      strict_mode: false
-      items: "//*[@id='zci-images']/div/div[2]/div/div"
-      details:
-        title:
-        - div[class='tile--img__media'] span[class='tile--img__media__i'] img[class='tile--img__img  js-lazyload']
-        - "@alt"
-        desc: div[class='tile--img__details'] div[class='tile--img__dimensions']
-        img:
-        - div span img[class='tile--img__img  js-lazyload']
-        - "@src"
-        url:
-        - div a[class='result__snippet']
-        - "@href"
-        - query-param(uddg)
 - route: "/google/search"
   debug: false
   disabled: true
@@ -702,3 +856,23 @@ routes:
         url:
         - li a
         - "@href"
+etcd:
+  disabled: false
+  debug: true
+  init_check: true
+  root_key: sniperkit
+cache:
+  disabled: false
+  engine: diskv
+  valid:
+  - diskv
+  - redis
+  - memcache
+  - couchdb
+  - leveldbcache
+  - disks3cache
+  - staticfilecache
+  - boltdbcache
+  listen_addr: localhost
+  expiration_time: 3600
+  prefix_path: "./shared/cache"
