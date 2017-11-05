@@ -8,9 +8,11 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	// "net/rpc"
 	"os"
 	"path/filepath"
 	"strings"
+	// "sync"
 	"time"
 
 	"github.com/birkelund/boltdbcache"
@@ -28,6 +30,7 @@ import (
 	"github.com/peterbourgon/diskv"
 	"github.com/roscopecoltran/configor"
 	"github.com/roscopecoltran/mxj"
+	"github.com/trustmaster/goflow"
 	"github.com/victortrac/disks3cache"
 	ctx "golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -48,18 +51,23 @@ var (
 	// memcacheClient *memcache.Client
 )
 
+// A graph for our app
+type App struct {
+	flow.Graph
+}
+
 type Handler struct {
 	Disabled bool              `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
 	Env      EnvConfig         `opts:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
 	Etcd     EtcdConfig        `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`
 	Config   Config            `opts:"-" json:"config,omitempty" yaml:"config,omitempty" toml:"config,omitempty"`
 	Headers  map[string]string `opts:"-" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
-
-	Auth    string `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
-	Log     bool   `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
-	Debug   bool   `opts:"debug" default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
-	Verbose bool   `opts:"verbose" default:"false" help:"Enable verbose output" json:"verbose,omitempty" yaml:"verbose,omitempty" toml:"verbose,omitempty"`
-	Cache   struct {
+	App      *App              `opts:"-" json:"app,omitempty" yaml:"app,omitempty" toml:"app,omitempty"`
+	Auth     string            `help:"Basic auth credentials <user>:<pass>" json:"auth,omitempty" yaml:"auth,omitempty" toml:"auth,omitempty"`
+	Log      bool              `default:"false" opts:"-" json:"log,omitempty" yaml:"log,omitempty" toml:"log,omitempty"`
+	Debug    bool              `opts:"debug" default:"false" help:"Enable debug output" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	Verbose  bool              `opts:"verbose" default:"false" help:"Enable verbose output" json:"verbose,omitempty" yaml:"verbose,omitempty" toml:"verbose,omitempty"`
+	Cache    struct {
 		Control int `opts:"-" default:"120" json:"control,omitempty" yaml:"control,omitempty" toml:"control,omitempty"`
 	} `opts:"-" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 }
@@ -156,6 +164,19 @@ func (h *Handler) LoadConfig(b []byte) error {
 	if err := json.Unmarshal(b, &c); err != nil { //json unmarshal performs selector validation
 		return err
 	}
+
+	// Create a new graph
+	h.App = new(App)
+	h.App.InitGraphState()
+
+	// Add graph nodes
+	// h.App.Add(new(Router), "router")
+
+	// Connect the processes
+	// h.App.Connect("router", "Show", "controller", "In")
+
+	// Network ports
+	// h.App.MapInPort("In", "router", "In")
 
 	h.Etcd = c.Etcd
 	if len(c.Env.Files) > 0 {

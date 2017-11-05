@@ -32,6 +32,7 @@ import (
 	"github.com/mmcdole/gofeed"
 	"github.com/oleiade/reflections"
 	"github.com/roscopecoltran/mxj"
+	"github.com/trustmaster/goflow"
 	"github.com/tsak/concurrent-csv-writer"
 	"golang.org/x/net/html"
 	// "github.com/cevaris/ordered_map"
@@ -336,6 +337,58 @@ func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will exec
 	*/
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
+
+// Simple JSON response generator
+type Responder struct {
+	flow.Component
+	// In <-chan *RequestPacket
+}
+
+type RequestPacket struct {
+	Req  *http.Request
+	Res  http.ResponseWriter
+	Code int
+	Data interface{}
+	Done chan bool
+}
+
+// Immediately pops the request with error response
+func (p *RequestPacket) Error(code int, msg string) {
+	p.Res.WriteHeader(code)
+	js, _ := json.Marshal(Error{Code: code, Msg: msg})
+	p.Res.Write(js)
+	p.Done <- true
+}
+
+type GetRequestPacket struct {
+	*RequestPacket
+	Since int64
+}
+
+type PostRequestPacket struct {
+	*RequestPacket
+	Author string
+	Text   string
+}
+
+type Error struct {
+	Code int
+	Msg  string
+}
+
+/*
+// Processes a request packet and sends the response JSON
+func (r *Responder) OnIn(p *RequestPacket) {
+	js, err := json.Marshal(p.Data)
+	if err != nil {
+		p.Error(http.StatusInternalServerError, "Could not marshal JSON")
+		return
+	}
+	p.Res.Write(js)
+	p.Done <- true
+}
+
+*/
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 	if e.Debug {
