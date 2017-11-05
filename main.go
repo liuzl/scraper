@@ -158,13 +158,6 @@ func main() {
 		}
 	}()
 
-	//if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
-	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
-		log.Fatal(err)
-	}
-
-	// file := "file.txt"
-	// r := gin.Default()
 	m := melody.New()
 	w, _ := fsnotify.NewWatcher()
 	go func() {
@@ -175,14 +168,22 @@ func main() {
 				fmt.Println("ev.Name:", ev.Name)
 				fmt.Printf("content: %s\n", content)
 				m.Broadcast(content)
+
+				if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+					log.Printf("[scraper] Failed to load configuration: %s", err)
+				} else {
+					log.Printf("[scraper] Successfully loaded new configuration")
+				}
+
 			}
 		}
 	}()
-	/*
-		r.GET("/ws", func(c *gin.Context) {
-			m.HandleRequest(c.Writer, c.Request)
-		})
-	*/
+
+	//if err := h.LoadConfigorFile(c.ConfigFile); err != nil {
+	if err := h.LoadConfigFile(c.ConfigFile); err != nil {
+		log.Fatal(err)
+	}
+
 	m.HandleConnect(func(s *melody.Session) {
 		content, _ := ioutil.ReadFile(c.ConfigFile)
 		s.Write(content)
