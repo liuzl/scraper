@@ -678,8 +678,14 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		}
 	}
 
+	//if e.Debug {
+	//	aggregate["raw"] = resp.Body
+	//}
+
 	return aggregate, nil
 }
+
+// https://github.com/xrd/docker-search/blob/master/client.go#L70-L89
 
 func cacheExpired(cacheFile string, maxAge time.Duration) bool {
 	fi, err := os.Stat(cacheFile)

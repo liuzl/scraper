@@ -1,6 +1,6 @@
 {
   "port": 3002,
-  "debug": true,
+  "debug": false,
   "migrate": true,
   "truncate": true,
   "dashboard": true,
@@ -26,10 +26,38 @@
   },
   "routes": [
     {
+      "route": "/docker.io",
+      "name": "docker-io",
+      "provider": "docker.com",
+      "base_url": "https://index.docker.io",
+      "url": "/v1/search?q={{query}}",
+      "timeout": 3,
+      "selector": "json",
+      "method": "GET",
+      "cache": false,
+      "debug": true,
+      "strict_mode": false,
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "results",
+          "details": {
+            "title": "name",
+            "desc": "description",
+            "stars": "star_count",
+            "is_trusted": "is_trusted",
+            "is_automated": "is_automated",
+            "is_official": "is_official"
+          }
+        }
+      }
+    },
+    {
       "route": "/xkcd",
       "name": "xkcd",
       "provider": "xkcd.com",
-      "base_url": "hhttp://what-if.xkcd.com",
+      "base_url": "http://what-if.xkcd.com",
       "url": "/feed.atom",
       "timeout": 3,
       "selector": "rss",
