@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
+	"github.com/go-fsnotify/fsnotify"
+	"github.com/googollee/go-socket.io"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -24,6 +27,8 @@ import (
 	"github.com/roscopecoltran/scraper/scraper"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
+	"gopkg.in/olahol/melody.v1"
+	// fsnotify "gopkg.in/fsnotify.v1"
 	// "github.com/valyala/fasthttp"
 	// "github.com/geekypanda/httpcache"
 	// "github.com/meission/router"
@@ -44,6 +49,7 @@ import (
 	// "golang.org/x/crypto/bcrypt"
 	// "github.com/roscopecoltran/scraper/db/redis"
 	// "github.com/roscopecoltran/scraper/api"
+	// https://github.com/aliostad/deep-learning-lang-detection/blob/1180fba0d2a7f6b470cb3c9a363b560787f5e7c5/data/test/go/ec5f82a852d053a084edbc39ac4b56f9381b7cf9test.go
 )
 
 var VERSION = "0.0.0"
@@ -157,6 +163,34 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// file := "file.txt"
+	// r := gin.Default()
+	m := melody.New()
+	w, _ := fsnotify.NewWatcher()
+	go func() {
+		for {
+			ev := <-w.Events
+			if ev.Op == fsnotify.Write {
+				content, _ := ioutil.ReadFile(ev.Name)
+				fmt.Println("ev.Name:", ev.Name)
+				fmt.Printf("content: %s\n", content)
+				m.Broadcast(content)
+			}
+		}
+	}()
+	/*
+		r.GET("/ws", func(c *gin.Context) {
+			m.HandleRequest(c.Writer, c.Request)
+		})
+	*/
+	m.HandleConnect(func(s *melody.Session) {
+		content, _ := ioutil.ReadFile(c.ConfigFile)
+		s.Write(content)
+		fmt.Println("c.ConfigFile:", c.ConfigFile)
+		fmt.Printf("content: %s\n", content)
+	})
+	w.Add(c.ConfigFile)
+
 	// cache
 	// https://github.com/garycarr/httpcache/blob/f039dd6ff44cf40d52e8e86ef10bff41e592fd48/README.md
 	fmt.Printf("Scraper.NumCPU: %d\n", runtime.NumCPU())
@@ -197,7 +231,7 @@ func main() {
 		pp.Println(h.Config.Env.VariablesTree)
 	}
 
-	if h.Config.Dashboard {
+	if h.Config.Migrate {
 		if h.Config.Debug {
 			fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
 			fmt.Printf(" - IsMigrateEndpoints? %t \n", h.Config.Migrate)
@@ -216,10 +250,34 @@ func main() {
 		}
 
 		scraper.MigrateTables(DB, h.Config.Truncate, Tables...) // Create RDB datastore
+	}
+
+	if h.Config.Dashboard {
 		initDashboard()
 		AdminUI.MountTo("/admin", mux) // amount to /admin, so visit `/admin` to view the admin interface
-
 	}
+
+	server, err := socketio.NewServer(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// https://github.com/googollee/go-socket.io/blob/master/example/main.go
+	server.On("connection", func(so socketio.Socket) {
+		log.Println("on connection")
+		so.Join("chat")
+		so.On("chat message", func(msg string) {
+			fmt.Println(so, msg)
+			log.Println("emit:", so.Emit("chat message", msg))
+			so.BroadcastTo("chat", "chat message", msg)
+		})
+		so.On("disconnection", func() {
+			log.Println("on disconnect")
+		})
+	})
+	server.On("error", func(so socketio.Socket, err error) {
+		log.Println("error:", err)
+	})
 
 	// Experimental
 	// redis.UseRedis(c.RedisHost)
@@ -227,6 +285,8 @@ func main() {
 	// scraper.SeedAlexaTop1M()
 	// h = scraper.NewRequestCacher(mux, "./shared/cache/scraper")
 	mux.Handle("/", h)
+	//	mux.HandleFunc("/ws", m.HandleRequest())
+	mux.Handle("/socket.io/", server)
 
 	mux.HandleFunc("/favicon.ico", scraper.FaviconHandler)
 	mux.HandleFunc("/test", handler)

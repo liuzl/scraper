@@ -15,8 +15,10 @@ import (
 	"net/url"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/jinzhu/now"
@@ -41,6 +43,26 @@ import (
 	*/)
 
 var templateRe = regexp.MustCompile(`\{\{\s*(\w+)\s*(:(\w+))?\s*\}\}`)
+
+func str2bytes(s string) []byte {
+	x := (*[2]uintptr)(unsafe.Pointer(&s))
+	h := [3]uintptr{x[0], x[1], x[1]}
+	return *(*[]byte)(unsafe.Pointer(&h))
+}
+
+func bytes2str(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+func stack() []byte {
+	buf := make([]byte, 10240)
+	n := runtime.Stack(buf, false)
+	if n > 710 {
+		copy(buf, buf[710:n])
+		return buf[:n-710]
+	}
+	return buf[:n]
+}
 
 func contains(input []string, match string) bool {
 	for _, value := range input {
