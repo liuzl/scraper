@@ -55,6 +55,7 @@ type Config struct {
 	gorm.Model      `json:"-" yaml:"-" toml:"-"`
 	sorting.Sorting `json:"-" yaml:"-" toml:"-"`
 	Disabled        bool        `default:"false" help:"Disable handler init" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Mode            string      `default:"dev" help:"Env mode" json:"mode,omitempty" yaml:"mode,omitempty" toml:"mode,omitempty"`
 	Cache           CacheConfig `gorm:"-" help:"Cache handler opts" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
 	Env             EnvConfig   `gorm:"-" json:"env,omitempty" yaml:"env,omitempty" toml:"env,omitempty"`
 	Etcd            EtcdConfig  `opts:"-" json:"etcd,omitempty" yaml:"etcd,omitempty" toml:"etcd,omitempty"`

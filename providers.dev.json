@@ -1,5 +1,5 @@
 {
-  "port": 3002,
+  "port": 3000,
   "debug": false,
   "migrate": true,
   "truncate": true,
@@ -26,11 +26,38 @@
   },
   "routes": [
     {
-      "route": "/docker.io",
-      "name": "docker-io",
-      "provider": "docker.com",
-      "base_url": "https://index.docker.io",
-      "url": "/v1/search?q={{query}}",
+      "route": "/fdroid",
+      "name": "fdroid",
+      "provider": "f-droid.org",
+      "base_url": "https://f-droid.org",
+      "url": "/packages/#q={{query}}",
+      "timeout": 3,
+      "selector": "css",
+      "method": "GET",
+      "cache": false,
+      "debug": true,
+      "strict_mode": false,
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "debug": true,
+          "items": "ul.results > * > a.package-header", 
+          "details": { 
+            "link": ["@href"],
+            "title": "a, div, h4",
+            "img": ["img", "@src"],
+            "desc": "a, div, div, span"
+          }
+        }
+      }
+    },
+    {
+      "route": "/trello",
+      "name": "trello",
+      "provider": "trello.com",
+      "base_url": "https://api.trello.com",
+      "url": "/1",
       "timeout": 3,
       "selector": "json",
       "method": "GET",
@@ -40,6 +67,34 @@
       "blocks": {
         "result": {
           "cache": false,
+          "strict_mode": false,
+          "items": "results",
+          "details": {
+            "title": "name",
+            "desc": "description",
+            "stars": "star_count",
+            "is_trusted": "is_trusted",
+            "is_automated": "is_automated",
+            "is_official": "is_official"
+          }
+        }
+      }
+    },
+    {
+      "route": "/docker.io",
+      "name": "docker-io",
+      "provider": "docker.com",
+      "base_url": "https://index.docker.io",
+      "url": "/v1/search?q={{query}}",
+      "timeout": 3,
+      "selector": "json",
+      "method": "GET",
+      "cache": true,
+      "debug": false,
+      "strict_mode": false,
+      "blocks": {
+        "result": {
+          "cache": true,
           "strict_mode": false,
           "items": "results",
           "details": {
