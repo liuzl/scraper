@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/alexflint/go-restructure"
 	"github.com/antchfx/xquery/html"
 	"github.com/archivers-space/warc"
 	"github.com/cnf/structhash"
@@ -35,6 +36,18 @@ import (
 	"github.com/trustmaster/goflow"
 	"github.com/tsak/concurrent-csv-writer"
 	"golang.org/x/net/html"
+	// "golang.org/x/net/proxy" // https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
+	// jsonql "github.com/ugurozgen/json-transformer"
+	// cregex "github.com/mingrammer/commonregex"
+	// rx "github.com/yargevad/regexpx"
+	// "github.com/naivesound/expr-go"
+	// "github.com/OAGr/rulebook"
+	// "github.com/Maldris/mathparse"
+	// "github.com/goanywhere/regex"
+	// "github.com/xyproto/lookup"
+	// "github.com/elgs/jsonql"
+	// "github.com/h12w/dfa"
+	// "github.com/nytlabs/gojee"
 	// "github.com/cevaris/ordered_map"
 	// "github.com/iancoleman/orderedmap"
 	// "golang.org/x/net/context/ctxhttp"
@@ -93,9 +106,220 @@ import (
 	- https://github.com/creack/spider/blob/master/example_test.go
 	- https://github.com/suwhs/go-goquery-utils/tree/master/pipes
 	- https://github.com/andrewstuart/goq
+
+	- https://golanglibs.com/search?page=4&q=expression
+	- https://github.com/elves/elvish
+	- https://github.com/google/zoekt
+	- https://github.com/pointlander/peg
+	- https://github.com/pointlander/peg/blob/master/grammars/c/c.peg
+	- https://github.com/icochico/regexbench
+
+	- https://github.com/hermanschaaf/go-string-concat-benchmarks
+	- https://github.com/elgs/jsonql
+	- https://github.com/alexflint/go-restructure/tree/master/samples
+	- https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
 */
 
 var cacheDuration = 3600 * time.Second
+var quaternionRegexp = restructure.MustCompile(QuotedQuaternion{}, restructure.Options{})
+
+type EmailAddress struct {
+	_    struct{} `^`
+	User string   `\w+`
+	_    struct{} `@`
+	Host string   `[^@]+`
+	_    struct{} `$`
+}
+
+type Hostname struct {
+	Domain string   `\w+`
+	_      struct{} `\.`
+	TLD    string   `\w+`
+}
+
+type EmailAddress2 struct {
+	_    struct{} `^`
+	User string   `[a-zA-Z0-9._%+-]+`
+	_    struct{} `@`
+	Host *Hostname
+	_    struct{} `$`
+}
+
+// Matches "123", "1.23", "1.23e-4", "-12.3E+5", ".123"
+type Float struct {
+	Sign     *Sign     `?` // sign is optional
+	Whole    string    `[0-9]*`
+	Period   struct{}  `\.?`
+	Frac     string    `[0-9]+`
+	Exponent *Exponent `?` // exponent is optional
+}
+
+// Matches "e+4", "E6", "e-03"
+type Exponent struct {
+	_    struct{} `[eE]`
+	Sign *Sign    `?` // sign is optional
+	Num  string   `[0-9]+`
+}
+
+// Matches "+" or "-"
+type Sign struct {
+	Ch string `[+-]`
+}
+
+type RealPart struct {
+	Sign string `regexp:"[+-]?"`
+	Real string `regexp:"[0-9]+"`
+}
+
+type SignedInt struct {
+	Sign string `regexp:"[+-]"`
+	Real string `regexp:"[0-9]+"`
+}
+
+type IPart struct {
+	Magnitude SignedInt
+	_         struct{} `regexp:"i"`
+}
+
+type JPart struct {
+	Magnitude SignedInt
+	_         struct{} `regexp:"j"`
+}
+
+type KPart struct {
+	Magnitude SignedInt
+	_         struct{} `regexp:"k"`
+}
+
+// matches "1+2i+3j+4k", "-1+2k", "-1", etc
+type Quaternion struct {
+	Real *RealPart
+	I    *IPart `regexp:"?"`
+	J    *JPart `regexp:"?"`
+	K    *KPart `regexp:"?"`
+}
+
+// matches the quoted strings `"-1+2i+3j+4k"`, `"3-4k"`, `"12+34i"`, etc
+type QuotedQuaternion struct {
+	_          struct{} `regexp:"^"`
+	_          struct{} `regexp:"\""`
+	Quaternion *Quaternion
+	_          struct{} `regexp:"\""`
+	_          struct{} `regexp:"$"`
+}
+
+func (c *QuotedQuaternion) UnmarshalJSON(b []byte) error {
+	if !quaternionRegexp.Find(c, string(b)) {
+		return fmt.Errorf("%s is not a quaternion number", string(b))
+	}
+	return nil
+}
+
+// this struct is handled by JSON
+type Var struct {
+	Name  string
+	Value *QuotedQuaternion
+}
+
+func prettyPrint(x interface{}) string {
+	buf, err := json.MarshalIndent(x, "", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(buf)
+}
+
+func testRestructureQuotedQuaternion() {
+	src := `{"name": "foo", "value": "1+2i+3j+4k"}`
+	var v Var
+	err := json.Unmarshal([]byte(src), &v)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(prettyPrint(v))
+}
+
+func testRestructureSubstring() {
+	content := "joe@example.com"
+	expr := regexp.MustCompile(`^([a-zA-Z0-9._%+-]+)@((\w+)\.(\w+))$`)
+	indices := expr.FindStringSubmatchIndex(content)
+	if len(indices) > 0 {
+		userBegin, userEnd := indices[2], indices[3]
+		var user string
+		if userBegin != -1 && userEnd != -1 {
+			user = content[userBegin:userEnd]
+		}
+
+		domainBegin, domainEnd := indices[6], indices[7]
+		var domain string
+		if domainBegin != -1 && domainEnd != -1 {
+			domain = content[domainBegin:domainEnd]
+		}
+
+		tldBegin, tldEnd := indices[8], indices[9]
+		var tld string
+		if tldBegin != -1 && tldEnd != -1 {
+			tld = content[tldBegin:tldEnd]
+		}
+
+		fmt.Println(user)   // prints "joe"
+		fmt.Println(domain) // prints "example"
+		fmt.Println(tld)    // prints "com"
+	}
+}
+
+func testRestructureNested() {
+	var addr EmailAddress2
+	success, _ := restructure.Find(&addr, "joe@example.com")
+	if success {
+		fmt.Println(addr.User)        // prints "joe"
+		fmt.Println(addr.Host.Domain) // prints "example"
+		fmt.Println(addr.Host.TLD)    // prints "com"
+	}
+}
+
+func testRestructure() {
+	var addr EmailAddress
+	restructure.Find(&addr, "joe@example.com")
+	fmt.Println(addr.User) // prints "joe"
+	fmt.Println(addr.Host) // prints "example.com"
+}
+
+func testJsonql() {
+	parser, err := jsonql.NewStringQuery(jsonString)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(parser.Query("name='elgs'"))
+	//[map[skills:[Golang Java C] name:elgs gender:m age:35]] <nil>
+
+	fmt.Println(parser.Query("name='elgs' && gender='f'"))
+	//[] <nil>
+
+	fmt.Println(parser.Query("age<10 || (name='enny' && gender='f')"))
+	//[map[gender:f age:36 skills:[IC Electric design Verification] name:enny] map[age:1 skills:[Eating Sleeping Crawling] name:sam gender:m]] <nil>
+
+	fmt.Println(parser.Query("age<10"))
+	//[map[name:sam gender:m age:1 skills:[Eating Sleeping Crawling]]] <nil>
+
+	fmt.Println(parser.Query("1=0"))
+	//[] <nil>
+
+	fmt.Println(parser.Query("age=(2*3)^2"))
+	//[map[skills:[IC Electric design Verification] name:enny gender:f age:36]] <nil>
+
+	fmt.Println(parser.Query("name ~= 'e.*'"))
+	//[map[age:35 skills:[Golang Java C] name:elgs gender:m] map[skills:[IC Electric design Verification] name:enny gender:f age:36]] <nil>
+
+	fmt.Println(parser.Query("name='el'+'gs'"))
+	fmt.Println(parser.Query("age=30+5.0"))
+	fmt.Println(parser.Query("age=40.0-5"))
+	fmt.Println(parser.Query("age=70-5*7"))
+	fmt.Println(parser.Query("age=70.0/2.0"))
+	fmt.Println(parser.Query("age=71%36"))
+	// [map[name:elgs gender:m age:35 skills:[Golang Java C]]] <nil>
+}
 
 func csvWriterTest() {
 	// Create `dump.csv` in `./shared/data` directory

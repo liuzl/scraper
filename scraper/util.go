@@ -29,18 +29,26 @@ import (
 	// "github.com/toukii/jsnm"
 	// "github.com/byrnedo/mapcast"
 	// "github.com/spf13/cast"
+	// "github.com/rakanalh/goscrape"
+	// "github.com/rakanalh/goscrape/extract"
+	// "github.com/rakanalh/goscrape/processors"
+	// "github.com/gorilla/css/scanner"
+	// "github.com/moovweb/gokogiri"
+	// "github.com/moovweb/gokogiri/html"
+	// "github.com/moovweb/gokogiri/xml"
+	// "github.com/moovweb/gokogiri/xpath"
 	// "github.com/roscopecoltran/css2xpath"
-	/*
-		"github.com/rakanalh/goscrape"
-		"github.com/rakanalh/goscrape/extract"
-		"github.com/rakanalh/goscrape/processors"
-	*//*
-		"github.com/gorilla/css/scanner"
-		"github.com/moovweb/gokogiri"
-		"github.com/moovweb/gokogiri/html"
-		"github.com/moovweb/gokogiri/xml"
-		"github.com/moovweb/gokogiri/xpath"
-	*/)
+)
+
+/*
+	Refs:
+	- https://github.com/osvik/txttransformer
+	- https://github.com/hotei/tempfile
+	- https://github.com/gonyi/yIndex
+	- https://github.com/nightmouse/funcsplit
+	- https://github.com/danward79/csvtool
+	- https://github.com/doganov/filesort-example
+*/
 
 var templateRe = regexp.MustCompile(`\{\{\s*(\w+)\s*(:(\w+))?\s*\}\}`)
 

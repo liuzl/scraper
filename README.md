@@ -98,3 +98,13 @@ Examples:
 ```bash
 open http://localhost:8086/ (e3ch)
 ```
+
+go run *.go --debug --verbose ./providers.dev.json
+
+ip="ifconfig en0 | grep inet | awk '$1=="inet" {print $2}'"
+socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\"
+eg. docker run -e DISPLAY=192.168.0.2:0 gns3/xeyes
+https://stackoverflow.com/questions/37826094/xt-error-cant-open-display-if-using-default-display
+
+socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\"
+docker run -e DISPLAY=192.168.0.2:0 jess/geary
