@@ -217,4 +217,8 @@ krakend.*
 kraken.*
 
 *.csv
+*.db
+*.tar.gz
+*.gz
+
 

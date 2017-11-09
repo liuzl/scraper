@@ -1,4 +1,4 @@
-package httptor
+package scraper
 
 import (
 	"bytes"
@@ -6,14 +6,14 @@ import (
 	"crypto/sha1"
 	"encoding/asn1"
 	"encoding/base32"
-	"log"
+	// "log"
 	"net/http"
-	"os"
-	"sort"
+	// "os"
+	// "sort"
 
-	"github.com/ak1t0/flame/crawler"
-	"github.com/ak1t0/flame/format"
-	"github.com/ak1t0/flame/reader"
+	// "github.com/ak1t0/flame/crawler"
+	// "github.com/ak1t0/flame/format"
+	// "github.com/ak1t0/flame/reader"
 	"golang.org/x/net/proxy"
 )
 

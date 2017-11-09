@@ -285,7 +285,8 @@ func testRestructure() {
 	fmt.Println(addr.Host) // prints "example.com"
 }
 
-func testJsonql() {
+/*
+func testJsonql(jsonString string) {
 	parser, err := jsonql.NewStringQuery(jsonString)
 	if err != nil {
 		fmt.Println(err)
@@ -320,6 +321,7 @@ func testJsonql() {
 	fmt.Println(parser.Query("age=71%36"))
 	// [map[name:elgs gender:m age:35 skills:[Golang Java C]]] <nil>
 }
+*/
 
 func csvWriterTest() {
 	// Create `dump.csv` in `./shared/data` directory
