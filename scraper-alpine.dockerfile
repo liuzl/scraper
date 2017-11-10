@@ -2,7 +2,7 @@ FROM alpine:edge
 MAINTAINER Rosco Pecoltran <https://github.com/roscopecoltran>
 
 # build: docker build -t scraper:alpine -f scraper-alpine.dockerfile --no-cache .
-# run: docker run --rm -ti -p 3000:3000 -v `pwd`:/app scraper:alpine
+# run: docker run --rm --host -ti -p 3000:3000 -v `pwd`:/app scraper:alpine
 
 ARG GOPATH=${GOPATH:-"/go"}
 ARG APK_INTERACTIVE=${APK_INTERACTIVE:-"bash nano tree"}
