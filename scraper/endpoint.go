@@ -3,30 +3,37 @@ package scraper
 import (
 	"context"
 	"crypto/md5"
-	// "crypto/sha1"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"math/rand"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	// "crypto/sha1"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alexflint/go-restructure"
 	"github.com/antchfx/xquery/html"
 	"github.com/archivers-space/warc"
+	"github.com/benmanns/goworker"
 	"github.com/cnf/structhash"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
 	"github.com/iancoleman/strcase"
 	"github.com/jeevatkm/go-model"
+	"github.com/jeffail/tunny"
 	"github.com/k0kubun/pp"
+	"github.com/kamildrazkiewicz/go-flow"
 	"github.com/karlseguin/cmap"
 	"github.com/leebenson/conform"
 	"github.com/mgbaozi/gomerge"
@@ -35,7 +42,11 @@ import (
 	"github.com/roscopecoltran/mxj"
 	"github.com/trustmaster/goflow"
 	"github.com/tsak/concurrent-csv-writer"
+	"github.com/vbauerster/mpb"
+	"github.com/vbauerster/mpb/decor"
 	"golang.org/x/net/html"
+	// "github.com/LibertyLocked/cachestore"
+	// "github.com/fatih/color"
 	// "golang.org/x/net/proxy" // https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
 	// jsonql "github.com/ugurozgen/json-transformer"
 	// cregex "github.com/mingrammer/commonregex"
@@ -79,6 +90,8 @@ import (
 
 /*
 	Refs:
+	- github.com/ahmetb/go-linq
+	- interfacer -for \"github.com/roscopecoltran/scraper/scraper\".Config -as mock.Scraper
 	- github.com/slotix/dataflowkit
 	- github.com/slotix/pageres-go-wrapper
 	- github.com/fern4lvarez/go-metainspector
@@ -118,9 +131,91 @@ import (
 	- https://github.com/elgs/jsonql
 	- https://github.com/alexflint/go-restructure/tree/master/samples
 	- https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
+
+	- https://github.com/mergermarket/news-aggro/blob/26d6834805449ed74684c3facac0813e339a8d8d/main.go#L21
 */
 
 var cacheDuration = 3600 * time.Second
+
+func myFunc(queue string, args ...interface{}) error {
+	fmt.Printf("From %s, %v\n", queue, args)
+	return nil
+}
+
+/*
+func newMyFunc(uri string) func(queue string, args ...interface{}) error {
+	foo := NewFoo(uri)
+	return func(queue string, args ...interface{}) error {
+		foo.Bar(args)
+		return nil
+	}
+}
+*/
+
+func init() {
+	settings := goworker.WorkerSettings{
+		URI:            "redis://localhost:6379/",
+		Connections:    100,
+		Queues:         []string{"myqueue", "delimited", "queues"},
+		UseNumber:      true,
+		ExitOnComplete: false,
+		Concurrency:    2,
+		Namespace:      "resque:",
+		Interval:       5.0,
+	}
+	goworker.SetSettings(settings)
+	goworker.Register("MyClass", myFunc)
+	// goworker.Register("MyClass", newMyFunc("http://www.example.com/"))
+}
+
+func testGoWorker() {
+
+	goworker.Enqueue(&goworker.Job{
+		Queue: "myqueue",
+		Payload: goworker.Payload{
+			Class: "MyClass",
+			Args:  []interface{}{"hi", "there"},
+		},
+	})
+
+	if err := goworker.Work(); err != nil {
+		fmt.Println("Error:", err)
+	}
+}
+
+func testGoFlow() {
+	f1 := func(r map[string]interface{}) (interface{}, error) {
+		fmt.Println("function1 started")
+		time.Sleep(time.Millisecond * 1000)
+		return 1, nil
+	}
+
+	f2 := func(r map[string]interface{}) (interface{}, error) {
+		time.Sleep(time.Millisecond * 1000)
+		fmt.Println("function2 started", r["f1"])
+		return "some results", nil // errors.New("Some error")
+	}
+
+	f3 := func(r map[string]interface{}) (interface{}, error) {
+		fmt.Println("function3 started", r["f1"])
+		return nil, nil
+	}
+
+	f4 := func(r map[string]interface{}) (interface{}, error) {
+		fmt.Println("function4 started", r)
+		return nil, nil
+	}
+
+	res, err := goflow.New().
+		Add("f1", nil, f1).
+		Add("f2", []string{"f1"}, f2).
+		Add("f3", []string{"f1"}, f3).
+		Add("f4", []string{"f2", "f3"}, f4).
+		Do()
+
+	fmt.Println(res, err)
+}
+
 var quaternionRegexp = restructure.MustCompile(QuotedQuaternion{}, restructure.Options{})
 
 type EmailAddress struct {
@@ -373,6 +468,40 @@ func warcReadAllTest() {
 	}
 }
 
+func testMBP() {
+	var wg sync.WaitGroup
+	p := mpb.New(mpb.WithWaitGroup(&wg))
+	total := 100
+	numBars := 3
+	wg.Add(numBars)
+
+	for i := 0; i < numBars; i++ {
+		name := fmt.Sprintf("Bar#%d:", i)
+		bar := p.AddBar(int64(total),
+			mpb.PrependDecorators(
+				decor.StaticName(name, 0, 0),
+				// DSyncSpace is shortcut for DwidthSync|DextraSpace
+				// means sync the width of respective decorator's column
+				// and prepend one extra space.
+				decor.Percentage(3, decor.DSyncSpace),
+			),
+			mpb.AppendDecorators(
+				decor.ETA(2, 0),
+			),
+		)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < total; i++ {
+				time.Sleep(time.Duration(rand.Intn(10)+1) * time.Second / 100)
+				bar.Increment()
+			}
+		}()
+	}
+	// Wait for incr loop goroutines to finish,
+	// and shutdown mpb's rendering goroutine
+	p.Stop()
+}
+
 func typedTest(path string) {
 	// directly from a map[string]interace{}
 	// typed := typed.New(a_map)
@@ -600,6 +729,37 @@ type PostRequestPacket struct {
 type Error struct {
 	Code int
 	Msg  string
+}
+
+// https://github.com/Jeffail/tunny
+func testTunny() {
+	numCPUs := runtime.NumCPU()
+	runtime.GOMAXPROCS(numCPUs + 1) // numCPUs hot threads + one for async tasks.
+
+	pool, _ := tunny.CreatePool(numCPUs, func(object interface{}) interface{} {
+		input, _ := object.([]byte)
+
+		// Do something that takes a lot of work
+		output := input
+
+		return output
+	}).Open()
+
+	defer pool.Close()
+
+	http.HandleFunc("/work", func(w http.ResponseWriter, r *http.Request) {
+		input, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+		}
+
+		// Send work to our pool
+		result, _ := pool.SendWork(input)
+
+		w.Write(result.([]byte))
+	})
+
+	http.ListenAndServe(":8080", nil)
 }
 
 /*
@@ -1206,4 +1366,127 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 		}
 	}
 	return r
+}
+
+type CacheResult struct {
+	Id      uint64
+	Name    string
+	Payload int
+}
+
+func (cacheRes *CacheResult) CreateOne(name string, payload int) (uint64, error) {
+	tx, err := BoltDB.Begin(true)
+	if err != nil {
+		log.Printf("[create] begin txn error: %v", err)
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	bucket := tx.Bucket([]byte("user"))
+
+	id, err := bucket.NextSequence()
+	if err != nil {
+		return 0, err
+	}
+
+	user := CacheResult{
+		Id:      id,
+		Name:    name,
+		Payload: payload,
+	}
+
+	if data, err := json.Marshal(&user); err != nil {
+		log.Printf("marshal error: %v", err)
+		return 0, err
+	} else if err := bucket.Put(intToByte(int(id)), data); err != nil {
+		log.Printf("put error: %v", err)
+		return 0, err
+	}
+
+	return id, tx.Commit()
+}
+
+func (cacheRes *CacheResult) Create(name string, payload int) error {
+	var (
+		payloadByte []byte
+		err         error
+	)
+
+	tx, err := BoltDB.Begin(true)
+	if err != nil {
+		log.Printf("[create] begin txn error: %v", err)
+		return err
+	}
+	defer tx.Rollback()
+
+	b := tx.Bucket([]byte("user"))
+
+	if payloadByte, err = json.Marshal(&payload); err != nil {
+		log.Printf("[create] marshal error: %v", err)
+		return err
+	}
+
+	nameByte, err := json.Marshal(&name)
+	if err != nil {
+		log.Printf("[create] marshal error: %v", err)
+		return err
+	}
+
+	err = b.Put(nameByte, payloadByte)
+	if err != nil {
+		log.Printf("[create] put error: %v", err)
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (cacheRes *CacheResult) GetOne(id uint64) (*CacheResult, error) {
+	tx, err := BoltDB.Begin(false)
+	if err != nil {
+		log.Printf("[get] begin txn error: %v", err)
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	var a CacheResult
+
+	if v := tx.Bucket([]byte("user")).Get(intToByte(int(id))); v == nil {
+		log.Print("get no record")
+		return nil, nil
+	} else if err := json.Unmarshal(v, &a); err != nil {
+		log.Printf("unmarshal error: %v", err)
+		return nil, err
+	}
+
+	return &a, nil
+}
+
+func (cacheRes *CacheResult) Get(name string) (int, error) {
+	var (
+		payload int
+	)
+
+	tx, err := BoltDB.Begin(false)
+	if err != nil {
+		log.Printf("[get] begin txn error: %v", err)
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	nameByte, err := json.Marshal(&name)
+	if err != nil {
+		log.Printf("[get] marshal error: %v", err)
+		return 0, err
+	}
+
+	if v := tx.Bucket([]byte("user")).Get(nameByte); v == nil {
+		log.Print("[get] return nil value")
+		return 0, nil
+	} else if err := json.Unmarshal(v, &payload); err != nil {
+		log.Printf("[get] unmarshal error: %v", err)
+		return 0, err
+	}
+
+	return payload, nil
 }

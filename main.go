@@ -233,6 +233,10 @@ func main() {
 		pp.Println(h.Config.Env.VariablesTree)
 	}
 
+	if err := scraper.OpenBucket("bucket.db", "scraper", 0666); err != nil {
+		log.Fatal(err)
+	}
+
 	if h.Config.Migrate {
 		if h.Config.Debug {
 			fmt.Printf(" - IsTruncateTables? %t \n", h.Config.Truncate)
@@ -334,6 +338,60 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// For this case, we will always pipe "Hello World" into the response writer
 	fmt.Fprintf(w, "Hello World!")
 }
+
+/*
+func semaphoreTimeout() {
+	sla := 100 * time.Millisecond
+	sem := semaphore.New(1000)
+
+	http.Handle("/do-with-timeout", http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		done := make(chan struct{})
+		deadline := semaphore.WithTimeout(sla)
+
+		go func() {
+			release, err := sem.Acquire(deadline)
+			if err != nil {
+				return
+			}
+			defer release()
+			defer close(done)
+
+			// do some heavy work
+		}()
+
+		// wait what happens before
+		select {
+		case <-deadline:
+			http.Error(rw, "operation timeout", http.StatusGatewayTimeout)
+		case <-done:
+			// send success response
+		}
+	}))
+}
+
+func semaphoreContextCancel() {
+	deadliner := func(limit int, timeout time.Duration, handler http.HandlerFunc) http.HandlerFunc {
+		throughput := semaphore.New(limit)
+		return func(rw http.ResponseWriter, req *http.Request) {
+			ctx := semaphore.WithContext(req.Context(), semaphore.WithTimeout(timeout))
+
+			release, err := throughput.Acquire(ctx.Done())
+			if err != nil {
+				http.Error(rw, err.Error(), http.StatusGatewayTimeout)
+				return
+			}
+			defer release()
+
+			handler.ServeHTTP(rw, req.WithContext(ctx))
+		}
+	}
+
+	http.HandleFunc("/do-with-deadline", deadliner(1000, time.Minute, func(rw http.ResponseWriter, req *http.Request) {
+		// do some limited work
+	}))
+}
+
+*/
 
 /*
 // import "github.com/lhside/chrome-go"

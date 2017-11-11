@@ -50,31 +50,46 @@ RUN \
     go get gopkg.in/olahol/melody.v1 && \
     go get github.com/googollee/go-socket.io && \
     go get github.com/go-fsnotify/fsnotify && \
-    go get  gopkg.in/redis.v5  && \
-    go get  gopkg.in/redis.v3 && \
-    go get  golang.org/x/oauth2 && \
-    go get  github.com/victortrac/disks3cache && \
-    go get  github.com/tsak/concurrent-csv-writer && \
-    go get  github.com/trustmaster/goflow && \
-    go get  github.com/qor/media && \
-    go get  github.com/peterbourgon/diskv && \
-    go get  github.com/oleiade/reflections && \
-    go get  github.com/klaidliadon/go-redis-cache && \
-    go get  github.com/klaidliadon/go-memcached && \
-    go get  github.com/klaidliadon/go-couch-cache && \
-    go get  github.com/jeevatkm/go-model && \
-    go get  github.com/if1live/staticfilecache && \
-    go get  github.com/iancoleman/strcase && \
+    go get gopkg.in/redis.v5  && \
+    go get gopkg.in/redis.v3 && \
+    go get golang.org/x/oauth2 && \
+    go get github.com/victortrac/disks3cache && \
+    go get github.com/tsak/concurrent-csv-writer && \
+    go get github.com/trustmaster/goflow && \
+    go get github.com/qor/media && \
+    go get github.com/peterbourgon/diskv && \
+    go get github.com/oleiade/reflections && \
+    go get github.com/klaidliadon/go-redis-cache && \
+    go get github.com/klaidliadon/go-memcached && \
+    go get github.com/klaidliadon/go-couch-cache && \
+    go get github.com/jeevatkm/go-model && \
+    go get github.com/if1live/staticfilecache && \
+    go get github.com/iancoleman/strcase && \
     go get github.com/ak1t0/flame && \
-    go get  github.com/alexflint/go-restructure && \
-    go get  github.com/archivers-space/warc && \
-    go get  github.com/birkelund/boltdbcache && \
-    go get  github.com/cabify/go-couchdb && \
-    go get  github.com/cnf/structhash && \
-    go get  github.com/go-mangos/mangos && \
-    go get  github.com/go-resty/resty && \
-    go get  github.com/gregjones/httpcache && \
-    go get  github.com/syndtr/goleveldb/... && \
+    go get github.com/alexflint/go-restructure && \
+    go get github.com/archivers-space/warc && \
+    go get github.com/birkelund/boltdbcache && \
+    go get github.com/cabify/go-couchdb && \
+    go get github.com/cnf/structhash && \
+    go get github.com/go-mangos/mangos && \
+    go get github.com/go-resty/resty && \
+    go get github.com/gregjones/httpcache && \
+    go get golang.org/x/crypto/... && \
+    go get github.com/google/jsonapi && \
+    go get github.com/adamzy/cedar-go && \
+    go get github.com/google/gopacket && \
+    go get github.com/jdkato/prose/... && \
+    go get github.com/syndtr/goleveldb/... && \
+    go get github.com/myntra/pipeline && \
+    go get github.com/vmihailenco/msgpack && \
+    go get github.com/alessio/shellescape && \
+    go get github.com/jeffail/tunny && \
+    go get github.com/plar/go-adaptive-radix-tree && \
+    go get github.com/kamilsk/semaphore && \
+    go get github.com/rjeczalik/interfaces/... && \
+    go get github.com/kamildrazkiewicz/go-flow && \
+    go get github.com/benmanns/goworker && \
+    go get github.com/ibmendoza/msgq && \
     \
     glide install --strip-vendor
 

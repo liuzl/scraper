@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/jinzhu/now"
 	"github.com/k0kubun/pp"
+	"github.com/mholt/archiver"
+	"github.com/plar/go-adaptive-radix-tree"
+	"github.com/schollz/progressbar"
 	// "github.com/jinzhu/inflection"
 	// "github.com/jinzhu/copier"
 	// "github.com/linkosmos/mapdecor"
@@ -48,9 +52,62 @@ import (
 	- https://github.com/nightmouse/funcsplit
 	- https://github.com/danward79/csvtool
 	- https://github.com/doganov/filesort-example
+	- https://github.com/vbauerster/mpb/blob/master/examples/io/multiple/main.go
+	- https://github.com/vbauerster/mpb/blob/master/examples/cancel/main.go
+	- https://github.com/vbauerster/mpb/blob/master/examples/remove/main.go
+	- https://github.com/vbauerster/mpb/blob/master/examples/sort/main.go
+	- https://github.com/vbauerster/mpb/blob/master/examples/prependETA/main.go
+	- https://github.com/alin-sinpalean/concurrent-writer
 */
 
 var templateRe = regexp.MustCompile(`\{\{\s*(\w+)\s*(:(\w+))?\s*\}\}`)
+
+func testAdaptiveRadixTree() {
+
+	tree := art.New()
+
+	tree.Insert(art.Key("Hi, I'm Key"), "Nice to meet you, I'm Value")
+	value, found := tree.Search(art.Key("Hi, I'm Key"))
+	if found {
+		fmt.Printf("Search value=%v\n", value)
+	}
+
+	tree.ForEach(func(node art.Node) bool {
+		fmt.Printf("Callback value=%v\n", node.Value())
+		return true
+	})
+
+	for it := tree.Iterator(); it.HasNext(); {
+		value, _ := it.Next()
+		fmt.Printf("Iterator value=%v\n", value.Value())
+	}
+}
+
+func testProgressBar() {
+	bar := progressbar.New(100)
+	for i := 0; i < 100; i++ {
+		bar.Add(1)
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func createArchive(outputFile string, files []string) {
+	if err := archiver.Zip.Make(outputFile, files); err != nil {
+		fmt.Println("Could not create archive...")
+	}
+}
+
+func extractArchive(inputFile string, outputFolder string) {
+	if err := archiver.Zip.Open(inputFile, outputFolder); err != nil {
+		fmt.Println("Could not extract archive...")
+	}
+}
+
+func intToByte(v int) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
+}
 
 func str2bytes(s string) []byte {
 	x := (*[2]uintptr)(unsafe.Pointer(&s))

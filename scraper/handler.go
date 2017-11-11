@@ -6,18 +6,22 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
-	// "net/rpc"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
-	// "sync"
 	"time"
+	// "net/rpc"
+	// "sync"
 
+	"github.com/ahmetb/go-linq"
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
-	// bolt "github.com/coreos/bbolt"
+	bolt "github.com/coreos/bbolt"
+	"github.com/fatih/color"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/gregjones/httpcache/leveldbcache"
@@ -44,12 +48,51 @@ import (
 )
 
 var (
+	BoltDB         *bolt.DB
 	transportCache *httpcache.Transport
 	// httpCache      httpcache.Cache
 	// redisClient    *redis.Client
 	// couchdbClient  *couchdb.Client
 	// memcacheClient *memcache.Client
+	// ErrURLEmpty to warn users that they passed an empty string in
+	ErrURLEmpty = fmt.Errorf("the url string is empty")
+	// ErrDomainMissing domain was missing from the url
+	ErrDomainMissing = fmt.Errorf("url domain e.g .com, .net was missing")
+	// ErrUnresolvedOrTimedOut ...
+	ErrUnresolvedOrTimedOut = fmt.Errorf("url could not be resolved or timeout")
+
+	// EmailRegex provides a base email regex for scraping emails
+	EmailRegex = regexp.MustCompile(`([a-z0-9!#$%&'*+\/=?^_{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_{|}~-]+)*(@|\sat\s)(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(\.|\sdot\s))+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)`)
+
+	searchTermColor = color.New(color.FgGreen).SprintFunc()
+	foundColor      = color.New(color.FgGreen).SprintFunc()
+	notFoundColor   = color.New(color.FgRed).SprintFunc()
+	newLineReplacer = strings.NewReplacer("\r\n", "", "\n", "", "\r", "")
 )
+
+type Car struct {
+	year         int
+	owner, model string
+}
+
+var owners, cars []string
+
+func testLinq() {
+
+	linq.From(cars).Where(func(c interface{}) bool {
+		return c.(Car).year >= 2015
+	}).Select(func(c interface{}) interface{} {
+		return c.(Car).owner
+	}).ToSlice(&owners)
+	pp.Println("owners: ", owners)
+
+	linq.From(cars).WhereT(func(c Car) bool {
+		return c.year >= 2015
+	}).SelectT(func(c Car) string {
+		return c.owner
+	}).ToSlice(&owners)
+	pp.Println("owners: ", owners)
+}
 
 // A graph for our app
 type App struct {
@@ -70,6 +113,36 @@ type Handler struct {
 	Cache    struct {
 		Control int `opts:"-" default:"120" json:"control,omitempty" yaml:"control,omitempty" toml:"control,omitempty"`
 	} `opts:"-" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+}
+
+func OpenBucket(filename string, bucketName string, permissions os.FileMode) error {
+	if filename == "" {
+		filename = "data.db"
+	}
+	if bucketName == "" {
+		bucketName = "common"
+	}
+	if permissions == 0000 {
+		permissions = 0666
+	}
+	db, err := bolt.Open(filename, permissions, nil)
+	if err != nil {
+		log.Printf("[open] init db error: %v", err)
+		return err
+	}
+	BoltDB = db
+
+	tx, err := BoltDB.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = tx.CreateBucketIfNotExists([]byte(bucketName)); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (h *Handler) LoadConfigorFile(path string) error {

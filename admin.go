@@ -4,7 +4,7 @@ import (
 	"github.com/qor/action_bar"
 	"github.com/roscopecoltran/scraper/scraper"
 
-	"github.com/qor/help"
+	admin_help "github.com/qor/help"
 	"github.com/qor/media_library"
 	"github.com/qor/qor"
 	"github.com/roscopecoltran/admin"
@@ -60,7 +60,7 @@ func initDashboard() {
 	assetManager := AdminUI.AddResource(&media_library.AssetManager{}, &admin.Config{Invisible: true})
 
 	// Add Help
-	Help := AdminUI.NewResource(&help.QorHelpEntry{}, &admin.Config{Menu: []string{"Help"}})
+	Help := AdminUI.NewResource(&admin_help.QorHelpEntry{}, &admin.Config{Menu: []string{"Help"}})
 	Help.GetMeta("Body").Config = &admin.RichEditorConfig{AssetManager: assetManager}
 
 	details := AdminUI.AddResource(&scraper.MatcherConfig{}, &admin.Config{Invisible: true})
