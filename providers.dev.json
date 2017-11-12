@@ -471,6 +471,59 @@
       }
     },
     {
+      "route": "/stackoverflow/search",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "stackoverflow-search",
+      "provider": "stackoverflow.com",
+      "base_url": "https://stackoverflow.com",
+      "url": "/search?q={{query}}&page=0",
+      "timeout": 10,
+      "selector": "xpath",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "//div[contains(@class,\"question-summary\")]",
+          "details": {
+            "title": ["a", "@href"],
+            "desc": ".//div[@class=\"excerpt\"]",
+            "url": ".//div[@class=\"result-link\"]//a|.//div[@class=\"summary\"]//h3//a"
+          }
+        }
+      }
+    },
+    {
+      "route": "/stackoverflow/tagged",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "stackoverflow-tagged",
+      "provider": "stackoverflow.com",
+      "base_url": "https://stackoverflow.com",
+      "url": "/questions/tagged/{{query}}",
+      "timeout": 10,
+      "selector": "css",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "#questions .question-summary",
+          "details": {
+            "title": ".summary h3 a",
+            "desc": ".excerpt",
+            "img": ["img", "@src"],
+            "url": [".summary h3 a", "@href"]
+          }
+        }
+      }
+    },
+    {
       "route": "/wikipedia/en",
       "debug": true,
       "disabled": false,
