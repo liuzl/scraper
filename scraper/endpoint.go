@@ -135,6 +135,8 @@ import (
 	- https://github.com/mergermarket/news-aggro/blob/26d6834805449ed74684c3facac0813e339a8d8d/main.go#L21
 */
 
+const defaultUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
+
 var cacheDuration = 3600 * time.Second
 
 func myFunc(queue string, args ...interface{}) error {
@@ -693,13 +695,6 @@ func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will exec
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
 
-func sanitizeText(input string) string {
-	input = strings.Replace(input, "\n", " ", -1)
-	input = strings.Replace(input, "\t", " ", -1)
-	input = strings.Trim(input, " ")
-	return input
-}
-
 // Simple JSON response generator
 type Responder struct {
 	flow.Component
@@ -1191,6 +1186,13 @@ func leafPathsPatterns(input []string) []string {
 	return dedup(output)
 }
 
+func sanitizeText(input string) string {
+	input = strings.Replace(input, "\n", " ", -1)
+	input = strings.Replace(input, "\t", " ", -1)
+	input = strings.Trim(input, " ")
+	return input
+}
+
 func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extractors) Result { //extract 1 result using this endpoints extractor map
 	r := Result{}
 	if e.Debug {
@@ -1361,12 +1363,12 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 					return nil
 				}
 				if field == "url" && !strings.HasPrefix(url, "http") {
-					r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, url), " ")
+					r[field] = sanitizeText(strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, url), " "))
 				} else {
-					r[field] = strings.Trim(url, " ")
+					r[field] = sanitizeText(strings.Trim(url, " "))
 				}
 			default:
-				r[field] = strings.Trim(t, " ")
+				r[field] = sanitizeText(strings.Trim(t, " "))
 			}
 		} else if e.Debug {
 			logf("missing field: %s", field)
