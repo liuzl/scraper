@@ -28,6 +28,7 @@ import (
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
 	"gopkg.in/olahol/melody.v1"
+	// "github.com/tleyden/open-ocr"
 	// fsnotify "gopkg.in/fsnotify.v1"
 	// "github.com/valyala/fasthttp"
 	// "github.com/geekypanda/httpcache"
@@ -52,6 +53,11 @@ import (
 	// https://github.com/dyllanwli/GoLang_project/blob/master/blockchain/main.go
 	// https://github.com/aliostad/deep-learning-lang-detection/blob/1180fba0d2a7f6b470cb3c9a363b560787f5e7c5/data/test/go/ec5f82a852d053a084edbc39ac4b56f9381b7cf9test.go
 )
+
+/*
+	Refs:
+	- https://github.com/agencyrevolution/go-microservices-example/blob/master/utils/vulcand.go
+*/
 
 var VERSION = "0.0.0"
 
@@ -353,6 +359,31 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// For this case, we will always pipe "Hello World" into the response writer
 	fmt.Fprintf(w, "Hello World!")
 }
+
+/*
+	// ref. https://github.com/tleyden/open-ocr/blob/master/cli-worker/main.go
+	// ref. https://github.com/tleyden/open-ocr/blob/master/cli-httpd/main.go
+	// This assumes that there is a worker running
+	// To test it:
+	// curl -X POST -H "Content-Type: application/json" -d '{"img_url":"http://localhost:8081/img","engine":0}' http://localhost:8081/ocr
+	rabbitConfig := ocrworker.DefaultConfigFlagsOverride(flagFunc)
+
+	// any requests to root, just redirect to main page
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		text := `<h1>OpenOCR is running!<h1> Need <a href="http://www.openocr.net">docs</a>?`
+		fmt.Fprintf(w, text)
+	})
+
+	http.Handle("/ocr", ocrworker.NewOcrHttpHandler(rabbitConfig))
+
+	http.Handle("/ocr-file-upload", ocrworker.NewOcrHttpMultipartHandler(rabbitConfig))
+
+	// add a handler to serve up an image from the filesystem.
+	// ignore this, was just something for testing ..
+	http.HandleFunc("/img", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../refactoring.png")
+	})
+*/
 
 /*
 func semaphoreTimeout() {

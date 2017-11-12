@@ -1335,6 +1335,7 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 	if e.Debug {
 		pp.Println(fields)
 	}
+	// ParseExtractor()
 	for field, ext := range fields {
 		if v := ext.execute(sel); v != "" {
 			if field == "url" && !strings.HasPrefix(v, "http") {
@@ -1361,7 +1362,16 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 		fieldsList = append(fieldsList, strcase.ToCamel(v[0].val))
 	}
 	r := Result{}
+	// ParseExtractor()
 	for _, field := range fieldsList {
+
+		res, err := ParseExtractor(field)
+		if err != nil {
+			if e.Debug {
+				fmt.Println("error: ", err)
+			}
+		}
+
 		has, _ := reflections.HasField(item, field)
 		if has {
 			value, err := reflections.GetField(item, field)
@@ -1379,6 +1389,7 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 				r[key] = value
 			}
 		}
+		pp.Println(" !!!! ParseExtractor result:", res)
 	}
 	if e.Debug {
 		pp.Println("fields:", fields)
@@ -1408,6 +1419,7 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 	if e.Debug {
 		pp.Println(list)
 	}
+	// ParseExtractor()
 	for i := 0; i < len(list); i++ {
 		l := Result{}
 		for attr, field := range fields {
@@ -1483,6 +1495,7 @@ func (e *Endpoint) extractXpath(node *html.Node, fields map[string]Extractors) R
 		pp.Print(e)
 	}
 	r := Result{}
+	// ParseExtractor()
 	for field, ext := range fields {
 		xpathRule := GetExtractorValue(ext)
 		if e.Debug {

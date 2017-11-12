@@ -1,6 +1,6 @@
 {
   "port": 3000,
-  "debug": false,
+  "debug": true,
   "migrate": true,
   "truncate": true,
   "dashboard": true,
@@ -459,7 +459,8 @@
             "desc": ".result__snippet",
             "icon": [
               "img.result__icon__img",
-              "@src"
+              "@src",
+              "prepend(https:)"
             ],
             "url": [
               "a.result__a",
@@ -498,7 +499,7 @@
     },
     {
       "route": "/stackoverflow/tagged",
-      "debug": true,
+      "debug": false,
       "disabled": false,
       "cache": false,
       "strict_mode": false,

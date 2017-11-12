@@ -3,6 +3,7 @@ package scraper
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -11,6 +12,48 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 )
+
+/*
+	Refs:
+	- https://github.com/m4rw3r/strexp/blob/master/parser.go
+	- https://github.com/cockroachdb/cockroach/blob/master/pkg/sql/sem/builtins/builtins.go#L134
+*/
+
+func Concat(strings ...string) string {
+	var b bytes.Buffer
+	for _, s := range strings {
+		b.WriteString(s)
+	}
+	return b.String()
+}
+
+var hasPrefix = strings.HasPrefix
+
+func ParseExtractor(expr string) (string, error) {
+	// https://github.com/levicook/upload-demo/blob/master/src/upload-demo/mime/is_image.go
+	switch {
+	case hasPrefix(expr, "CONCAT"):
+		expr = strings.Replace(expr, "CONCAT(", "", -1)
+		closure := strings.LastIndex(expr, ")")
+		seq := expr[0:closure]
+		fmt.Println("closure: ", closure)
+		fmt.Println("expr: ", expr)
+		fmt.Println("seq: ", seq)
+		return "CONCAT", nil
+	case hasPrefix(expr, "REPLACE"):
+		return "REPLACE", nil
+	case hasPrefix(expr, "APPEND"):
+		return "APPEND", nil
+	case hasPrefix(expr, "PREPEND"):
+		return "PREPEND", nil
+	case hasPrefix(expr, "TOLOWER"):
+		return "TOLOWER", nil
+	case hasPrefix(expr, "TOUPPER"):
+		return "TOUPPER", nil
+	default:
+		return "", errors.New("unknown function")
+	}
+}
 
 func GetExtractorValue(ext Extractors) string {
 	return ext[0].val
@@ -238,6 +281,42 @@ var generators = []struct {
 			}, nil
 		},
 	},
+	//prepend string generator
+	{
+		match: func(extractor string) bool {
+			return strings.HasPrefix(extractor, "prepend(") && strings.HasSuffix(extractor, ")")
+		},
+		generate: func(extractor string) (extractorFn, error) {
+			param := strings.TrimSuffix(strings.TrimPrefix(extractor, "prepend("), ")")
+			return func(value string, sel *goquery.Selection) (string, *goquery.Selection) {
+				ctx := value
+				if ctx == "" {
+					ctx, _ = sel.Html() //force text
+				}
+				return standardizeSpaces(fmt.Sprintf("%s%s", param, ctx)), sel
+			}, nil
+		},
+	},
+	//append string generator
+	{
+		match: func(extractor string) bool {
+			return strings.HasPrefix(extractor, "append(") && strings.HasSuffix(extractor, ")")
+		},
+		generate: func(extractor string) (extractorFn, error) {
+			param := strings.TrimSuffix(strings.TrimPrefix(extractor, "append("), ")")
+			return func(value string, sel *goquery.Selection) (string, *goquery.Selection) {
+				ctx := value
+				if ctx == "" {
+					ctx, _ = sel.Html() //force text
+				}
+				return standardizeSpaces(fmt.Sprintf("%s%s", ctx, param)), sel
+			}, nil
+		},
+	},
+}
+
+func standardizeSpaces(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
 func loadHTML(str string) *html.Node {

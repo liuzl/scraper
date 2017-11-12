@@ -7,6 +7,9 @@ import (
 	"github.com/go-ego/riot/types"
 )
 
+// https://github.com/blevesearch/bleve#indexing
+// https://github.com/blevesearch/bleve#querying
+
 var (
 	// searcher is coroutine safe
 	searcher = riot.Engine{}
