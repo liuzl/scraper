@@ -481,17 +481,17 @@
       "base_url": "https://stackoverflow.com",
       "url": "/search?q={{query}}&page=0",
       "timeout": 10,
-      "selector": "xpath",
+      "selector": "css",
       "method": "GET",
       "blocks": {
         "result": {
           "cache": false,
           "strict_mode": false,
-          "items": "//div[contains(@class,\"question-summary\")]",
+          "items": "#mainbar > div.search-results.js-search-results",
           "details": {
-            "title": ["a", "@href"],
-            "desc": ".//div[@class=\"excerpt\"]",
-            "url": ".//div[@class=\"result-link\"]//a|.//div[@class=\"summary\"]//h3//a"
+            "title": "div.summary > div.result-link > span > a",
+            "desc": "div.summary > div.excerpt",
+            "url": ["div.summary > div.result-link > span > a", "@href"]
           }
         }
       }

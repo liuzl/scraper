@@ -90,6 +90,7 @@ RUN \
     go get github.com/kamildrazkiewicz/go-flow && \
     go get github.com/benmanns/goworker && \
     go get github.com/ibmendoza/msgq && \
+    go get github.com/patrickmn/go-cache && \
     \
     glide install --strip-vendor
 

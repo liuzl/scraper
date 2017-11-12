@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -39,12 +40,16 @@ import (
 	"github.com/mgbaozi/gomerge"
 	"github.com/mmcdole/gofeed"
 	"github.com/oleiade/reflections"
+	"github.com/parnurzeal/gorequest"
 	"github.com/roscopecoltran/mxj"
+	comap "github.com/streamrail/concurrent-map"
 	"github.com/trustmaster/goflow"
 	"github.com/tsak/concurrent-csv-writer"
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 	"golang.org/x/net/html"
+	// cache "github.com/patrickmn/go-cache"
+	// "github.com/patrickmn/go-cache"
 	// "github.com/LibertyLocked/cachestore"
 	// "github.com/fatih/color"
 	// "golang.org/x/net/proxy" // https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
@@ -134,11 +139,64 @@ import (
 
 	- https://github.com/mergermarket/news-aggro/blob/26d6834805449ed74684c3facac0813e339a8d8d/main.go#L21
 	- github.com/mateuszdyminski/bloom-filter
+	- https://github.com/Flaque/wikiracer
 */
 
 const defaultUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
 
-var cacheDuration = 3600 * time.Second
+var (
+	cacheDuration = 3600 * time.Second
+	userAgents    = []string{
+		"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		"GalaxyBot/1.0 (http://www.galaxy.com/galaxybot.html)",
+		"Googlebot-Image/1.0",
+	}
+)
+
+// https://github.com/mmadfox/scraper/blob/master/visits.go
+type Visiter interface {
+	Visit(string) bool
+	ResetVisit(string) error
+	Drop() error
+	Close() error
+}
+
+type memoryVisits struct {
+	m     comap.ConcurrentMap
+	mutex *sync.Mutex
+}
+
+func (v *memoryVisits) Visit(u string) bool {
+	return !v.m.SetIfAbsent(u, 1)
+}
+
+func (v *memoryVisits) ResetVisit(u string) error {
+	v.m.Remove(u)
+	return nil
+}
+
+func (v *memoryVisits) Drop() error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
+	v.m = comap.New()
+	return nil
+}
+
+func (v *memoryVisits) Close() error {
+	return nil
+}
+
+func NewMemoryVisits() Visiter {
+	return &memoryVisits{
+		m:     comap.New(),
+		mutex: &sync.Mutex{},
+	}
+}
+
+func RandomUserAgent() string {
+	return userAgents[rand.Intn(len(userAgents))]
+}
 
 func myFunc(queue string, args ...interface{}) error {
 	fmt.Printf("From %s, %v\n", queue, args)
@@ -581,6 +639,56 @@ func gomergeTest(body []byte) {
 	fmt.Println(result)
 }
 
+// c is a cache for api call
+// var c = cache.New(cache.NoExpiration, cache.NoExpiration)
+
+// var WorkQueue = make(chan WorkRequest, 10) // Simultaneous requests!
+// var WorkQueue = make(chan WorkRequest, 1)    // Buffered channel to not lose anything
+// var StopDispatcher = make(chan chan bool, 1) // Stop all!
+// var apiToken = make(chan struct{}, 40)
+// ref. https://github.com/parnurzeal/gorequest#endbytes
+func requestMultiPart(endpoint string, payload string, filePath string, filename string, fieldname string) (resp gorequest.Response, body string, errs []error) {
+	payload = `{"query1":"test"}`
+	f, err := filepath.Abs(filePath)
+	if err != nil {
+		errs = append(errs, err)
+		return nil, "", errs
+	}
+
+	bytesOfFile, err := ioutil.ReadFile(f)
+	if err != nil {
+		errs = append(errs, err)
+		return nil, "", errs
+	}
+
+	request := gorequest.New().Timeout(2 * time.Millisecond)
+	resp, body, errs = request.Post(endpoint).
+		Type("multipart").
+		Send(payload).SendFile(bytesOfFile, filename, fieldname).
+		Retry(3, 5*time.Second, http.StatusBadRequest, http.StatusInternalServerError).
+		End()
+		/*
+			RedirectPolicy(func(req Request, via []*Request) error {
+				if req.URL.Scheme != "https" {
+					return http.ErrUseLastResponse
+				}
+			}).
+			// Set("Accept", "application/json").
+			// AppendHeader("Accept", "application/json").
+			// Set("Accept-Language", "en-US,en;q=0.8").
+			// Set("Cache-Control", "max-age=0").
+			// Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36").
+		*/
+		/*
+			if len(errs) > 0 {
+				return nil, errs[0]
+			}
+		*/
+
+	return resp, body, errs
+
+}
+
 // StarResult wraps a star and an error
 type ScraperResult struct {
 	List  map[string][]Result
@@ -776,8 +884,11 @@ func (r *Responder) OnIn(p *RequestPacket) {
 	p.Res.Write(js)
 	p.Done <- true
 }
-
 */
+
+// callCount is an API call counter used for debug
+// var callCount uint16
+// var callCountMutex sync.Mutex
 
 func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error) { // Execute will execute an Endpoint with the given params
 	if e.Debug {
@@ -788,7 +899,6 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if err != nil {
 		return nil, err
 	}
-
 	if e.Debug {
 		fmt.Println("url: ", url)
 	}
@@ -797,6 +907,7 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 	if method == "" {
 		method = "GET"
 	}
+
 	body := io.Reader(nil) //render body (if set)
 	if e.Body != "" {
 		s, err := template(true, e.Body, params)
@@ -1176,6 +1287,28 @@ func cacheResponse(cacheSlug string, aggregate map[string][]Result) error {
 		return err
 	}
 	return nil
+}
+
+func post(url string, params map[string]interface{}) ([]byte, error) {
+	resp, err := resty.R().
+		SetBody(params).
+		Post(url)
+
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body(), nil
+}
+
+func Get(url string, params map[string]string) ([]byte, error) {
+	resp, err := resty.R().
+		SetQueryParams(params).
+		SetHeader("Accept", "application/json").
+		Get(url)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body(), nil
 }
 
 func leafPathsPatterns(input []string) []string {

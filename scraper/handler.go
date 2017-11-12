@@ -22,6 +22,7 @@ import (
 	"github.com/cabify/go-couchdb"
 	bolt "github.com/coreos/bbolt"
 	"github.com/fatih/color"
+	"github.com/go-resty/resty"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/gregjones/httpcache/leveldbcache"
@@ -39,6 +40,7 @@ import (
 	ctx "golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"gopkg.in/redis.v3"
+	// cache "github.com/patrickmn/go-cache"
 	// "github.com/gin-gonic/gin"
 	// "github.com/go-fsnotify/fsnotify"
 	// "gopkg.in/olahol/melody.v1"
@@ -434,6 +436,15 @@ func getClient() *http.Client {
 	// c.Timeout = time.Duration(30 * time.Second)
 	// TODO Client Transport of type *httpcache.Transport doesn't support CanelRequest; Timeout not supported
 	return c
+}
+
+func getResty() *resty.Client {
+	transport := http.Transport{
+		MaxIdleConns:        30,
+		MaxIdleConnsPerHost: 30,
+	}
+
+	return resty.New().SetTransport(&transport).SetRetryCount(3).SetTimeout(time.Duration(25 * time.Second)).SetRedirectPolicy(resty.FlexibleRedirectPolicy(15))
 }
 
 func FaviconHandler(w http.ResponseWriter, r *http.Request) {

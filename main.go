@@ -159,6 +159,21 @@ func main() {
 		}
 	}()
 
+	// alternative: https://github.com/Entalpi/H-News-Backend/blob/master/cmd/main.go
+	/*
+		// When closed make sure to call Close on all the underlying bolt.DB instances.
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGTERM, os.Interrupt)
+		go func() {
+			<-ch
+			newestScraper.DatabaseService.Close()
+			services.Commentsdb.Close()
+			os.Exit(1)
+		}()
+
+		select {} // Block forever and ever
+	*/
+
 	m := melody.New()
 	w, _ := fsnotify.NewWatcher()
 	go func() {
