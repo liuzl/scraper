@@ -693,6 +693,13 @@ func (e *Endpoint) getHash(crypto string) (string, error) { // Execute will exec
 	return fmt.Sprintf("%x", structhash.Sha1(e, 1)), nil
 }
 
+func sanitizeText(input string) string {
+	input = strings.Replace(input, "\n", " ", -1)
+	input = strings.Replace(input, "\t", " ", -1)
+	input = strings.Trim(input, " ")
+	return input
+}
+
 // Simple JSON response generator
 type Responder struct {
 	flow.Component
@@ -1192,9 +1199,9 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 	for field, ext := range fields {
 		if v := ext.execute(sel); v != "" {
 			if field == "url" && !strings.HasPrefix(v, "http") {
-				r[field] = strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, v), " ")
+				r[field] = sanitizeText(strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, v), " "))
 			} else {
-				r[field] = strings.Trim(v, " ")
+				r[field] = sanitizeText(strings.Trim(v, " "))
 			}
 		} else if e.Debug {
 			logf("missing field: %s", field)

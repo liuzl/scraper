@@ -452,16 +452,17 @@
         "result": {
           "cache": false,
           "strict_mode": false,
-          "items": "div[class='result results_links results_links_deep web-result ']",
+          "items": "#links > .results_links > .links_main",
+          "no-results": ".no-results",
           "details": {
-            "title": "div h2[class='result__title'] a[class='result__a']",
-            "desc": "div a[class='result__snippet']",
+            "title": "a.result__a",
+            "desc": ".result__snippet",
             "icon": [
-              "img[class='result__icon__img']",
+              "img.result__icon__img",
               "@src"
             ],
             "url": [
-              "div a[class='result__snippet']",
+              "a.result__a",
               "@href",
               "query-param(uddg)"
             ]
