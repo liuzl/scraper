@@ -133,6 +133,7 @@ import (
 	- https://github.com/prsolucoes/go-tor-crawler/blob/master/main.go
 
 	- https://github.com/mergermarket/news-aggro/blob/26d6834805449ed74684c3facac0813e339a8d8d/main.go#L21
+	- github.com/mateuszdyminski/bloom-filter
 */
 
 const defaultUA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
@@ -882,6 +883,9 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 			logf("%s %s => %s", method, url, resp.Status)
 		}
 		if resp.StatusCode == 403 {
+			if e.Debug {
+				logf("%s %s =>\n%s\n", method, url, resp.Body)
+			}
 			return nil, errors.New("Unauthorized request")
 		}
 	}

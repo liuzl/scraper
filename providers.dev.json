@@ -471,6 +471,34 @@
       }
     },
     {
+      "route": "/wikipedia/en",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "wikipedia-en",
+      "provider": "wikipedia.org",
+      "base_url": "https://en.wikipedia.org",
+      "url": "/w/api.php?format=json&action=query&generator=search&gsrnamespace=0&gsrsearch={{query}}&gsrlimit=10&prop=pageimages|extracts&pilimit=max&exintro&explaintext&exsentences=1&exlimit=max",
+      "supported_languages": "https://meta.wikimedia.org/wiki/List_of_Wikipedias",
+      "timeout": 10,
+      "selector": "json",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "query.pages.*",
+          "details": {
+            "title": "title",
+            "thumbnail": "thumbnail.source",
+            "desc": "extract",
+            "url": "url"
+          }
+        }
+      }
+    },
+    {
       "route": "/duckduckgo/images",
       "debug": true,
       "disabled": false,
@@ -478,8 +506,99 @@
       "strict_mode": false,
       "name": "duckduckgo-images",
       "provider": "duckduckgo.com",
-      "base_url": "https://www.duckduckgo.com/",
-      "url": "?q={{query}}&t=hg&iax=images&ia=images",
+      "base_url": "https://duckduckgo.com",
+      "url": "/i.js?q={{query}}&s=0&p=true&o=json&vqd=12345",
+      "timeout": 10,
+      "selector": "json",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "results",
+          "details": {
+            "title": "title",
+            "thumbnail": "thumbnail",
+            "img": "image",
+            "url": "url"
+          }
+        }
+      }
+    },
+    {
+      "route": "/duckduckgo/videos",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "duckduckgo-videos",
+      "provider": "duckduckgo.com",
+      "base_url": "https://duckduckgo.com",
+      "url": "/v.js?q={{query}}&s=0&p=true&o=json&vqd=12345",
+      "timeout": 10,
+      "selector": "json",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "results",
+          "details": {
+            "title": "title",
+            "thumbnail": "thumbnail",
+            "img": "image",
+            "url": "url"
+          }
+        }
+      }
+    },
+    {
+      "route": "/programme-tv/schedule",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "programme-tv-schedule",
+      "provider": "programme-tv.net",
+      "base_url": "https://www.programme-tv.net",
+      "url": "/",
+      "timeout": 10,
+      "selector": "xpath",
+      "method": "GET",
+      "blocks": {
+        "result": {
+          "cache": false,
+          "strict_mode": false,
+          "items": "//*[@id='zci-images']/div/div[2]/div/div",
+          "details": {
+            "title": [
+              "div[class='tile--img__media'] span[class='tile--img__media__i'] img[class='tile--img__img  js-lazyload']",
+              "@alt"
+            ],
+            "desc": "div[class='tile--img__details'] div[class='tile--img__dimensions']",
+            "img": [
+              "div span img[class='tile--img__img  js-lazyload']",
+              "@src"
+            ],
+            "url": [
+              "div a[class='result__snippet']",
+              "@href",
+              "query-param(uddg)"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "route": "/programme-tv/videos",
+      "debug": true,
+      "disabled": false,
+      "cache": false,
+      "strict_mode": false,
+      "name": "programme-tv-videos",
+      "provider": "programme-tv.net",
+      "base_url": "https://www.programme-tv.net/",
+      "url": "",
       "timeout": 10,
       "selector": "xpath",
       "method": "GET",
