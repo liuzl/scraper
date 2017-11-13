@@ -1364,14 +1364,14 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 	r := Result{}
 	// ParseExtractor()
 	for _, field := range fieldsList {
-
-		res, err := ParseExtractor(field)
-		if err != nil {
-			if e.Debug {
-				fmt.Println("error: ", err)
+		/*
+			res, err := ParseExtractor(field)
+			if err != nil {
+				if e.Debug {
+					fmt.Println("error: ", err)
+				}
 			}
-		}
-
+		*/
 		has, _ := reflections.HasField(item, field)
 		if has {
 			value, err := reflections.GetField(item, field)
@@ -1389,7 +1389,7 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 				r[key] = value
 			}
 		}
-		pp.Println(" !!!! ParseExtractor result:", res)
+		// pp.Println(" !!!! ParseExtractor result:", res)
 	}
 	if e.Debug {
 		pp.Println("fields:", fields)

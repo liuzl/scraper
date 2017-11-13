@@ -108,3 +108,21 @@ https://stackoverflow.com/questions/37826094/xt-error-cant-open-display-if-using
 
 socat TCP-LISTEN:6000,reuseaddr,fork UNIX-CLIENT:\"$DISPLAY\"
 docker run -e DISPLAY=192.168.0.2:0 jess/geary
+
+## RabbitMQ (brew/osx)
+Management Plugin enabled by default at http://localhost:15672
+
+Bash completion has been installed to:
+  /usr/local/etc/bash_completion.d
+
+To have launchd start rabbitmq now and restart at login:
+  brew services start rabbitmq
+Or, if you don't want/need a background service you can just run:
+  rabbitmq-server
+
+## NSQ
+To have launchd start nsq now and restart at login:
+  brew services start nsq
+Or, if you don't want/need a background service you can just run:
+  nsqd -data-path=/usr/local/var/nsq
+
