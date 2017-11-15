@@ -1227,6 +1227,8 @@ func (e *Endpoint) Execute(params map[string]string) (map[string][]Result, error
 		fmt.Println("unkown selector type")
 	}
 
+	conform.Strings(aggregate)
+
 	if len(aggregate) > 0 && e.Cache && cacheFile != "" {
 		err = cacheResponse(cacheFile, aggregate) // dump response
 		if err != nil {
@@ -1324,6 +1326,8 @@ func leafPathsPatterns(input []string) []string {
 }
 
 func sanitizeText(input string) string {
+	// input =
+	input = strings.Replace(input, " ...", "...", -1)
 	input = strings.Replace(input, "\n", " ", -1)
 	input = strings.Replace(input, "\t", " ", -1)
 	input = strings.Trim(input, " ")
@@ -1386,7 +1390,7 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 				pp.Println("reflected value: ", value)
 			}
 			if value != nil {
-				r[key] = value
+				r[key] = value // sanitizeText(value)
 			}
 		}
 		// pp.Println(" !!!! ParseExtractor result:", res)
@@ -1465,6 +1469,7 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 						fmt.Println("Error: ", merr)
 					}
 					if node != nil {
+						// conform.Strings(&node)
 						if len(node) == 1 {
 							w[keyName] = node[0]
 						} else if len(node) > 1 {
@@ -1484,6 +1489,7 @@ func (e *Endpoint) extractMXJ(mv mxj.Map, items string, fields map[string]Extrac
 			} else if len(node) > 1 {
 				l[attr] = node
 			}
+			// conform.Strings(l)
 		}
 		r = append(r, l)
 	}

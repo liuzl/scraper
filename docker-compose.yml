@@ -227,7 +227,7 @@ services:
       - '4160-4161:4160-4161'
     restart: always
     networks:
-      - nsq_strategies
+      - nsq
     # command: /nsqlookupd
   
   nsqd:
@@ -242,7 +242,7 @@ services:
       - 'nsqlookupd:nsqlookupd'
     restart: always
     networks:
-      - nsq_strategies
+      - nsq
     # command: /nsqd --lookupd-tcp-address=nsqlookupd:4160
 
   nsqadmin:
@@ -258,8 +258,24 @@ services:
       - 'nsqd:nsqd'
     restart: always
     networks:
-      - nsq_strategies
+      - nsq
     # /nsqadmin --lookupd-http-address=nsqlookupd:4161
 
+  # MongoDB
+  mongo:
+    image: mongo
+    container_name: 'mongo'
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo
+    # command: mongo -d /data/db
+
 networks:
-  nsq_strategies:
+  mongo:
+    external:
+      name: mongo
+  nsq:
+    external:
+      name: nsq

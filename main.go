@@ -17,17 +17,40 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-fsnotify/fsnotify"
 	"github.com/googollee/go-socket.io"
+	"github.com/jamisonhyatt/HttpParallelSync"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/jpillora/opts"
 	"github.com/k0kubun/pp"
+	"github.com/mholt/caddy"
+	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/roscopecoltran/admin"
 	"github.com/roscopecoltran/scraper/scraper"
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"gopkg.in/olahol/melody.v1"
+
+	"github.com/geekypanda/httpcache"
+	"gopkg.in/unrolled/secure.v1"
+
+	krakendcfg "github.com/devopsfaith/krakend/config"
+	krakendlog "github.com/devopsfaith/krakend/logging"
+	"github.com/devopsfaith/krakend/proxy"
+	"github.com/devopsfaith/krakend/router/mux"
+	// ref. https://github.com/devopsfaith/krakend/blob/master/examples/httpcache/main.go
+	// "github.com/gin-gonic/contrib/cache"
+	// "github.com/gin-gonic/gin"
+	// "github.com/gregjones/httpcache"
+	// ref. https://github.com/hacdias/filemanager/blob/master/cmd/filemanager/main.go
+	// "github.com/asdine/storm"
+	// "github.com/hacdias/filemanager"
+	// "github.com/hacdias/filemanager/bolt"
+	// h "github.com/hacdias/filemanager/http"
+	// "github.com/hacdias/filemanager/staticgen"
+	// "github.com/hacdias/fileutils"
 	// "github.com/tleyden/open-ocr"
 	// fsnotify "gopkg.in/fsnotify.v1"
 	// "github.com/valyala/fasthttp"
@@ -124,11 +147,211 @@ var (
 		&scraper.OpenAPISpecsConfig{},
 	}
 
-	logger  *zap.Logger
+	logger        *zap.Logger
+	krakendlogger krakendlog.Logger
+	/*
+	   log.SetOutput(&lumberjack.Logger{
+	       Filename:   "./shared/logs/http_parallel_sync/scraper.log",
+	       MaxSize:    500, // megabytes
+	       MaxBackups: 3,
+	       MaxAge:     28, //days
+	   })
+	*/
+
 	errInit error
 )
 
 var cacheDuration = 3600 * time.Second
+var DefaultCaddyServeMux = http.NewServeMux()
+
+/*
+func setup(c *caddy.Controller) error {
+	//func setup(c *setup.Controller) error {
+	// (middleware.Middleware, error) {
+	//return func(next middleware.Handler) middleware.Handler {
+	//	return &handler{}
+	//}, nil
+	httpserver.GetConfig(c.Key).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
+		return MuxHandler{Next: next}
+	})
+	return nil
+}
+*/
+
+func setup(c *caddy.Controller) error {
+	cnf := httpserver.GetConfig(c)
+	for c.Next() {
+		if !c.NextArg() { // expect at least one value
+			return c.ArgErr() // otherwise it's an error
+		}
+		value := c.Val() // use the value
+		fmt.Println(value)
+	}
+	mid := func(next httpserver.Handler) httpserver.Handler {
+		return &MuxHandler{
+			Next: next,
+		}
+	}
+
+	cnf.AddMiddleware(mid)
+	return nil
+}
+
+/*
+
+func Setup(c *setup.Controller) (middleware.Middleware, error) {
+	return func(next middleware.Handler) middleware.Handler {
+		return &handler{}
+	}, nil
+}
+
+type handler struct{}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	w.Write([]byte("Hello, I'm a caddy middleware"))
+	return 0, nil
+}
+*/
+
+func init() {
+	caddy.RegisterPlugin("mux", caddy.Plugin{
+		ServerType: "http",
+		Action:     setup,
+	})
+}
+
+type MuxHandler struct {
+	Next httpserver.Handler
+}
+
+type TelegramHandler struct {
+	Next httpserver.Handler
+}
+
+// Get the default Caddy ServeMux
+func ServeMux() *http.ServeMux {
+	return DefaultCaddyServeMux
+}
+
+// Register the handler for the given pattern in the default Caddy ServeMux
+func Handle(pattern string, handler http.Handler) {
+	DefaultCaddyServeMux.Handle(pattern, handler)
+}
+
+// Registers the handler function for the given pattern in the default Caddy ServeMux
+func HandleFunc(pattern string, handler func(http.ResponseWriter, *http.Request)) {
+	DefaultCaddyServeMux.HandleFunc(pattern, handler)
+}
+
+func (m MuxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	_, pattern := DefaultCaddyServeMux.Handler(r)
+	if len(pattern) > 0 {
+		DefaultCaddyServeMux.ServeHTTP(w, r)
+		return 0, nil
+	} else {
+		// no matching filter
+		return m.Next.ServeHTTP(w, r)
+	}
+}
+
+func httpParallelSyncMain() {
+
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   "./shared/logs/http_parallel_sync/scraper.log",
+		MaxSize:    500, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, //days
+	})
+
+	client := NewCaddyClient()
+
+	err := HttpParallelSync.Sync(client, "movies", 2)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("complete")
+}
+
+func NewCaddyClient() *HttpParallelSync.CaddyClient {
+	caddy := HttpParallelSync.CaddyClient{
+		Host: "localhost",
+		Port: 2015,
+		Ssl:  false,
+	}
+
+	caddy.HttpClient = &http.Client{
+		Timeout: time.Second * 25,
+	}
+	var protocol string
+	if caddy.Ssl {
+		protocol = "https"
+	} else {
+		protocol = "http"
+	}
+	caddy.BaseURI = fmt.Sprintf("%s://%s:%v", protocol, caddy.Host, caddy.Port)
+	return &caddy
+}
+
+// import "github.com/devopsfaith/krakend/config/viper"
+func newKrakendMux(serviceConfig krakendcfg.ServiceConfig, logLevel string) {
+
+	/*
+		port := flag.Int("p", 0, "Port of the service")
+		logLevel := flag.String("l", "ERROR", "Logging level")
+		debug := flag.Bool("d", false, "Enable the debug")
+		configFile := flag.String("c", "/etc/krakend/configuration.json", "Path to the configuration filename")
+		flag.Parse()
+
+		parser := viper.New()
+		serviceConfig, err := parser.Parse(*configFile)
+		if err != nil {
+			log.Fatal("ERROR:", err.Error())
+		}
+		serviceConfig.Debug = serviceConfig.Debug || *debug
+		if *port != 0 {
+			serviceConfig.Port = *port
+		}
+	*/
+
+	if logLevel == "" {
+		logLevel = "ERROR"
+	}
+
+	klogger, err := krakendlog.NewLogger(logLevel, os.Stdout, "[SCRAPER]")
+	if err != nil {
+		log.Fatal("ERROR: ", err.Error())
+	}
+	krakendlogger = klogger
+
+	secureMiddleware := secure.New(secure.Options{
+		AllowedHosts:          []string{"127.0.0.1:8080", "example.com", "ssl.example.com"},
+		SSLRedirect:           false,
+		SSLHost:               "ssl.example.com",
+		SSLProxyHeaders:       map[string]string{"X-Forwarded-Proto": "https"},
+		STSSeconds:            315360000,
+		STSIncludeSubdomains:  true,
+		STSPreload:            true,
+		FrameDeny:             true,
+		ContentTypeNosniff:    true,
+		BrowserXssFilter:      true,
+		ContentSecurityPolicy: "default-src 'self'",
+	})
+
+	// routerFactory := mux.DefaultFactory(proxy.DefaultFactory(logger), logger)
+
+	routerFactory := mux.NewFactory(mux.Config{
+		Engine:       mux.DefaultEngine(),
+		ProxyFactory: proxy.DefaultFactory(klogger),
+		Middlewares:  []mux.HandlerMiddleware{secureMiddleware},
+		Logger:       krakendlogger,
+		HandlerFactory: func(cfg *krakendcfg.EndpointConfig, p proxy.Proxy) http.HandlerFunc {
+			return httpcache.CacheFunc(mux.EndpointHandler(cfg, p), time.Minute)
+		},
+	})
+
+	routerFactory.New().Run(serviceConfig)
+}
 
 func main() {
 

@@ -710,7 +710,7 @@
       "pager": {
         "disabled": "false",
         "max": "500",
-        "offset": "1",
+        "offset": "0",
         "limit": "100",
         "offset_var": "page",
         "limit_var": "per_page",
@@ -772,7 +772,7 @@
       "concurrency": 20,
       "pager": {
         "disabled": "false",
-        "max": "10",
+        "max": "20",
         "offset": "1",
         "limit": "100",
         "offset_var": "page",
