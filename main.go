@@ -1,6 +1,7 @@
 package main
 
 import (
+	// _ "expvar"
 	"fmt"
 	"html"
 	"io/ioutil"
@@ -10,9 +11,11 @@ import (
 	"os/signal"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
+	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/go-fsnotify/fsnotify"
@@ -28,6 +31,7 @@ import (
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"github.com/roscopecoltran/admin"
 	"github.com/roscopecoltran/scraper/scraper"
+
 	"github.com/wantedly/gorm-zap"
 	"go.uber.org/zap"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -35,6 +39,8 @@ import (
 
 	"github.com/geekypanda/httpcache"
 	"gopkg.in/unrolled/secure.v1"
+	//"github.com/soheilhy/cmux"
+	// "github.com/stretchr/graceful"
 
 	krakendcfg "github.com/devopsfaith/krakend/config"
 	krakendlog "github.com/devopsfaith/krakend/logging"
@@ -541,10 +547,15 @@ func main() {
 	mux.HandleFunc("/favicon.ico", scraper.FaviconHandler)
 	mux.HandleFunc("/test", handler)
 
+	api_handler, err := setupApi()
+	if err == nil {
+		mux.Handle("/api/v2", api_handler)
+	}
+
 	// GetFunc, PostFunc etc ... takes http.HandlerFunc
 	// mux.GetFunc("/test", Handler)
 
-	mux.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/v1", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
 	})
 
@@ -574,6 +585,92 @@ func main() {
 
 	}
 
+}
+
+func setupApi() (http.Handler, error) {
+
+	api := rest.NewApi()
+	api.Use(rest.DefaultDevStack...)
+	router, err := rest.MakeRouter(
+		rest.Get("/countries", GetAllCountries),
+		rest.Post("/countries", PostCountry),
+		rest.Get("/countries/:code", GetCountry),
+		rest.Delete("/countries/:code", DeleteCountry),
+	)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	api.SetApp(router)
+	return api.MakeHandler(), nil
+}
+
+type Country struct {
+	Code string
+	Name string
+}
+
+var store = map[string]*Country{}
+
+var lock = sync.RWMutex{}
+
+func GetCountry(w rest.ResponseWriter, r *rest.Request) {
+	code := r.PathParam("code")
+
+	lock.RLock()
+	var country *Country
+	if store[code] != nil {
+		country = &Country{}
+		*country = *store[code]
+	}
+	lock.RUnlock()
+
+	if country == nil {
+		rest.NotFound(w, r)
+		return
+	}
+	w.WriteJson(country)
+}
+
+func GetAllCountries(w rest.ResponseWriter, r *rest.Request) {
+	lock.RLock()
+	countries := make([]Country, len(store))
+	i := 0
+	for _, country := range store {
+		countries[i] = *country
+		i++
+	}
+	lock.RUnlock()
+	w.WriteJson(&countries)
+}
+
+func PostCountry(w rest.ResponseWriter, r *rest.Request) {
+	country := Country{}
+	err := r.DecodeJsonPayload(&country)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if country.Code == "" {
+		rest.Error(w, "country code required", 400)
+		return
+	}
+	if country.Name == "" {
+		rest.Error(w, "country name required", 400)
+		return
+	}
+	lock.Lock()
+	store[country.Code] = &country
+	lock.Unlock()
+	w.WriteJson(&country)
+}
+
+func DeleteCountry(w rest.ResponseWriter, r *rest.Request) {
+	code := r.PathParam("code")
+	lock.Lock()
+	delete(store, code)
+	lock.Unlock()
+	w.WriteHeader(http.StatusOK)
 }
 
 // "handler" is our handler function. It has to follow the function signature of a ResponseWriter and Request type

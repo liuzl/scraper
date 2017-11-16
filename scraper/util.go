@@ -20,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/PuerkitoBio/goquery"
@@ -364,6 +366,88 @@ func ErrorJson(w http.ResponseWriter, data interface{}, errcode int) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(d)
 	}
+}
+
+func indentLen(s string) int {
+	i := 0
+	for i < len(s) && (s[i] == ' ' || s[i] == '\t') {
+		i++
+	}
+	return i
+}
+
+func isBlank(s string) bool {
+	return len(s) == 0 || (len(s) == 1 && s[0] == '\n')
+}
+
+func commonPrefix(a, b string) string {
+	i := 0
+	for i < len(a) && i < len(b) && a[i] == b[i] {
+		i++
+	}
+	return a[0:i]
+}
+
+func unindent(block []string) {
+	if len(block) == 0 {
+		return
+	}
+
+	// compute maximum common white prefix
+	prefix := block[0][0:indentLen(block[0])]
+	for _, line := range block {
+		if !isBlank(line) {
+			prefix = commonPrefix(prefix, line[0:indentLen(line)])
+		}
+	}
+	n := len(prefix)
+
+	// remove
+	for i, line := range block {
+		if !isBlank(line) {
+			block[i] = line[n:]
+		}
+	}
+}
+
+// heading returns the trimmed line if it passes as a section heading;
+// otherwise it returns the empty string.
+func heading(line string) string {
+	line = strings.TrimSpace(line)
+	if len(line) == 0 {
+		return ""
+	}
+
+	// a heading must start with an uppercase letter
+	r, _ := utf8.DecodeRuneInString(line)
+	if !unicode.IsLetter(r) || !unicode.IsUpper(r) {
+		return ""
+	}
+
+	// it must end in a letter or digit:
+	r, _ = utf8.DecodeLastRuneInString(line)
+	if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+		return ""
+	}
+
+	// exclude lines with illegal characters
+	if strings.IndexAny(line, ",.;:!?+*/=()[]{}_^°&§~%#@<\">\\") >= 0 {
+		return ""
+	}
+
+	// allow "'" for possessive "'s" only
+	for b := line; ; {
+		i := strings.IndexRune(b, '\'')
+		if i < 0 {
+			break
+		}
+		if i+1 >= len(b) || b[i+1] != 's' || (i+2 < len(b) && b[i+2] != ' ') {
+			return "" // not followed by "s "
+		}
+		b = b[i+2:]
+	}
+
+	return line
 }
 
 // https://github.com/thbourlove/restc/blob/master/transport.go

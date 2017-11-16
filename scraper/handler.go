@@ -17,15 +17,19 @@ import (
 	// "net/rpc"
 	// "sync"
 
+	"github.com/BurntSushi/toml"
 	"github.com/ahmetb/go-linq"
+	"github.com/ant0ine/go-json-rest/rest"
 	"github.com/birkelund/boltdbcache"
 	"github.com/cabify/go-couchdb"
 	bolt "github.com/coreos/bbolt"
 	"github.com/fatih/color"
+	"github.com/foize/go.fifo"
 	"github.com/go-resty/resty"
 	"github.com/gregjones/httpcache"
 	"github.com/gregjones/httpcache/diskcache"
 	"github.com/gregjones/httpcache/leveldbcache"
+	"github.com/hydrogen18/stoppableListener"
 	"github.com/if1live/staticfilecache"
 	"github.com/joho/godotenv"
 	"github.com/k0kubun/pp"
@@ -115,6 +119,10 @@ type Handler struct {
 	Cache    struct {
 		Control int `opts:"-" default:"120" json:"control,omitempty" yaml:"control,omitempty" toml:"control,omitempty"`
 	} `opts:"-" json:"cache,omitempty" yaml:"cache,omitempty" toml:"cache,omitempty"`
+	// Api
+	stoppable *stoppableListener.StoppableListener
+	events    *fifo.Queue
+	api       *rest.Api
 }
 
 func OpenBucket(filename string, bucketName string, permissions os.FileMode) error {
@@ -145,6 +153,18 @@ func OpenBucket(filename string, bucketName string, permissions os.FileMode) err
 	}
 
 	return tx.Commit()
+}
+
+func (h *Handler) LoadConfigToml(configFile string) error {
+	c := Config{}
+	_, err := toml.DecodeFile(configFile, &c)
+	if err != nil {
+		log.Fatal("Error loading config file")
+		return err
+	}
+	h.Config = c
+	InitCache("./shared/cache/external")
+	return nil
 }
 
 func (h *Handler) LoadConfigorFile(path string) error {
@@ -309,6 +329,10 @@ func (h *Handler) LoadConfig(b []byte) error {
 					v = strings.Replace(v, holderKey, vl, -1)
 				}
 				e.HeadersJSON[k] = strings.Trim(v, " ")
+			}
+			if e.Crawler.MaxDepth <= 0 {
+				// if e.Crawler.MaxDepth <= 0 {
+				e.Crawler.MaxDepth = 1
 			}
 			if e.HeadersJSON == nil {
 				e.HeadersJSON = h.Headers

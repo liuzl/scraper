@@ -3,6 +3,7 @@ package scraper
 import (
 	"context"
 	"crypto/md5"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	// "crypto/sha1"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/advancedlogic/GoOse"
 	"github.com/alexflint/go-restructure"
 	"github.com/antchfx/xquery/html"
 	"github.com/archivers-space/warc"
@@ -30,6 +32,7 @@ import (
 	"github.com/cnf/structhash"
 	"github.com/gebv/typed"
 	"github.com/go-resty/resty"
+	"github.com/gocolly/colly"
 	"github.com/iancoleman/strcase"
 	"github.com/jeevatkm/go-model"
 	"github.com/jeffail/tunny"
@@ -48,6 +51,8 @@ import (
 	"github.com/vbauerster/mpb"
 	"github.com/vbauerster/mpb/decor"
 	"golang.org/x/net/html"
+	// "github.com/foize/go.fifo"
+	// "github.com/hydrogen18/stoppableListener"
 	// cache "github.com/patrickmn/go-cache"
 	// "github.com/patrickmn/go-cache"
 	// "github.com/LibertyLocked/cachestore"
@@ -212,6 +217,22 @@ func newMyFunc(uri string) func(queue string, args ...interface{}) error {
 	}
 }
 */
+
+func testGoose(link string) {
+	g := goose.New()
+	if link == "" {
+		link = "http://edition.cnn.com/2012/07/08/opinion/banzi-ted-open-source/index.html"
+	}
+	article, _ := g.ExtractFromURL(link)
+	println("link: ", link)
+	println("title: ", article.Title)
+	println("description: ", article.MetaDescription)
+	println("keywords: ", article.MetaKeywords)
+	println("content: ", article.CleanedText)
+	println("url: ", article.FinalURL)
+	println("top image: ", article.TopImage)
+	println("============================================================")
+}
 
 func init() {
 	settings := goworker.WorkerSettings{
@@ -873,6 +894,98 @@ func testTunny() {
 	http.ListenAndServe(":8080", nil)
 }
 
+func (e *Endpoint) getLinks(url string, parallelism int, exportToCSV bool, cacheKey string) {
+
+	if url == "" {
+		url = "https://en.wikipedia.org/"
+	}
+	if parallelism <= 0 {
+		parallelism = 5
+	}
+
+	if exportToCSV {
+		var fName string
+		if cacheKey == "" {
+			if fName, err := e.getHash(""); err != nil {
+				log.Printf("Cannot create file %q: %s\n", fName, err)
+				return
+			}
+			fName = fmt.Sprintf("%s.csv", fName)
+			fmt.Printf("fName: %s", fName)
+		}
+
+		file, err := os.Create(fName)
+		if err != nil {
+			log.Fatalf("Cannot create file %q: %s\n", fName, err)
+			return
+		}
+		defer file.Close()
+		writer := csv.NewWriter(file)
+		defer writer.Flush()
+
+		// Write CSV header
+		writer.Write([]string{"Name", "Symbol", "Price (USD)", "Volume (USD)", "Market capacity (USD)", "Change (1h)", "Change (24h)", "Change (7d)"})
+	}
+	// Instantiate default collector
+	c := colly.NewCollector()
+
+	/*
+		threads := make(map[string][]Mail)
+
+		threadCollector := colly.NewCollector()
+		mailCollector := colly.NewCollector()
+	*/
+
+	c.CacheDir = "./shared/cache/external/"
+	c.UserAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"
+
+	// Limit the maximum parallelism to 5
+	// This is necessary if the goroutines are dynamically
+	// created to control the limit of simultaneous requests.
+	//
+	// Parallelism can be controlled also by spawning fixed
+	// number of go routines.
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: parallelism})
+
+	// MaxDepth is 2, so only the links on the scraped page
+	// and links on those pages are visited
+	c.MaxDepth = e.Crawler.MaxDepth
+
+	// Visit only root url and urls which start with "e" or "h" on httpbin.org
+	/*
+		c.URLFilters = []*regexp.Regexp{
+			regexp.MustCompile("http://httpbin\\.org/(|e.+)$"),
+			regexp.MustCompile("http://httpbin\\.org/h.+"),
+		}
+	*/
+
+	// Before making a request put the URL with
+	// the key of "url" into the context of the request
+	c.OnRequest(func(r *colly.Request) {
+		r.Ctx.Put("url", r.URL.String())
+	})
+
+	// After making a request get "url" from
+	// the context of the request
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println(r.Ctx.Get("url"))
+	})
+
+	// On every a element which has href attribute call callback
+	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
+		link := e.Attr("href")
+		// Print link
+		fmt.Println(link)
+		// Visit link found on page on a new thread
+		go e.Request.Visit(link)
+	})
+
+	// Start scraping on https://en.wikipedia.org
+	c.Visit(url)
+	// Wait until threads are finished
+	c.Wait()
+}
+
 /*
 // Processes a request packet and sends the response JSON
 func (r *Responder) OnIn(p *RequestPacket) {
@@ -1342,6 +1455,13 @@ func (e *Endpoint) extractCss(sel *goquery.Selection, fields map[string]Extracto
 	// ParseExtractor()
 	for field, ext := range fields {
 		if v := ext.execute(sel); v != "" {
+			if field == "url" || field == "link" || field == "page_url" {
+				link := v
+				if !strings.HasPrefix(v, "http") {
+					link = fmt.Sprintf("%s%s", e.BaseURL, v)
+				}
+				testGoose(link)
+			}
 			if field == "url" && !strings.HasPrefix(v, "http") {
 				r[field] = sanitizeText(strings.Trim(fmt.Sprintf("%s%s", e.BaseURL, v), " "))
 			} else {
@@ -1390,6 +1510,13 @@ func (e *Endpoint) extractRss(item *gofeed.Item, fields map[string]Extractors) R
 				pp.Println("reflected value: ", value)
 			}
 			if value != nil {
+				if key == "url" || key == "link" || key == "page_url" {
+					link := fmt.Sprintf("%s", value)
+					if !strings.HasPrefix(link, "http") {
+						link = fmt.Sprintf("%s%s", e.BaseURL, link)
+					}
+					testGoose(link)
+				}
 				r[key] = value // sanitizeText(value)
 			}
 		}

@@ -272,7 +272,26 @@ services:
       - mongo
     # command: mongo -d /data/db
 
+  rabbit1:
+    image: "rabbitmq:3-management"
+    hostname: "rabbit1"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      RABBITMQ_DEFAULT_USER: "rabbitmq"
+      RABBITMQ_DEFAULT_PASS: "rabbitmq"
+      RABBITMQ_DEFAULT_VHOST: "/"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    labels:
+      NAME: "rabbitmq1"
+    networks:
+      - app-tier
+
+# https://github.com/hugominas/recipe-docker-go-mongo-react/blob/master/docker-compose.yml
 networks:
+  app-tier:
+    driver: bridge
   mongo:
     external:
       name: mongo

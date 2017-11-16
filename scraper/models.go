@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -155,8 +156,90 @@ type Endpoint struct {
 	Extract            ExtractConfig                     `etcd:"extract" json:"extract,omitempty" yaml:"extract,omitempty" toml:"extract,omitempty"`
 	Debug              bool                              `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 	StrictMode         bool                              `etcd:"strict_mode" json:"strict_mode,omitempty" yaml:"strict_mode,omitempty" toml:"strict_mode,omitempty"`
-	// ExtractJSON        map[string]bool                   `etcd:"extractors" gorm"-" json:"extractors,omitempty" yaml:"extractors,omitempty" toml:"extractors,omitempty"`
+	Crawler            CrawlerConfig                     `etcd:"crawler" json:"crawler,omitempty" yaml:"crawler,omitempty" toml:"crawler,omitempty"`
 	// Screenshot  Screenshot `json:"-" yaml:"-" toml:"-"`
+}
+
+type CrawlerConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled          bool                    `default:"false" gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Debug             bool                    `default:"false" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+	GetScreenshot     bool                    `default:"false" etcd:"screenshot" json:"screenshot,omitempty" yaml:"screenshot,omitempty" toml:"screenshot,omitempty"`
+	MultiPart         MultiPartConfig         `default:"false" etcd:"is_multi_part" json:"is_multi_part,omitempty" yaml:"is_multi_part,omitempty" toml:"is_multi_part,omitempty"`
+	IsContext         bool                    `default:"true" etcd:"is_context" json:"is_context,omitempty" yaml:"is_context,omitempty" toml:"is_context,omitempty"`
+	IgnoreRobotsTxt   bool                    `default:"false" etcd:"ignore_robots_txt" json:"ignore_robots_txt,omitempty" yaml:"ignore_robots_txt,omitempty" toml:"ignore_robots_txt,omitempty"` // IgnoreRobotsTxt allows the Collector to ignore any restrictions set by
+	AllowURLRevisit   bool                    `default:"false" etcd:"allow_url_revisit" json:"allow_url_revisit,omitempty" yaml:"allow_url_revisit,omitempty" toml:"allow_url_revisit,omitempty"` // AllowURLRevisit allows multiple downloads of the same URL
+	AllowedDomains    []DomainConfig          `etcd:"allowed_domains" json:"csv,omitempty" yaml:"csv,omitempty" toml:"csv,omitempty"`                                                             // AllowedDomains is a domain whitelist.
+	DisallowedDomains []DomainConfig          `etcd:"disallowed_domains" json:"disallowed_domains,omitempty" yaml:"disallowed_domains,omitempty" toml:"disallowed_domains,omitempty"`             // DisallowedDomains is a domain blacklist.
+	URLFilters        []*regexp.Regexp        `etcd:"url_filters" json:"url_filters,omitempty" yaml:"url_filters,omitempty" toml:"url_filters,omitempty"`                                         // URLFilters is a list of regular expressions which restricts                                         // URLFilters is a list of regular expressions which restricts
+	Limits            LimitsConfig            `etcd:"limits" json:"limits,omitempty" yaml:"limits,omitempty" toml:"limits,omitempty"`
+	OnHTML            []CrawlerSelectorConfig `etcd:"selectors" json:"selectors,omitempty" yaml:"selectors,omitempty" toml:"selectors,omitempty"`
+	CSV               CSVConfig               `etcd:"csv" json:"csv,omitempty" yaml:"csv,omitempty" toml:"csv,omitempty"`
+	UserAgent         string                  `etcd:"user_agent" json:"user_agent,omitempty" yaml:"user_agent,omitempty" toml:"user_agent,omitempty"`                             // UserAgent is the User-Agent string used by HTTP requests
+	CacheDir          string                  `default:"./shared/cache/colly" etcd:"cache_dir" json:"cache_dir,omitempty" yaml:"cache_dir,omitempty" toml:"cache_dir,omitempty"`  // CacheDir specifies a location where GET requests are cached as files.
+	MaxBodySize       int                     `default:"10000" etcd:"max_body_size" json:"max_body_size,omitempty" yaml:"max_body_size,omitempty" toml:"max_body_size,omitempty"` // MaxBodySize is the limit of the retrieved response body in bytes.
+	MaxDepth          int                     `default:"1" etcd:"max_depth" json:"max_depth,omitempty" yaml:"max_depth,omitempty" toml:"max_depth,omitempty"`                     // MaxDepth limits the recursion depth of visited URLs.
+
+}
+
+type MultiPartConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled bool              `default:"false" gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Params   map[string]string `etcd:"params" json:"params,omitempty" yaml:"params,omitempty" toml:"params,omitempty"`
+	Files    map[string]string `etcd:"files" json:"files,omitempty" yaml:"files,omitempty" toml:"files,omitempty"`
+	Debug    bool              `default:"false" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+// []byte
+
+type CrawlerSelectorConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled bool   `default:"false" gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Selector string `etcd:"selector" json:"selector,omitempty" yaml:"selector,omitempty" toml:"selector,omitempty"`
+	Debug    bool   `default:"false" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type LimitsConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled    bool   `default:"false" gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	DomainGlob  string `etcd:"domain_glob" json:"domain_glob,omitempty" yaml:"domain_glob,omitempty" toml:"domain_glob,omitempty"`
+	Parallelism int    `default:"5" etcd:"parallelism" json:"parallelism,omitempty" yaml:"parallelism,omitempty" toml:"parallelism,omitempty"`
+	Debug       bool   `default:"false" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type DomainConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled bool `default:"false" gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	MaxDepth int  `default:"1" etcd:"max_depth" json:"max_depth,omitempty" yaml:"max_depth,omitempty" toml:"max_depth,omitempty"`
+	Debug    bool `default:"false" etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+type CSVConfig struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled   bool   `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	PrefixPath string `etcd:"prefix_path" json:"prefix_path,omitempty" yaml:"prefix_path,omitempty" toml:"prefix_path,omitempty"`
+	Separator  string `etcd:"separator" json:"separator,omitempty" yaml:"separator,omitempty" toml:"separator,omitempty"`
+	Headers    string `etcd:"headers" json:"headers,omitempty" yaml:"headers,omitempty" toml:"headers,omitempty"`
+	Debug      bool   `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
+}
+
+// Mail is the container of a single e-mail
+type Mail struct {
+	// gorm.Model         `json:"-" yaml:"-" toml:"-"`
+	// sorting.Sorting    `json:"-" yaml:"-" toml:"-"`
+	Disabled bool   `gorm:"disabled" etcd:"disabled" json:"disabled,omitempty" yaml:"disabled,omitempty" toml:"disabled,omitempty"`
+	Title    string `json:"title,omitempty" yaml:"title,omitempty" toml:"title,omitempty"`
+	Link     string `json:"link,omitempty" yaml:"link,omitempty" toml:"link,omitempty"`
+	Author   string `json:"author,omitempty" yaml:"author,omitempty" toml:"author,omitempty"`
+	Date     string `json:"date,omitempty" yaml:"date,omitempty" toml:"date,omitempty"`
+	Message  string `json:"message,omitempty" yaml:"message,omitempty" toml:"message,omitempty"`
+	Debug    bool   `etcd:"debug" json:"debug,omitempty" yaml:"debug,omitempty" toml:"debug,omitempty"`
 }
 
 // Endpoint represents a single remote endpoint. The performed query can be modified between each call by parameterising URL. See documentation.
